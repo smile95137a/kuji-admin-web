@@ -1,0 +1,28 @@
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+
+$root-block-name: '.noData';
+
+#{$root-block-name} {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 72px 16px;
+
+  &__img {
+    width: 160px;
+
+    img {
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  &__text {
+    margin-top: 4px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: $brand;
+  }
+}

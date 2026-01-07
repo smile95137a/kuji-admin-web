@@ -1,0 +1,73 @@
+// src/assets/styles/components/_tab.scss
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+
+.tabs {
+  width: 100%;
+  border: 1px solid $form-border;
+  border-radius: $form-radius;
+  background: $form-bg;
+
+  .tab-headers {
+    display: flex;
+    border-bottom: 1px solid $form-border;
+    background: $bg-light;
+  }
+
+  .tab-content {
+    padding: 12px;
+    background: $form-bg;
+  }
+
+  .tab-button {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+    padding: 12px 16px;
+
+    font-size: $font-lg;
+    text-align: center;
+
+    border: none;
+    border-right: 1px solid $form-border;
+    background: transparent;
+
+    color: $ink-800;
+    font-weight: 500;
+    cursor: pointer;
+
+    transition: background-color 0.2s ease, color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover:not(:disabled) {
+      // 品牌淡色 hover（橘色系）
+      background: $brand-light;
+      color: $brand-dark;
+    }
+
+    &.active {
+      // active 也用品牌淡色 + 底線
+      background: $brand-light;
+      color: $brand-dark;
+      font-weight: 700;
+      border-bottom: 3px solid $brand;
+    }
+
+    &:disabled {
+      background: color.mix($bg-light, $form-bg, 65%);
+      color: $muted;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    // 如果你希望鍵盤 focus 有視覺提示（推薦）
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px #{color.change($brand, $alpha: 0.25)};
+    }
+  }
+}

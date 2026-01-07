@@ -1,0 +1,82 @@
+/* --- 必須最上方：所有 @use 先宣告 --- */
+
+/* 全站 Tokens（橘色主題） */
+@use 'base/tokens' as tokens;
+
+/* 基底樣式 */
+@use 'base/base' as *;
+@use 'shared/mixins' as *;
+@use 'shared/utilities' as *;
+@use 'shared/flex' as *;
+
+/* 共用元件 */
+@use 'components/m-card' as *;
+@use 'components/spinner' as *;
+@use 'components/no-data' as *;
+@use 'components/pagination' as *;
+@use 'components/form' as *;
+@use 'components/form-select' as *;
+@use 'components/form-input' as *;
+@use 'components/form-textarea' as *;
+@use 'components/form-checkbox' as *;
+@use 'components/form-radio' as *;
+@use 'components/mbtn' as *;
+@use 'components/tab' as *;
+@use 'components/report-table' as *;
+@use 'components/breadcrumbs' as *;
+
+/* 版面 Layouts */
+@use 'layout/sidebarLayout' as *;
+
+/* 頁面級樣式 */
+@use 'pages/loader' as *;
+@use 'pages/login' as *;
+
+/* Dialogs */
+@use 'components/dialog/dialog' as *;
+@use 'components/dialog/confirm-dialog' as *;
+@use 'components/dialog/info-dialog' as *;
+@use 'components/dialog/search-company-dialog' as *;
+@use 'components/dialog/search-fn-option-dialog' as *;
+@use 'components/dialog/reject-reason-dialog' as *;
+@use 'components/dialog/add-biller-code-id-list-dialog' as *;
+@use 'components/dialog/add-ip-list-dialog' as *;
+@use 'components/dialog/add-relation-list-dialog' as *;
+@use 'components/dialog/add-relation-media-list-dialog' as *;
+@use 'components/dialog/add-ap-to-ap-list-dialog' as *;
+@use 'components/dialog/add-user-data-dialog' as *;
+@use 'components/dialog/reset-bizuser-pwd-dialog' as *;
+@use 'components/dialog/column-setting-dialog' as *;
+@use 'components/dialog/b01CompanyDialog' as *;
+
+/* --- @use 區塊結束 --- */
+
+/* 全局 rem 設定 */
+html {
+  font-size: 62.5%;
+}
+
+body {
+  font-size: 1.2rem;
+}
+
+* {
+  font-size: inherit;
+}
+
+/* clickable（橘色） */
+.clickable {
+  cursor: pointer;
+  color: tokens.$brand;
+  text-decoration: underline;
+
+  &:hover {
+    color: tokens.$brand-dark;
+  }
+}
+
+/* 已下載（維持紅色） */
+.is-downloaded,
+.is-downloaded * {
+  color: #e60012 !important;
+}

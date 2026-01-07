@@ -1,0 +1,23 @@
+import { createApp } from 'vue';
+import App from './App.vue';
+import './assets/styles/main.scss';
+import router from '@/router';
+import { createPinia } from 'pinia';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import * as solidIcons from '@fortawesome/free-solid-svg-icons';
+import '@fortawesome/fontawesome-free/css/all.css';
+import { gsap } from 'gsap';
+import { Draggable } from 'gsap/Draggable';
+
+gsap.registerPlugin(Draggable);
+
+Object.values(solidIcons).forEach((icon: any) => {
+  if (icon?.iconName) library.add(icon);
+});
+
+const app = createApp(App);
+
+app.component('font-awesome-icon', FontAwesomeIcon);
+
+app.use(createPinia()).use(router).mount('#app');

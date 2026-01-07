@@ -1,0 +1,145 @@
+// src/assets/styles/components/dialog/_info-dialog.scss
+@use 'sass:color';
+@use '../../shared/mixins' as *;
+@use '@/assets/styles/base/tokens' as *;
+
+$root-block-name: '.infoDialog';
+
+#{$root-block-name} {
+  $p: &;
+  $p__text: #{$p}__text;
+
+  width: 100%;
+  @include flex(null, null, column);
+  background: $form-bg;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px #{color.change($shadow-brand, $alpha: 0.22)};
+
+  &__header {
+    @include w_h(100%, 52px);
+    position: relative;
+    border-radius: 18px 18px 0 0;
+    background: $bg-light;
+    border-bottom: 1px solid $form-border;
+
+    &-title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+
+      #{$p__text} {
+        text-align: center;
+        font-size: 18px;
+        letter-spacing: 1px;
+        font-weight: 900;
+        color: $brand-dark;
+      }
+    }
+  }
+
+  &__close {
+    position: absolute;
+    top: 50%;
+    right: 24px;
+    z-index: 9;
+    cursor: pointer;
+    transform: translateY(-50%);
+    color: $muted;
+    transition: color 0.2s ease, transform 0.05s ease;
+
+    &:hover {
+      color: $brand-dark;
+    }
+
+    &:active {
+      transform: translateY(-50%) scale(0.96);
+    }
+  }
+
+  &__main {
+    flex: 1;
+    padding: 12px;
+    padding-top: 0;
+    @include flex(null, null, column);
+
+    &-content {
+      flex: 1;
+      @include flex(center, center);
+      gap: 12px;
+      padding: 0 8px;
+
+      &-icon {
+        width: 40px;
+        height: 40px;
+        background-color: $brand;
+        color: #fff;
+        border-radius: 50%;
+        @include flex(center, center);
+        box-shadow: 0 2px 8px #{color.change($shadow-brand, $alpha: 0.28)};
+      }
+
+      &-msg {
+        flex: 1;
+        @include flex(center);
+
+        #{$p__text} {
+          text-align: center;
+          font-size: 14px;
+          letter-spacing: 1px;
+          color: $form-text;
+        }
+      }
+    }
+
+    &-btns {
+      @include flex(center, center);
+      gap: 24px;
+    }
+
+    &-btn {
+      @include flex(center, center);
+      width: 80px;
+      height: 32px;
+      border-radius: 50px;
+
+      border: 1px solid $form-border;
+      background: $form-bg;
+
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      color: $ink-800;
+
+      transition: background-color 0.2s ease, border-color 0.2s ease,
+        color 0.2s ease, transform 0.05s ease;
+
+      &:hover {
+        border-color: color.mix($brand, $form-border, 35%);
+        background: $brand-light;
+        color: $brand-dark;
+      }
+
+      &:active {
+        transform: scale(0.96);
+      }
+
+      &--confirm {
+        color: #fff;
+        background: $danger;
+        border-color: $danger;
+
+        &:hover {
+          background: color.mix($danger, #000, 10%);
+          border-color: color.mix($danger, #000, 10%);
+          color: #fff;
+        }
+
+        &:active {
+          background: color.mix($danger, #000, 18%);
+          border-color: color.mix($danger, #000, 18%);
+        }
+      }
+    }
+  }
+}
