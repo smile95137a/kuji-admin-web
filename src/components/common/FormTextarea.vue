@@ -42,7 +42,6 @@
           :value="modelValue"
           :disabled="disabled"
           :readonly="readonly"
-          :required="required"
           :rows="rows"
           :maxlength="maxlength"
           :aria-required="required ? 'true' : 'false'"

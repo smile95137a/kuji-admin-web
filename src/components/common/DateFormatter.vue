@@ -1,3 +1,4 @@
+<!-- src/components/common/DateFormatter.vue -->
 <template>
   <span>{{ formattedDate }}</span>
 </template>

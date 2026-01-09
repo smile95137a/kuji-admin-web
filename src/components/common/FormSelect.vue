@@ -19,7 +19,6 @@
         class="form-select__field"
         :class="{ 'is-error': !!error }"
         :value="modelValue"
-        :required="required"
         :disabled="disabled"
         :aria-required="required ? 'true' : 'false'"
         @change="
@@ -43,7 +42,7 @@
 
 <script setup lang="ts">
 interface SelectOption {
-  value: string | number;
+  value: any;
   label: string;
 }
 const props = withDefaults(

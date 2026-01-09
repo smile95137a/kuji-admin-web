@@ -1,3 +1,4 @@
+<!-- src/components/common/NumberFormatter.vue -->
 <template>
   <span>{{ formattedNumber }}</span>
 </template>

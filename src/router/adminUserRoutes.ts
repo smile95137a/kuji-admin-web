@@ -3,28 +3,28 @@ import type { RouteRecordRaw } from 'vue-router';
 
 const adminUserRoutes: RouteRecordRaw[] = [
   {
-    path: 'admin-users',
+    path: '/home/admin-users',
     name: 'AdminUserList',
     component: () => import('@/views/adminUser/AdminUserList.vue'),
-    meta: { title: '後台帳號管理' },
+    meta: { requiresAuth: true, layout: 'default' },
   },
   {
-    path: 'admin-users/add-owner',
+    path: '/home/admin-users/add-owner',
     name: 'AdminUserAddOwner',
     component: () => import('@/views/adminUser/AdminUserForm.vue'),
-    meta: { title: '新增店家負責人帳號' },
+    meta: { requiresAuth: true, layout: 'default' },
   },
   {
-    path: 'admin-users/add-editor',
+    path: '/home/admin-users/add-editor',
     name: 'AdminUserAddEditor',
     component: () => import('@/views/adminUser/AdminUserForm.vue'),
-    meta: { title: '新增店家編輯帳號' },
+    meta: { requiresAuth: true, layout: 'default' },
   },
   {
-    path: 'admin-users/edit/:id',
-    name: 'AdminUserEdit',
+    path: '/home/admin-users/:id',
+    name: 'AdminUserDetail',
     component: () => import('@/views/adminUser/AdminUserForm.vue'),
-    meta: { title: '帳號詳情' },
+    meta: { requiresAuth: true, layout: 'default' },
   },
 ];
 

@@ -1,4 +1,4 @@
-<!-- src/views/adminUsers/AdminUserForm.vue -->
+<!-- src/views/adminUser/AdminUserForm.vue -->
 <template>
   <MCard>
     <form @submit.prevent="onSubmit">
@@ -67,7 +67,6 @@
             allLabel="請選擇"
             :allValue="''"
           />
-          <p class="form__text m-t-6" v-if="storeLoading">店家選項載入中...</p>
         </div>
 
         <!-- ===================== add-owner: 店家資訊 ===================== -->
@@ -212,20 +211,25 @@
             <FormInput label="店家" :modelValue="storeText(detail)" disabled />
           </div>
 
+          <!-- ✅ 日期改用 DateFormatter（不再用 formatDateTime） -->
           <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="最後登入"
-              :modelValue="formatDateTime(detail?.lastLoginAt)"
-              disabled
+            <p class="form__text">最後登入</p>
+            <DateFormatter
+              v-if="detail?.lastLoginAt"
+              :date="detail.lastLoginAt"
+              format="YYYY-MM-DD HH:mm:ss"
             />
+            <span v-else>-</span>
           </div>
 
           <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="建立時間"
-              :modelValue="formatDateTime(detail?.createdAt)"
-              disabled
+            <p class="form__text">建立時間</p>
+            <DateFormatter
+              v-if="detail?.createdAt"
+              :date="detail.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
             />
+            <span v-else>-</span>
           </div>
         </template>
       </div>
@@ -253,9 +257,9 @@
           <MButton class="mbtn--red" @click="doDelete">刪除</MButton>
         </template>
 
-        <MButton type="button" class="mbtn--red" @click="router.back()">
-          返回
-        </MButton>
+        <MButton type="button" class="mbtn--red" @click="router.back()"
+          >返回</MButton
+        >
       </div>
     </form>
   </MCard>
@@ -271,6 +275,7 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
+import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore } from '@/stores';
@@ -286,6 +291,12 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions } from '@/services/adminStoreService';
+
+interface SelectOption {
+  label: string;
+  value: any;
+  description?: string;
+}
 
 /* Setup */
 const route = useRoute();
@@ -306,31 +317,27 @@ const pageTitle = computed(() => {
   return '帳號詳情';
 });
 
-/* 店家選項（Banner 同款） */
+/* 店家選項 */
 const storeOptions = ref<SelectOption[]>([]);
-const storeLoading = ref(false);
 
-const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] => {
-  return list.map((x) => ({
+const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
+  list.map((x) => ({
     label: x?.label ?? '',
     value: x?.value ?? '',
     ...(x?.description ? { description: x.description } : {}),
   }));
-};
 
 const ensureStoreOptionExists = (storeIdValue: string) => {
   if (!storeIdValue) return;
   const exists = storeOptions.value.some((o) => o.value === storeIdValue);
-  if (!exists) {
+  if (!exists)
     storeOptions.value.unshift({
       label: `店家（${storeIdValue}）`,
       value: storeIdValue,
     });
-  }
 };
 
 const loadStoreOptions = async () => {
-  storeLoading.value = true;
   await executeApi<any[]>({
     fn: async () => getStoreOptions({ activeOnly: true }),
     onSuccess: (data) => {
@@ -339,17 +346,11 @@ const loadStoreOptions = async () => {
       );
       ensureStoreOptionExists(storeId.value);
     },
-    onFinally: () => {
-      storeLoading.value = false;
-    },
-    showFailDialog: true,
-    showCatchDialog: true,
   });
 };
 
-/* schema（依 req 對齊） */
+/* schema */
 const schema = computed(() => {
-  // detail：不驗證
   if (isDetail.value) {
     return yup.object({
       email: yup.string().nullable(),
@@ -374,7 +375,6 @@ const schema = computed(() => {
     });
   }
 
-  // add-editor（CreateStoreEditorReq）
   if (mode.value === 'add-editor') {
     return yup.object({
       storeId: yup.string().required('店家不可為空'),
@@ -383,7 +383,6 @@ const schema = computed(() => {
       phone: yup.string().nullable(),
       remark: yup.string().nullable(),
 
-      // owner 欄位不管
       storeName: yup.string().nullable(),
       shortDescription: yup.string().nullable(),
       longDescription: yup.string().nullable(),
@@ -399,7 +398,6 @@ const schema = computed(() => {
     });
   }
 
-  // add-owner（CreateStoreOwnerReq）
   return yup.object({
     email: yup.string().required('Email 不可為空').email('Email 格式不正確'),
     displayName: yup.string().required('顯示名稱不可為空'),
@@ -428,7 +426,7 @@ const schema = computed(() => {
   });
 });
 
-/* useForm（Banner 同款 defineField + v-model） */
+/* useForm */
 const { errors, handleSubmit, setValues, defineField } = useForm({
   validationSchema: schema,
   initialValues: {
@@ -478,8 +476,6 @@ const [lineId] = defineField('lineId');
 /* detail */
 const detail = ref<any>(null);
 
-const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
-
 const roleText = (u: any) => {
   const roles = u?.roles;
   if (!Array.isArray(roles) || roles.length === 0) return '-';
@@ -516,12 +512,14 @@ const reloadDetail = async () => {
   await executeApi({
     fn: async () => getAdminUserById(userId.value),
     onSuccess: (data) => {
-      detail.value = data;
+      const d = (data as any)?.data ?? data;
+      detail.value = d;
+
       setValues({
-        email: data?.email ?? '',
-        displayName: data?.displayName ?? '',
-        phone: data?.phone ?? '',
-        remark: data?.remark ?? '',
+        email: d?.email ?? '',
+        displayName: d?.displayName ?? '',
+        phone: d?.phone ?? '',
+        remark: d?.remark ?? '',
         storeId: '',
         storeName: '',
         shortDescription: '',
@@ -541,14 +539,8 @@ const reloadDetail = async () => {
 };
 
 onMounted(async () => {
-  // editor 需要下拉：先載店家選項
-  if (mode.value === 'add-editor') {
-    await loadStoreOptions();
-  }
-
-  if (isDetail.value) {
-    await reloadDetail();
-  }
+  if (mode.value === 'add-editor') await loadStoreOptions();
+  if (isDetail.value) await reloadDetail();
 });
 
 /* mock */

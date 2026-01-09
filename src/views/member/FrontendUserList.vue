@@ -1,0 +1,526 @@
+<!-- src/views/member/FrontendUserList.vue -->
+<template>
+  <MCard>
+    <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
+      <FormTitle title="會員列表" />
+
+      <FrontendUserSearchForm
+        :status-options="statusOptions"
+        :provider-options="providerOptions"
+      />
+
+      <div class="flex justify-center m-y-8">
+        <MButton type="submit">查詢</MButton>
+      </div>
+    </Form>
+  </MCard>
+
+  <div class="m-t-12">
+    <MCard>
+      <div class="flex justify-end gap-x-12 flex-wrap">
+        <MButton :disabled="!canActivate" @click="activateSelected"
+          >啟用</MButton
+        >
+        <MButton :disabled="!canDeactivate" @click="deactivateSelected"
+          >停用</MButton
+        >
+        <MButton :disabled="!canSuspend" @click="suspendSelected">暫停</MButton>
+
+        <MButton
+          class="mbtn--red"
+          :disabled="!canDelete"
+          @click="deleteSelected"
+        >
+          刪除
+        </MButton>
+      </div>
+
+      <template v-if="!hasData">
+        <NoData :message="noDataMessage" />
+      </template>
+
+      <template v-else>
+        <ReportTable
+          class="m-t-12"
+          :columns="columns"
+          :items="currentPageItems"
+          row-key="id"
+          selectable
+          selection-type="checkbox"
+          :show-select-all="true"
+          v-model:selected="selectedIds"
+          :useWidthClass="true"
+          :sort-key="sortKey"
+          @sort="handleSort"
+        >
+          <template #cell-name="{ item }">
+            <span class="clickable" @click="navigateToEdit(item)">
+              {{ item.name || item.nickname || '-' }}
+            </span>
+          </template>
+
+          <template #cell-provider="{ item }">
+            <span>{{ providerText(item.provider) }}</span>
+          </template>
+
+          <template #cell-goldCoins="{ item }">
+            <NumberFormatter
+              v-if="
+                item.goldCoins !== null &&
+                item.goldCoins !== undefined &&
+                item.goldCoins !== ''
+              "
+              :number="item.goldCoins"
+              locale="zh-TW"
+            />
+            <span v-else>-</span>
+          </template>
+
+          <template #cell-statusName="{ item }">
+            <span>{{ item.statusName || statusText(item.status) }}</span>
+          </template>
+
+          <template #cell-createdAt="{ item }">
+            <DateFormatter
+              :date="item.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </template>
+
+          <template #cell-updatedAt="{ item }">
+            <DateFormatter
+              :date="item.updatedAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </template>
+        </ReportTable>
+
+        <div class="flex justify-center m-t-12">
+          <Pagination
+            :totalPages="totalPages"
+            :renderPaginationNums="renderPaginationNums"
+            :currentPage="currentPage"
+            :nextPage="nextPage"
+            :previousPage="previousPage"
+            :goToPage="goToPage"
+            :pageLimitSize="pageLimitSize"
+            :totalItems="list.length"
+            @update:pageLimitSize="pageLimitSize = $event"
+          />
+        </div>
+      </template>
+    </MCard>
+  </div>
+</template>
+
+<script setup lang="ts">
+/* ==============================
+ * Imports
+ * ============================== */
+import { ref, computed, onMounted, nextTick } from 'vue';
+import { Form, FormContext } from 'vee-validate';
+import { useRouter } from 'vue-router';
+
+import { usePagination } from '@/hook/usePagination';
+import { useSearchPage } from '@/hook/useSearchPage';
+import { compareByKeySmart } from '@/utils/sortUtils';
+
+import MCard from '@/components/common/MCard.vue';
+import MButton from '@/components/common/MButton.vue';
+import NoData from '@/components/common/NoData.vue';
+import Pagination from '@/components/common/Pagination.vue';
+import ReportTable from '@/components/common/ReportTable.vue';
+import FormTitle from '@/components/common/FormTitle.vue';
+import NumberFormatter from '@/components/common/NumberFormatter.vue';
+import DateFormatter from '@/components/common/DateFormatter.vue';
+
+import FrontendUserSearchForm from '@/components/member/FrontendUserSearchForm.vue';
+
+import { useDialogStore } from '@/stores';
+import { executeApi } from '@/utils/executeApiUtils';
+
+import {
+  queryFrontendUsers,
+  activateFrontendUser,
+  deactivateFrontendUser,
+  suspendFrontendUser,
+  deleteFrontendUser,
+} from '@/services/adminFrontendUserService';
+
+/* ==============================
+ * Types
+ * ============================== */
+interface SelectOption {
+  label: string;
+  value: any;
+}
+
+/* ==============================
+ * Router / Store
+ * ============================== */
+const router = useRouter();
+const dialogStore = useDialogStore();
+
+/* ==============================
+ * Form & InitValues（對齊 FrontendUserCondition）
+ * ============================== */
+const formRef = ref<FormContext | null>(null);
+
+const initValues = ref<any>({
+  email: '',
+  nickname: '',
+  status: '',
+  provider: '',
+  goldCoinsMin: '',
+  goldCoinsMax: '',
+});
+
+/* ==============================
+ * Search Hook
+ * ============================== */
+const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
+  useLocalList: true,
+});
+
+/* ==============================
+ * Options
+ * ============================== */
+const statusOptions = ref<SelectOption[]>([
+  { label: '全部', value: '' },
+  { label: 'ACTIVE', value: 'ACTIVE' },
+  { label: 'INACTIVE', value: 'INACTIVE' },
+  { label: 'SUSPENDED', value: 'SUSPENDED' },
+  // 後端如果真的有回 DELETED 也能顯示/篩選（若後端不支援，選了也只是查不到）
+  { label: 'DELETED', value: 'DELETED' },
+]);
+
+const providerOptions = ref<SelectOption[]>([
+  { label: '全部', value: '' },
+  { label: 'LOCAL', value: 'LOCAL' },
+  { label: 'GOOGLE', value: 'GOOGLE' },
+  { label: 'FACEBOOK', value: 'FACEBOOK' },
+  { label: 'LINE', value: 'LINE' },
+]);
+
+const loadSelectOptions = async () => {
+  await nextTick();
+};
+
+/* ==============================
+ * Utils
+ * ============================== */
+const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
+
+const statusText = (status?: string) =>
+  status === 'ACTIVE'
+    ? '啟用'
+    : status === 'INACTIVE'
+    ? '停用'
+    : status === 'SUSPENDED'
+    ? '暫停'
+    : status === 'DELETED'
+    ? '已刪除'
+    : '-';
+
+const providerText = (p?: string) =>
+  p === 'LOCAL'
+    ? '本地'
+    : p === 'GOOGLE'
+    ? 'Google'
+    : p === 'FACEBOOK'
+    ? 'Facebook'
+    : p === 'LINE'
+    ? 'LINE'
+    : p
+    ? String(p)
+    : '-';
+
+/* ==============================
+ * Sorting
+ * ============================== */
+const sortKey = ref('');
+const sortOrder = ref<'asc' | 'desc' | ''>('asc');
+
+const handleSort = ({ key, order }: any) => {
+  sortKey.value = key;
+  sortOrder.value = order;
+  goToPage(1);
+};
+
+const sortedList = computed(() => {
+  if (!sortKey.value || !sortOrder.value) return list.value;
+
+  const arr = [...list.value];
+  arr.sort((a: any, b: any) =>
+    compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
+      type: 'auto',
+      mode: 'big5',
+      locale: 'zh-TW',
+    })
+  );
+  return arr;
+});
+
+/* ==============================
+ * Pagination
+ * ============================== */
+const pageLimitSize = ref(10);
+
+const {
+  totalPages,
+  currentPageItems,
+  renderPaginationNums,
+  currentPage,
+  nextPage,
+  previousPage,
+  goToPage,
+} = usePagination(sortedList, pageLimitSize);
+
+/* ==============================
+ * Columns（依 condition + 常見回傳欄位）
+ * ============================== */
+const columns = [
+  { field: 'name', label: '姓名/暱稱', width: 200, sortable: true },
+  { field: 'email', label: 'Email', width: 240, sortable: true },
+  { field: 'provider', label: '登入方式', width: 120, sortable: true },
+  { field: 'goldCoins', label: '金幣', width: 120, sortable: true },
+  { field: 'statusName', label: '狀態', width: 120, sortable: true },
+  { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
+];
+
+/* ==============================
+ * Query（對齊 QueryReq<FrontendUserCondition>）
+ * ============================== */
+const onSubmit = async (values: any) => {
+  const req = {
+    condition: {
+      email: values.email || null,
+      nickname: values.nickname || null,
+      status: values.status || null,
+      provider: values.provider || null,
+      goldCoinsMin:
+        values.goldCoinsMin === '' ||
+        values.goldCoinsMin === null ||
+        values.goldCoinsMin === undefined
+          ? null
+          : Number(values.goldCoinsMin),
+      goldCoinsMax:
+        values.goldCoinsMax === '' ||
+        values.goldCoinsMax === null ||
+        values.goldCoinsMax === undefined
+          ? null
+          : Number(values.goldCoinsMax),
+    },
+  };
+
+  await query(() => queryFrontendUsers(req));
+  goToPage(1);
+};
+
+/* ==============================
+ * Selection / Bulk Actions
+ * ============================== */
+const selectedIds = ref<string[]>([]);
+
+const selectedRows = computed(() =>
+  list.value.filter((row: any) => selectedIds.value.includes(row.id))
+);
+
+const canActivateRow = (r: any) =>
+  r?.status && r.status !== 'ACTIVE' && r.status !== 'DELETED';
+const canDeactivateRow = (r: any) => r?.status === 'ACTIVE';
+const canSuspendRow = (r: any) =>
+  r?.status && r.status !== 'SUSPENDED' && r.status !== 'DELETED';
+const canDeleteRow = (r: any) => r?.status !== 'DELETED';
+
+const canActivate = computed(
+  () =>
+    selectedRows.value.length > 0 && selectedRows.value.every(canActivateRow)
+);
+const canDeactivate = computed(
+  () =>
+    selectedRows.value.length > 0 && selectedRows.value.every(canDeactivateRow)
+);
+const canSuspend = computed(
+  () => selectedRows.value.length > 0 && selectedRows.value.every(canSuspendRow)
+);
+const canDelete = computed(
+  () => selectedRows.value.length > 0 && selectedRows.value.every(canDeleteRow)
+);
+
+const refresh = async () => {
+  const values = formRef.value?.values || initValues.value;
+  await onSubmit(values);
+  selectedIds.value = [];
+};
+
+const activateSelected = async () => {
+  if (!canActivate.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '選中的會員需為非 ACTIVE / 非 DELETED 才能啟用。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '啟用確認',
+    message: `確定要啟用選中的 ${selectedIds.value.length} 位會員嗎？`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () =>
+      Promise.allSettled(
+        selectedIds.value.map((id) => activateFrontendUser(id))
+      ),
+    onSuccess: async (results: any[]) => {
+      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const failCount = results.length - okCount;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message:
+          failCount > 0
+            ? `啟用完成：成功 ${okCount}、失敗 ${failCount}`
+            : `啟用完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+const deactivateSelected = async () => {
+  if (!canDeactivate.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '只有 ACTIVE 的會員才能停用。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '停用確認',
+    message: `確定要停用選中的 ${selectedIds.value.length} 位會員嗎？`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () =>
+      Promise.allSettled(
+        selectedIds.value.map((id) => deactivateFrontendUser(id))
+      ),
+    onSuccess: async (results: any[]) => {
+      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const failCount = results.length - okCount;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message:
+          failCount > 0
+            ? `停用完成：成功 ${okCount}、失敗 ${failCount}`
+            : `停用完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+const suspendSelected = async () => {
+  if (!canSuspend.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '選中的會員需為非 SUSPENDED / 非 DELETED 才能暫停。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '暫停確認',
+    message: `確定要暫停選中的 ${selectedIds.value.length} 位會員嗎？`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () =>
+      Promise.allSettled(
+        selectedIds.value.map((id) => suspendFrontendUser(id))
+      ),
+    onSuccess: async (results: any[]) => {
+      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const failCount = results.length - okCount;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message:
+          failCount > 0
+            ? `暫停完成：成功 ${okCount}、失敗 ${failCount}`
+            : `暫停完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+const deleteSelected = async () => {
+  if (!canDelete.value) return;
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '刪除確認',
+    message: `確定要刪除選中的 ${selectedIds.value.length} 位會員嗎？（軟刪除）`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () =>
+      Promise.allSettled(selectedIds.value.map((id) => deleteFrontendUser(id))),
+    onSuccess: async (results: any[]) => {
+      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const failCount = results.length - okCount;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message:
+          failCount > 0
+            ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
+            : `刪除完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+/* ==============================
+ * Navigation
+ * ============================== */
+const navigateToEdit = (item: any) => {
+  router.push(`/home/member/edit/${item.id}`);
+};
+
+/* ==============================
+ * Lifecycle
+ * ============================== */
+onMounted(async () => {
+  await loadSelectOptions();
+  await onSubmit(initValues.value);
+  isSearch.value = true;
+});
+</script>
+
+<style scoped></style>

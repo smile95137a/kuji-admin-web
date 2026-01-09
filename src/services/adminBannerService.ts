@@ -1,4 +1,4 @@
-// services/frontend/adminBannerService.ts
+// services/adminBannerService.ts
 import { api } from './FrontAPI';
 
 const basePath = '/admin/banner';

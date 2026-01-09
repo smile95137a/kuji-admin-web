@@ -145,6 +145,27 @@ watch([isMobile, sidebarVisible], ([mobile, open]) => {
 // ----- Menu data -----
 const menuItems = ref([
   {
+    title: '系統設定',
+    submenu: [
+      { title: '選單管理', route: '/home/menus' },
+      { title: '角色管理', route: '/home/roles' },
+    ],
+  },
+
+  {
+    title: '營運工具',
+    submenu: [{ title: '賞品盒管理', route: '/home/prize-box' }],
+  },
+
+  {
+    title: '錢包管理',
+    submenu: [
+      { title: '錢包/交易紀錄', route: '/home/wallet' },
+      { title: '儲值方案', route: '/home/recharge-plan' },
+    ],
+  },
+
+  {
     title: '網站內容管理',
     submenu: [
       { title: 'Banner 列表', route: '/home/banner' },
@@ -156,11 +177,10 @@ const menuItems = ref([
     title: '會員管理',
     submenu: [
       { title: '會員列表', route: '/home/member/list' },
-      { title: '新增會員', route: '/home/member/add' },
-      // 如果這些頁面你還沒做，可以先註解掉
-      // { title: '會員等級管理', route: '/home/member/level' },
-      // { title: '會員標籤管理', route: '/home/member/tags' },
-      // { title: '再行銷推播', route: '/home/member/marketing' },
+      // ⚠️ 你後端目前是 FrontendUser：list/edit/delete/activate/deactivate/suspend
+      // 沒有「新增會員」API，所以先改成「編輯會員」由列表點進去
+      // 如果你真的要新增會員，等你補後端 /admin/frontend-users POST 我再幫你補 route + 畫面
+      // { title: '新增會員', route: '/home/member/add' },
     ],
   },
 
@@ -179,6 +199,11 @@ const menuItems = ref([
       { title: '商品列表', route: '/home/lottery' },
       { title: '新增商品', route: '/home/lottery/add' },
     ],
+  },
+
+  {
+    title: '訂單管理',
+    submenu: [{ title: '訂單列表', route: '/home/order' }],
   },
 ]);
 

@@ -44,7 +44,6 @@
           :value="modelValue"
           :disabled="disabled"
           :readonly="readonly"
-          :required="required"
           :maxlength="maxlength"
           :minlength="minlength"
           :autocomplete="autocomplete"

@@ -85,7 +85,6 @@ function toggleBySpace() {
       :value="value"
       :checked="isChecked"
       :disabled="disabled"
-      :required="required"
       :aria-invalid="!!error || undefined"
       :aria-describedby="describedById"
       @change="onChange"

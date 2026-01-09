@@ -10,6 +10,13 @@ import adminUserRoutes from './adminUserRoutes';
 import lotteryRoutes from './lotteryRoutes';
 
 import { useAuthStore } from '@/stores';
+import orderRoutes from './orderRoutes';
+import rechargePlanRoutes from './rechargePlanRoutes';
+import walletRoutes from './walletRoutes';
+import frontendUserRoutes from './frontendUserRoutes';
+import prizeBoxRoutes from './prizeBoxRoutes';
+import menuRoutes from './menuRoutes';
+import roleRoutes from './roleRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -31,6 +38,13 @@ const routes: Array<RouteRecordRaw> = [
       ...newsRoutes,
       ...adminUserRoutes,
       ...lotteryRoutes,
+      ...orderRoutes,
+      ...rechargePlanRoutes,
+      ...walletRoutes,
+      ...frontendUserRoutes,
+      ...prizeBoxRoutes,
+      ...menuRoutes,
+      ...roleRoutes,
     ],
   },
   {
