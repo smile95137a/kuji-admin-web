@@ -7,8 +7,6 @@ interface RequestData {
   [key: string]: any;
 }
 
-const unwrap = (res: any) => res?.data ?? res;
-
 /** 查詢商品列表（支援動態條件，後端會自動依角色過濾 storeId） */
 export const queryLotteries = async (
   req?: RequestData

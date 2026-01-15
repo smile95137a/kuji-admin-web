@@ -149,8 +149,10 @@ const menuItems = ref([
     submenu: [
       { title: '選單管理', route: '/home/menus' },
       { title: '角色管理', route: '/home/roles' },
+      { title: '系統日誌', route: '/home/system-log' },
     ],
   },
+
   {
     title: '營運工具',
     submenu: [
@@ -171,6 +173,7 @@ const menuItems = ref([
     submenu: [
       { title: 'Banner 列表', route: '/home/banner' },
       { title: '最新消息列表', route: '/home/news' },
+      { title: '跑馬燈管理', route: '/home/marquee' },
     ],
   },
 
@@ -199,6 +202,7 @@ const menuItems = ref([
     submenu: [
       { title: '商品列表', route: '/home/lottery' },
       { title: '新增商品', route: '/home/lottery/add' },
+      { title: '獎項管理（從商品列表進入）', route: '/home/lottery' },
     ],
   },
 

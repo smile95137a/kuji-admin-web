@@ -48,7 +48,7 @@ interface SelectOption {
 const props = withDefaults(
   defineProps<{
     label?: string;
-    modelValue: string | number;
+    modelValue: any;
     options: SelectOption[];
     error?: string;
     required?: boolean;

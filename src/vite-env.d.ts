@@ -9,6 +9,6 @@ interface ApiResponse<T = any> {
 }
 
 interface SelectOption {
-  value: string;
-  label: string;
+  value: any;
+  label: any;
 }

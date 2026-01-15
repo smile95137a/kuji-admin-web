@@ -18,6 +18,9 @@ import prizeBoxRoutes from './prizeBoxRoutes';
 import menuRoutes from './menuRoutes';
 import roleRoutes from './roleRoutes';
 import referralCodeRoutes from './adminReferralCodeRoutes';
+import lotteryPrizeRoutes from './lotteryPrizeRoutes';
+import marqueeRoutes from './marqueeRoutes';
+import systemLogRoutes from './systemLogRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -39,6 +42,7 @@ const routes: Array<RouteRecordRaw> = [
       ...newsRoutes,
       ...adminUserRoutes,
       ...lotteryRoutes,
+      ...lotteryPrizeRoutes,
       ...orderRoutes,
       ...rechargePlanRoutes,
       ...walletRoutes,
@@ -47,6 +51,8 @@ const routes: Array<RouteRecordRaw> = [
       ...menuRoutes,
       ...roleRoutes,
       ...referralCodeRoutes,
+      ...marqueeRoutes,
+      ...systemLogRoutes,
     ],
   },
   {
