@@ -243,7 +243,7 @@ const props = withDefaults(
     selectedId?: string | null;
 
     sortKey?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: 'asc' | 'desc' | '';
 
     useWidthClass?: boolean;
     selectColWidth?: WidthSpec;

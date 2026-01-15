@@ -151,12 +151,13 @@ const menuItems = ref([
       { title: '角色管理', route: '/home/roles' },
     ],
   },
-
   {
     title: '營運工具',
-    submenu: [{ title: '賞品盒管理', route: '/home/prize-box' }],
+    submenu: [
+      { title: '賞品盒管理', route: '/home/prize-box' },
+      { title: '推薦碼管理', route: '/home/referral-codes' },
+    ],
   },
-
   {
     title: '錢包管理',
     submenu: [

@@ -29,6 +29,7 @@
           :row-key="rowKey"
           :useWidthClass="true"
           :sort-key="sortKey"
+          :sort-order="sortOrder"
           @sort="handleSort"
         >
           <!-- summary: 店家名稱 -->

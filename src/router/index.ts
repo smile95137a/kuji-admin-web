@@ -17,6 +17,7 @@ import frontendUserRoutes from './frontendUserRoutes';
 import prizeBoxRoutes from './prizeBoxRoutes';
 import menuRoutes from './menuRoutes';
 import roleRoutes from './roleRoutes';
+import referralCodeRoutes from './adminReferralCodeRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -45,6 +46,7 @@ const routes: Array<RouteRecordRaw> = [
       ...prizeBoxRoutes,
       ...menuRoutes,
       ...roleRoutes,
+      ...referralCodeRoutes,
     ],
   },
   {

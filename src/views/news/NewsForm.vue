@@ -27,38 +27,49 @@
           />
         </div>
 
-        <!-- 排序 -->
+        <!-- 上架時間 scheduledAt -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="排序（orderNum）"
-            v-model="orderNum"
-            :error="errors.orderNum"
-            type="number"
-            placeholder="數字越小越前面"
+            label="上架時間（scheduledAt）"
+            v-model="scheduledAt"
+            :error="errors.scheduledAt"
+            type="datetime-local"
+            placeholder="可不填"
+          />
+        </div>
+
+        <!-- 下架時間 endTime -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="下架時間（endTime）"
+            v-model="endTime"
+            :error="errors.endTime"
+            type="datetime-local"
+            placeholder="可不填"
           />
         </div>
 
         <!-- 封面圖 -->
         <div class="w-100 p-6">
           <FormInput
-            label="封面圖片（上傳到 S3 後回填 coverImageUrl）"
+            label="封面圖片（上傳到 S3 後回填 imageUrl）"
             type="file"
             accept="image/*"
             @change="onFileChange"
-            :error="errors.coverImageUrl"
+            :error="errors.imageUrl"
           />
 
           <div class="m-t-12">
             <FormInput
-              label="封面圖片 URL（可直接貼）"
-              v-model="coverImageUrl"
-              :error="errors.coverImageUrl"
+              label="封面圖片 URL（imageUrl，可直接貼）"
+              v-model="imageUrl"
+              :error="errors.imageUrl"
               placeholder="https://example.com/news.jpg（或上方上傳會自動回填）"
               @blur="syncPreviewFromUrl"
             />
           </div>
 
-          <div class="flex gap-x-12 m-t-12" v-if="coverImageUrl">
+          <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
             <MButton
               type="button"
               class="mbtn--gray"
@@ -79,16 +90,6 @@
           </div>
         </div>
 
-        <!-- 摘要 -->
-        <div class="w-100 p-6">
-          <FormInput
-            label="摘要（summary）"
-            v-model="summary"
-            :error="errors.summary"
-            placeholder="可不填"
-          />
-        </div>
-
         <!-- ✅ 內容（CKEditor） -->
         <div class="w-100 p-6">
           <p class="form__text form__text--red">內容（content）</p>
@@ -106,9 +107,20 @@
       </div>
 
       <!-- bottom button -->
+      <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12">
         <MButton type="button" class="mbtn--gray" @click="fillMockData">
           快速產生資料
+        </MButton>
+
+        <!-- ✅ 新增：批量建立 -->
+        <MButton
+          type="button"
+          class="mbtn--gray"
+          :disabled="uploading || isEdit"
+          @click="batchCreateMockNews"
+        >
+          一鍵批量新增（10 筆）
         </MButton>
 
         <MButton type="submit" :disabled="uploading">
@@ -154,14 +166,13 @@ const router = useRouter();
 const dialogStore = useDialogStore();
 const isEdit = computed(() => Boolean(route.params.id));
 
-/** 狀態（依你的後端 enum 調整） */
+/** 狀態（依你的後端 NewsCreateReq：DRAFT/PUBLISHED） */
 const statusOptions: SelectOption[] = [
   { label: '草稿（DRAFT）', value: 'DRAFT' },
   { label: '上架（PUBLISHED）', value: 'PUBLISHED' },
-  { label: '下架（ARCHIVED）', value: 'ARCHIVED' },
 ];
 
-/** CKEditor 設定（可按需加 toolbar、圖片等） */
+/** CKEditor 設定 */
 const editorConfig = {
   placeholder: '請輸入內容...',
   toolbar: [
@@ -183,20 +194,33 @@ const editorConfig = {
   ],
 };
 
-/** schema（欄位請依你的 NewsCreateReq/NewsUpdateReq 調整） */
+/**
+ * ✅ datetime-local <-> LocalDateTime 格式處理
+ * datetime-local 會是：YYYY-MM-DDTHH:mm
+ * 後端 LocalDateTime 建議送：YYYY-MM-DDTHH:mm:ss
+ */
+const toLocalDateTime = (v?: string | null) => {
+  if (!v) return null;
+  // 如果已經有秒數就原樣回傳
+  if (v.length >= 19) return v.slice(0, 19);
+  // 補上 :00 秒
+  return `${v}:00`;
+};
+
+/** 後端回來可能是 2026-01-10T10:00:00，datetime-local 只吃到分鐘 */
+const toDateTimeLocalValue = (v?: string | null) => {
+  if (!v) return '';
+  return String(v).slice(0, 16); // YYYY-MM-DDTHH:mm
+};
+
+/** schema（依 NewsCreateReq / NewsUpdateReq 調整） */
 const schema = yup.object({
   title: yup.string().required('請輸入標題'),
   status: yup.string().required('請選擇狀態'),
-  orderNum: yup
-    .number()
-    .typeError('排序必須是數字')
-    .nullable()
-    .transform((v, o) =>
-      o === '' || o === null || o === undefined ? null : v
-    ),
-  coverImageUrl: yup.string().required('封面圖片 URL 不能為空'),
-  summary: yup.string().nullable(),
+  imageUrl: yup.string().nullable(),
   content: yup.string().required('請輸入內容'),
+  scheduledAt: yup.string().nullable(),
+  endTime: yup.string().nullable(),
 });
 
 const { errors, handleSubmit, setValues, defineField } = useForm({
@@ -204,19 +228,19 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
   initialValues: {
     title: '',
     status: 'DRAFT',
-    orderNum: null as number | null,
-    coverImageUrl: '',
-    summary: '',
+    imageUrl: '',
     content: '',
+    scheduledAt: '',
+    endTime: '',
   },
 });
 
 const [title] = defineField('title');
 const [status] = defineField('status');
-const [orderNum] = defineField('orderNum');
-const [coverImageUrl] = defineField('coverImageUrl');
-const [summary] = defineField('summary');
+const [imageUrl] = defineField('imageUrl');
 const [content] = defineField('content');
+const [scheduledAt] = defineField('scheduledAt');
+const [endTime] = defineField('endTime');
 
 const imagePreview = ref('');
 const uploading = ref(false);
@@ -232,23 +256,23 @@ onMounted(async () => {
       setValues({
         title: d.title ?? '',
         status: d.status ?? 'DRAFT',
-        orderNum: d.orderNum ?? null,
-        coverImageUrl: d.coverImageUrl ?? d.imageUrl ?? '',
-        summary: d.summary ?? '',
+        imageUrl: d.imageUrl ?? '',
         content: d.content ?? '',
+        scheduledAt: toDateTimeLocalValue(d.scheduledAt),
+        endTime: toDateTimeLocalValue(d.endTime),
       });
 
-      imagePreview.value = d.coverImageUrl ?? d.imageUrl ?? '';
+      imagePreview.value = d.imageUrl ?? '';
     },
   });
 });
 
 const syncPreviewFromUrl = () => {
-  imagePreview.value = coverImageUrl.value || '';
+  imagePreview.value = imageUrl.value || '';
 };
 
 const clearImage = () => {
-  coverImageUrl.value = '';
+  imageUrl.value = '';
   imagePreview.value = '';
 };
 
@@ -291,7 +315,8 @@ const onFileChange = async (evt: Event) => {
         });
         return;
       }
-      coverImageUrl.value = url;
+
+      imageUrl.value = url;
       imagePreview.value = url;
 
       await dialogStore.openInfoDialog({
@@ -311,20 +336,21 @@ const onFileChange = async (evt: Event) => {
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const fillMockData = async () => {
   const now = new Date();
-  const mockOrder = Math.floor(Math.random() * 20) + 1;
+  const mockImg = imageUrl.value || 'https://picsum.photos/seed/news/1200/630';
 
-  const mockImg =
-    coverImageUrl.value || 'https://picsum.photos/seed/news/1200/630';
+  const yyyy = now.getFullYear();
+  const MM = pad2(now.getMonth() + 1);
+  const dd = pad2(now.getDate());
+  const hh = pad2(now.getHours());
+  const mm = pad2(now.getMinutes());
 
   setValues({
     title: `測試最新消息 ${now.getTime()}`,
     status: 'PUBLISHED',
-    orderNum: mockOrder,
-    coverImageUrl: mockImg,
-    summary: '這是一段測試摘要（可不填）',
-    content: `<p>測試內容 ${now.getFullYear()}-${pad2(
-      now.getMonth() + 1
-    )}-${pad2(now.getDate())}</p><p><strong>CKEditor</strong> 內容測試</p>`,
+    imageUrl: mockImg,
+    scheduledAt: `${yyyy}-${MM}-${dd}T${hh}:${mm}`,
+    endTime: '',
+    content: `<p>測試內容 ${yyyy}-${MM}-${dd}</p><p><strong>CKEditor</strong> 內容測試</p>`,
   });
 
   imagePreview.value = mockImg;
@@ -346,13 +372,14 @@ const onSubmit = handleSubmit(async (values) => {
     return;
   }
 
+  // ✅ 對齊 NewsCreateReq / NewsUpdateReq
   const payload = {
     title: values.title,
+    content: values.content, // CKEditor HTML string
+    imageUrl: values.imageUrl || '',
     status: values.status,
-    orderNum: values.orderNum ?? null,
-    coverImageUrl: values.coverImageUrl,
-    summary: values.summary || '',
-    content: values.content, // ✅ CKEditor HTML 字串
+    scheduledAt: toLocalDateTime(values.scheduledAt),
+    endTime: toLocalDateTime(values.endTime),
   };
 
   if (!isEdit.value) {
@@ -381,16 +408,156 @@ const onSubmit = handleSubmit(async (values) => {
     });
   }
 });
+/** ✅ 產生更豐富的 CKEditor HTML（比原本長很多） */
+const buildRichMockHtml = (seed: string) => {
+  return `
+    <h2>📣 ${seed}｜系統公告與活動資訊</h2>
+
+    <p>
+      感謝各位玩家的支持！本次更新將帶來更完整的抽獎體驗與穩定性改善，
+      包含伺服器優化、抽獎流程更順暢、以及儲值與賞品盒流程調整。
+    </p>
+
+    <h3>✅ 本次更新重點</h3>
+    <ul>
+      <li><strong>抽獎流程優化</strong>：提高抽獎畫面反應速度，降低等待時間</li>
+      <li><strong>儲值方案更新</strong>：新增活動加碼，並改善付款流程提示</li>
+      <li><strong>賞品盒出貨體驗</strong>：新增分店彙總與批次出貨功能</li>
+      <li><strong>最新消息顯示</strong>：支援封面圖、內容格式完整呈現</li>
+    </ul>
+
+    <h3>🕒 活動時間</h3>
+    <p>
+      活動期間：<strong>即日起 ～ 2026/12/31</strong><br />
+      期間內不定期推出限量加碼與特殊賞項，請密切關注最新公告。
+    </p>
+
+    <blockquote>
+      📌 小提醒：若你遇到頁面異常或載入較慢，建議重新整理或稍後再試。
+      我們會持續優化系統穩定性。
+    </blockquote>
+
+    <h3>🎁 加碼說明</h3>
+    <ol>
+      <li>單筆儲值達門檻可獲得額外點數回饋</li>
+      <li>指定系列抽獎將提高稀有賞出現機率（依活動規則為準）</li>
+      <li>每日首次登入有機會獲得免費抽獎次數</li>
+    </ol>
+
+    <h3>📦 出貨資訊</h3>
+    <p>
+      若你已累積多項實體獎品，可前往「賞品盒」進行出貨。<br />
+      出貨時請確認收件資料完整，避免配送失敗。
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>功能</th>
+          <th>狀態</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>抽獎</td>
+          <td>正常</td>
+          <td>流程優化完成</td>
+        </tr>
+        <tr>
+          <td>儲值</td>
+          <td>正常</td>
+          <td>付款提示更新</td>
+        </tr>
+        <tr>
+          <td>賞品盒</td>
+          <td>正常</td>
+          <td>支援批次出貨</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      若你有任何問題，歡迎透過客服聯絡我們。<br />
+      再次感謝你的支持，祝你抽到夢想中的大獎！✨
+    </p>
+  `;
+};
+
+/** ✅ 批量建立 mock 最新消息（一次建立 N 筆） */
+const batchCreateMockNews = async () => {
+  if (uploading.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '圖片上傳中，請稍後再試',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  if (isEdit.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '目前是編輯模式，批量新增只允許在新增頁使用',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  // ✅ 你可以改成 5 / 20
+  const count = 10;
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '批量新增確認',
+    message: `即將建立 ${count} 筆最新消息，確定要執行嗎？`,
+  });
+
+  if (!ok) return;
+
+  // ✅ 建議用「逐筆」送，避免後端瞬間壓力太大
+  // 如果你後端扛得住，也可改 Promise.all
+  await executeApi({
+    fn: async () => {
+      for (let i = 1; i <= count; i++) {
+        const now = new Date();
+        const seed = `批量公告 #${i}`;
+
+        const payload = {
+          title: `${seed}｜${now.getTime()}`,
+          status: 'PUBLISHED',
+          imageUrl:
+            imageUrl.value || `https://picsum.photos/seed/news-${i}/1200/630`,
+          content: buildRichMockHtml(seed),
+          scheduledAt: null,
+          endTime: null,
+        };
+
+        await createNews(payload);
+      }
+      return true;
+    },
+    onSuccess: async () => {
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: `批量新增完成 ✅ 已建立 ${count} 筆最新消息`,
+        iconType: 'success',
+      });
+
+      // ✅ 新增完回列表
+      router.push('/home/news');
+    },
+
+    showSuccessDialog: false,
+  });
+};
 </script>
 
 <style scoped>
-/* 若你專案已有 .error-text 可移除 */
 .error-text {
   color: #d93025;
   font-size: 12px;
 }
 
-/* CKEditor 外框微調（避免太貼邊） */
 :deep(.ck-editor__editable) {
   min-height: 260px;
 }

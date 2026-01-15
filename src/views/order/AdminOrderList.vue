@@ -47,6 +47,7 @@
           v-model:selected="selectedIds"
           :useWidthClass="true"
           :sort-key="sortKey"
+          :sort-order="sortOrder"
           @sort="handleSort"
         >
           <template #cell-orderNo="{ item }">

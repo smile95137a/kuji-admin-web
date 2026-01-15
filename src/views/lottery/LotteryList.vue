@@ -1,5 +1,6 @@
 <!-- src/views/lottery/LotteryList.vue -->
 <template>
+  <!-- 查詢區 -->
   <MCard>
     <Form
       ref="formRef"
@@ -68,14 +69,17 @@
         </div>
       </div>
 
+      <!-- ✅ 查詢按鈕：比照 B02002，用權限控制 -->
       <div class="flex justify-center m-y-8">
         <MButton type="submit">查詢</MButton>
       </div>
     </Form>
   </MCard>
 
+  <!-- 結果區 -->
   <div class="m-t-12">
     <MCard>
+      <!-- ✅ 上方操作區（比照 B02002） -->
       <div class="flex justify-end gap-x-12 flex-wrap">
         <MButton @click="navigateToAdd">新增</MButton>
 
@@ -112,24 +116,81 @@
           v-model:selected="selectedIds"
           :useWidthClass="true"
           :sort-key="sortKey"
+          :sort-order="sortOrder"
           @sort="handleSort"
         >
+          <!-- 標題可點（進編輯） -->
           <template #cell-title="{ item }">
             <span class="clickable" @click="navigateToEdit(item)">
               {{ item.title || '-' }}
             </span>
           </template>
 
-          <template #cell-status="{ item }">
-            <span>{{ statusText(item.status) }}</span>
+          <!-- 店家 -->
+          <template #cell-storeName="{ item }">
+            <span>{{ item.storeName || item.storeId || '-' }}</span>
           </template>
 
+          <!-- 圖片 -->
+          <template #cell-imageUrl="{ item }">
+            <img
+              v-if="item.imageUrl"
+              :src="resolveImageUrl(item.imageUrl)"
+              alt="lottery"
+              style="width: 120px; height: auto; border-radius: 4px"
+            />
+            <span v-else>-</span>
+          </template>
+
+          <!-- 類別 -->
+          <template #cell-categoryName="{ item }">
+            <span>{{ item.categoryName || item.category || '-' }}</span>
+          </template>
+
+          <!-- 價格 -->
+          <template #cell-pricePerDraw="{ item }">
+            <span>{{ formatMoney(item.pricePerDraw) }}</span>
+          </template>
+
+          <template #cell-currentPrice="{ item }">
+            <span>{{ formatMoney(item.currentPrice) }}</span>
+          </template>
+
+          <template #cell-discountedPrice="{ item }">
+            <span>{{ formatMoney(item.discountedPrice) }}</span>
+          </template>
+
+          <!-- 抽數 -->
+          <template #cell-totalDraws="{ item }">
+            <span>{{ numberOrDash(item.totalDraws) }}</span>
+          </template>
+
+          <template #cell-remainingDraws="{ item }">
+            <span>{{ numberOrDash(item.remainingDraws) }}</span>
+          </template>
+
+          <!-- 狀態 -->
+          <template #cell-statusName="{ item }">
+            <span>{{ item.statusName || statusText(item.status) }}</span>
+          </template>
+
+          <!-- ✅ 日期用 DateFormatter（統一格式） -->
           <template #cell-updatedAt="{ item }">
-            <span>{{ formatDateTime(item.updatedAt) }}</span>
+            <DateFormatter
+              v-if="item.updatedAt"
+              :date="item.updatedAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+            <span v-else>-</span>
           </template>
 
           <template #cell-createdAt="{ item }">
-            <span>{{ formatDateTime(item.createdAt) }}</span>
+            <DateFormatter
+              v-if="item.createdAt"
+              :date="item.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+            <span v-else>-</span>
           </template>
         </ReportTable>
 
@@ -152,6 +213,9 @@
 </template>
 
 <script setup lang="ts">
+/* ==============================
+ * Imports
+ * ============================== */
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { Form, FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
@@ -169,6 +233,8 @@ import FormTitle from '@/components/common/FormTitle.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 
+import DateFormatter from '@/components/common/DateFormatter.vue';
+
 import { useDialogStore, useAuthStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useLotteryStore } from '@/stores/lottery/useLotteryStore';
@@ -180,11 +246,17 @@ import {
   deleteLottery,
 } from '@/services/AdminLotteryService';
 
+/* ==============================
+ * Permission / Router / Store
+ * ============================== */
 const router = useRouter();
 const dialogStore = useDialogStore();
 const authStore = useAuthStore();
 const lotteryStore = useLotteryStore();
 
+/* ==============================
+ * isAdmin（沿用你原本邏輯）
+ * ============================== */
 const isAdmin = computed(() => {
   const roles = authStore.user?.roles || authStore.user?.authorities || [];
   const codes = Array.isArray(roles)
@@ -195,6 +267,9 @@ const isAdmin = computed(() => {
   );
 });
 
+/* ==============================
+ * Form & InitValues
+ * ============================== */
 const formRef = ref<FormContext | null>(null);
 
 const initValues = ref<any>({
@@ -206,25 +281,125 @@ const initValues = ref<any>({
   createdAtEnd: '',
 });
 
+/* ==============================
+ * Search Hook (local list)
+ * ============================== */
 const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
   useLocalList: true,
 });
 
+/* ==============================
+ * Select Options
+ * ============================== */
 const statusOptions = ref<SelectOption[]>([
-  { label: '全部', value: '' },
   { label: '上架', value: 'ON_SHELF' },
   { label: '下架', value: 'OFF_SHELF' },
 ]);
-
-const formatDateTime = (v?: string) => (v ? String(v).replace('T', ' ') : '-');
-
-const statusText = (s?: string) =>
-  s === 'ON_SHELF' ? '上架' : s === 'OFF_SHELF' ? '下架' : s ? String(s) : '-';
 
 const loadSelectOptions = async () => {
   await nextTick();
 };
 
+/* ==============================
+ * Utils
+ * ============================== */
+const API_BASE_URL =
+  ((import.meta as any)?.env?.VITE_API_BASE_URL as string) || '';
+
+const resolveImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url;
+
+  if (API_BASE_URL) {
+    const base = API_BASE_URL.replace(/\/$/, '');
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${base}${path}`;
+  }
+
+  return url;
+};
+
+const statusText = (s?: string) =>
+  s === 'ON_SHELF' ? '上架' : s === 'OFF_SHELF' ? '下架' : s ? String(s) : '-';
+
+const numberOrDash = (v: any) => {
+  if (v === 0) return '0';
+  return v ? String(v) : '-';
+};
+
+const formatMoney = (v: any) => {
+  if (v === 0) return '0';
+  if (v === null || v === undefined || v === '') return '-';
+  const n = Number(v);
+  if (Number.isNaN(n)) return String(v);
+  return n.toLocaleString('zh-TW');
+};
+
+/* ==============================
+ * Sorting（比照 B02002 寫法）
+ * ============================== */
+const sortKey = ref('');
+const sortOrder = ref<'asc' | 'desc' | ''>('asc');
+
+const handleSort = ({ key, order }: any) => {
+  sortKey.value = key;
+  sortOrder.value = order;
+  goToPage(1);
+};
+
+const sortedList = computed(() => {
+  if (!sortKey.value || !sortOrder.value) return list.value;
+
+  const arr = [...list.value];
+
+  arr.sort((a: any, b: any) =>
+    compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
+      type: 'auto',
+      mode: 'big5',
+      locale: 'zh-TW',
+    })
+  );
+
+  return arr;
+});
+
+/* ==============================
+ * Pagination（比照 B02002）
+ * ============================== */
+const pageLimitSize = ref(10);
+
+const {
+  totalPages,
+  currentPageItems,
+  renderPaginationNums,
+  currentPage,
+  nextPage,
+  previousPage,
+  goToPage,
+} = usePagination(sortedList, pageLimitSize);
+
+/* ==============================
+ * Table Columns（對齊 LotteryRes）
+ * ============================== */
+const columns = [
+  { field: 'storeName', label: '店家', width: 160, sortable: true },
+  { field: 'title', label: '標題', width: 260, sortable: true },
+  { field: 'imageUrl', label: '圖片', width: 160 },
+  { field: 'categoryName', label: '分類', width: 140, sortable: true },
+  { field: 'pricePerDraw', label: '單抽價格', width: 110, sortable: true },
+  { field: 'currentPrice', label: '目前價格', width: 110, sortable: true },
+  { field: 'discountedPrice', label: '折扣價', width: 100, sortable: true },
+  { field: 'totalDraws', label: '總抽數', width: 90, sortable: true },
+  { field: 'remainingDraws', label: '剩餘抽數', width: 100, sortable: true },
+  { field: 'orderNum', label: '排序', width: 80, sortable: true },
+  { field: 'statusName', label: '狀態', width: 110, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
+  { field: 'createdAt', label: '建立時間', width: 160, sortable: true },
+];
+
+/* ==============================
+ * Query（比照 B02002：onSubmit -> query() -> goToPage）
+ * ============================== */
 const filterRows = (rows: any[], cond: any) => {
   const status = String(cond?.status || '').trim();
   const title = String(cond?.title || '')
@@ -268,70 +443,15 @@ const filterRows = (rows: any[], cond: any) => {
   });
 };
 
-const doQuery = async (condition: any) => {
-  lotteryStore.setSearchCondition(condition);
-
-  await query(async () => {
-    const req = { condition };
-    const res = await queryLotteries(req);
-  });
-
-  list.value = filterRows(list.value, condition);
-};
-
 const onSubmit = async (values: any) => {
-  await doQuery(values);
+  await query(() => queryLotteries(values));
   goToPage(1);
   selectedIds.value = [];
 };
 
-/* Sorting */
-const sortKey = ref('');
-const sortOrder = ref<'asc' | 'desc' | ''>('asc');
-
-const handleSort = ({ key, order }: any) => {
-  sortKey.value = key;
-  sortOrder.value = order;
-  goToPage(1);
-};
-
-const sortedList = computed(() => {
-  if (!sortKey.value || !sortOrder.value) return list.value;
-
-  const arr = [...list.value];
-  arr.sort((a: any, b: any) =>
-    compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
-      type: 'auto',
-      mode: 'big5',
-      locale: 'zh-TW',
-    })
-  );
-  return arr;
-});
-
-/* Pagination */
-const pageLimitSize = ref(10);
-
-const {
-  totalPages,
-  currentPageItems,
-  renderPaginationNums,
-  currentPage,
-  nextPage,
-  previousPage,
-  goToPage,
-} = usePagination(sortedList, pageLimitSize);
-
-/* Columns（先用常見欄位；你 LotteryRes 若有 price/orderNum 等再加） */
-const columns = [
-  { field: 'title', label: '標題', width: 260, sortable: true },
-  { field: 'status', label: '狀態', width: 100, sortable: true },
-  { field: 'storeId', label: '店家ID', width: 220, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
-  { field: 'createdAt', label: '建立時間', width: 160, sortable: true },
-];
-
-/* Selection / Bulk */
+/* ==============================
+ * Selection / Bulk Actions
+ * ============================== */
 const selectedIds = ref<string[]>([]);
 
 const selectedRows = computed(() =>
@@ -464,13 +584,16 @@ const deleteSelected = async () => {
   });
 };
 
-/* Navigation（進表單前暫存） */
+/* ==============================
+ * Navigation（編輯 → 暫存）（比照 B02002）
+ * ============================== */
 const stashStateAndGo = (path: string) => {
   lotteryStore.setList([...list.value]);
   lotteryStore.setSearchCondition(formRef.value?.values || {});
   lotteryStore.setSort(sortKey.value, sortOrder.value);
   lotteryStore.setCurrentPage(currentPage.value);
   lotteryStore.setPageLimitSize(pageLimitSize.value);
+
   router.push(path);
 };
 
@@ -478,7 +601,9 @@ const navigateToAdd = () => stashStateAndGo('/home/lottery/add');
 const navigateToEdit = (item: any) =>
   stashStateAndGo(`/home/lottery/edit/${item.id}`);
 
-/* Lifecycle（回來 → 還原） */
+/* ==============================
+ * Lifecycle（回來 → 還原）（比照 B02002）
+ * ============================== */
 onMounted(async () => {
   await loadSelectOptions();
 
@@ -486,13 +611,16 @@ onMounted(async () => {
     list.value = [...lotteryStore.list];
 
     initValues.value = { ...lotteryStore.searchCondition };
-    if (formRef.value) formRef.value.setValues(lotteryStore.searchCondition);
+    if (formRef.value) {
+      formRef.value.setValues(lotteryStore.searchCondition);
+    }
 
     sortKey.value = lotteryStore.sortKey;
     sortOrder.value = (lotteryStore.sortOrder as any) || 'asc';
-    pageLimitSize.value = lotteryStore.pageLimitSize;
 
+    pageLimitSize.value = lotteryStore.pageLimitSize;
     isSearch.value = true;
+
     await nextTick();
     goToPage(lotteryStore.currentPage);
 

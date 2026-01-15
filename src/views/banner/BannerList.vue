@@ -45,6 +45,7 @@
           v-model:selected="selectedIds"
           :useWidthClass="true"
           :sort-key="sortKey"
+          :sort-order="sortOrder"
           @sort="handleSort"
         >
           <template #cell-title="{ item }">
@@ -166,7 +167,6 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
  * Select Options
  * ============================== */
 const statusOptions = ref<SelectOption[]>([
-  { label: '全部', value: '' },
   { label: '上架', value: 'PUBLISHED' },
   { label: '下架', value: 'UNPUBLISHED' },
 ]);

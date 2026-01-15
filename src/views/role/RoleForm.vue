@@ -73,6 +73,15 @@
             快速產生資料
           </MButton>
 
+          <MButton
+            v-if="isDev && mode === 'add'"
+            type="button"
+            class="mbtn--gray"
+            @click="createMockBatch(12)"
+          >
+            快速建立 12 筆
+          </MButton>
+
           <MButton type="submit">儲存</MButton>
         </template>
 
@@ -237,6 +246,52 @@ const onSubmit = handleSubmit(async (values) => {
 const navigateToEdit = () => {
   if (!id.value) return;
   router.push(`/home/roles/edit/${id.value}`);
+};
+
+/* ✅ Dev only：批次建立多筆角色 */
+const createMockBatch = async (count = 12) => {
+  if (mode.value !== 'add') return;
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '快速建立確認',
+    message: `確定要一次建立 ${count} 筆測試角色嗎？（僅 dev 用）`,
+  });
+  if (!ok) return;
+
+  const baseTs = Date.now();
+
+  await executeApi({
+    fn: async () => {
+      const tasks = Array.from({ length: count }).map((_, idx) => {
+        const suffix = `${baseTs}_${idx + 1}`;
+        return createRole({
+          name: `測試角色_${suffix}`,
+          code: `ROLE_TEST_${suffix}`,
+          description: `dev 批次建立（${idx + 1}/${count}）`,
+        });
+      });
+
+      return Promise.allSettled(tasks);
+    },
+    onSuccess: async (results: any[]) => {
+      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const failCount = results.length - okCount;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message:
+          failCount > 0
+            ? `批次建立完成：成功 ${okCount}、失敗 ${failCount}`
+            : `批次建立完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+
+      router.push('/home/roles');
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+  });
 };
 </script>
 

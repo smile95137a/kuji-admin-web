@@ -109,6 +109,7 @@
           row-key="id"
           :useWidthClass="true"
           :sort-key="sortKey"
+          :sort-order="sortOrder"
           @sort="handleSort"
         >
           <template #cell-amount="{ item }">

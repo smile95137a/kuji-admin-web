@@ -34,7 +34,7 @@
         <!-- 排序 -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="排序（orderNum）"
+            label="排序"
             v-model="orderNum"
             :error="errors.orderNum"
             type="number"
@@ -97,7 +97,7 @@
             <MButton
               type="button"
               class="mbtn--gray"
-              :disabled="uploading"
+              :disabled="uploading || bulkCreating"
               @click="clearImage"
             >
               清除圖片
@@ -121,7 +121,17 @@
           快速產生資料
         </MButton>
 
-        <MButton type="submit" :disabled="uploading">
+        <!-- ✅ 批量新增 -->
+        <MButton
+          type="button"
+          class="mbtn--gray"
+          :disabled="isEdit || uploading || bulkCreating"
+          @click="bulkCreateMockBanners"
+        >
+          批量新增 15 筆
+        </MButton>
+
+        <MButton type="submit" :disabled="uploading || bulkCreating">
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
 
@@ -129,6 +139,8 @@
           返回
         </MButton>
       </div>
+
+      <p class="form__text m-t-6" v-if="bulkCreating">批量新增中...</p>
     </form>
   </MCard>
 </template>
@@ -164,8 +176,8 @@ const isEdit = computed(() => Boolean(route.params.id));
 
 /* 狀態選單（對齊後端：PUBLISHED/UNPUBLISHED） */
 const statusOptions: SelectOption[] = [
-  { label: '下架（UNPUBLISHED）', value: 'UNPUBLISHED' },
-  { label: '上架（PUBLISHED）', value: 'PUBLISHED' },
+  { label: '下架', value: 'UNPUBLISHED' },
+  { label: '上架', value: 'PUBLISHED' },
 ];
 
 /* 店家選項 */
@@ -176,7 +188,6 @@ const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] => {
   return list.map((x) => ({
     label: x?.label ?? '',
     value: x?.value ?? '',
-    // 你的 SelectOption 若有 description 欄位可保留；沒有也不影響
     ...(x?.description ? { description: x.description } : {}),
   }));
 };
@@ -201,7 +212,6 @@ const loadStoreOptions = async () => {
       storeOptions.value = mapEnumOptionsToSelect(
         Array.isArray(data) ? data : []
       );
-      // 編輯時如果 storeId 不在清單（例如停用/被過濾），仍補一筆避免 select 顯示空白
       ensureStoreOptionExists(storeId.value);
     },
     onFinally: () => {
@@ -261,6 +271,9 @@ const imagePreview = ref('');
 /* 上傳狀態 */
 const uploading = ref(false);
 
+/* 批量新增狀態 */
+const bulkCreating = ref(false);
+
 /* datetime-local: 送出時補秒 / 載入時裁秒（避免 input 不吃秒） */
 const normalizeToBackendLocalDateTime = (v?: string | null) => {
   if (!v) return null;
@@ -314,15 +327,12 @@ const clearImage = () => {
 
 /**
  * ✅ 選檔後上傳到 S3 → 回填 imageUrl（URL）
- * 後端：POST /admin/upload/banner (form-data: file)
- * 回傳：{ imageUrl: string }
  */
 const onFileChange = async (evt: Event) => {
   const input = evt.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
 
-  // 基本檢查：5MB + image/*
   const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
     await dialogStore.openInfoDialog({
@@ -370,7 +380,6 @@ const onFileChange = async (evt: Event) => {
     },
     onFinally: async () => {
       uploading.value = false;
-      // 避免同檔案重選不觸發 change
       input.value = '';
     },
     showSuccessDialog: false,
@@ -393,7 +402,6 @@ const fillMockData = async () => {
   const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
   const mockOrder = Math.floor(Math.random() * 20) + 1;
 
-  // 如果已經有店家選項，就挑第一個有效店家（跳過空值）
   const firstStoreId =
     storeOptions.value.find((o) => o.value)?.value || 'STORE_001';
 
@@ -419,12 +427,103 @@ const fillMockData = async () => {
   });
 };
 
-/* 提交（對齊 BannerCreateReq / BannerUpdateReq） */
-const onSubmit = handleSubmit(async (values) => {
+/* ✅ 批量新增 15 筆 */
+const bulkCreateMockBanners = async () => {
+  if (isEdit.value) return;
+
   if (uploading.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '圖片上傳中，請稍後再送出',
+      message: '圖片上傳中，請稍後再操作批量新增',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  // 先決定 storeId（優先用目前選的）
+  const pickedStoreId =
+    storeId.value || storeOptions.value.find((o) => o.value)?.value || '';
+
+  if (!pickedStoreId) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '請先選擇店家（storeId）後再批量新增',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '批量新增確認',
+    message: '確定要批量新增 15 筆 Banner 測試資料嗎？',
+  });
+  if (!ok) return;
+
+  bulkCreating.value = true;
+
+  const now = new Date();
+  const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const start = toDatetimeLocal(now);
+  const end = toDatetimeLocal(twoWeeksLater);
+
+  // orderNum 基準（避免全部一樣）
+  const baseOrder =
+    typeof orderNum.value === 'number' && !Number.isNaN(orderNum.value)
+      ? Number(orderNum.value)
+      : Math.floor(Math.random() * 30) + 1;
+
+  // 產生 15 筆 payload
+  const count = 15;
+  const tasks = Array.from({ length: count }).map((_, i) => {
+    const idx = i + 1;
+
+    const payload = {
+      storeId: pickedStoreId,
+      title: `批量 Banner #${idx}｜${Date.now()}`,
+      imageUrl: `https://picsum.photos/seed/banner-${Date.now()}-${idx}/1200/600`,
+      orderNum: baseOrder + i,
+      status: 'PUBLISHED',
+      startTime: normalizeToBackendLocalDateTime(start),
+      endTime: normalizeToBackendLocalDateTime(end),
+    };
+
+    return createBanner(payload);
+  });
+
+  try {
+    const results = await Promise.allSettled(tasks);
+    const okCount = results.filter((x) => x.status === 'fulfilled').length;
+    const failCount = results.length - okCount;
+
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message:
+        failCount > 0
+          ? `批量新增完成：成功 ${okCount}、失敗 ${failCount}`
+          : `批量新增完成：成功 ${okCount}`,
+      iconType: failCount > 0 ? 'warning' : 'success',
+    });
+
+    // 新增完直接回列表
+    router.push('/home/banner');
+  } catch (e) {
+    console.error(e);
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '批量新增失敗，請稍後再試',
+      iconType: 'warning',
+    });
+  } finally {
+    bulkCreating.value = false;
+  }
+};
+
+/* 提交（對齊 BannerCreateReq / BannerUpdateReq） */
+const onSubmit = handleSubmit(async (values) => {
+  if (uploading.value || bulkCreating.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '操作進行中，請稍後再送出',
       iconType: 'warning',
     });
     return;

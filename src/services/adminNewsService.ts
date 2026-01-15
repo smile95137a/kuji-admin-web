@@ -1,4 +1,4 @@
-// services/frontend/adminNewsService.ts
+// services/adminNewsService.ts
 import { api } from './FrontAPI';
 
 const basePath = '/admin/news';

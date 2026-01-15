@@ -27,6 +27,7 @@
         v-model:selected="selectedIds"
         :useWidthClass="true"
         :sort-key="sortKey"
+        :sort-order="sortOrder"
         @sort="handleSort"
       >
         <template #cell-name="{ item }">
@@ -36,20 +37,12 @@
         </template>
 
         <template #cell-createdAt="{ item }">
-          <DateFormatter
-            v-if="item.createdAt"
-            :date="item.createdAt"
-            format="YYYY-MM-DD HH:mm:ss"
-          />
+          <DateFormatter v-if="item.createdAt" :date="item.createdAt" />
           <span v-else>-</span>
         </template>
 
         <template #cell-updatedAt="{ item }">
-          <DateFormatter
-            v-if="item.updatedAt"
-            :date="item.updatedAt"
-            format="YYYY-MM-DD HH:mm:ss"
-          />
+          <DateFormatter v-if="item.updatedAt" :date="item.updatedAt" />
           <span v-else>-</span>
         </template>
 
