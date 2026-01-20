@@ -152,6 +152,13 @@ const menuItems = ref([
       { title: '系統日誌', route: '/home/system-log' },
     ],
   },
+  {
+    title: '商品管理（整合商品+獎品）',
+    submenu: [
+      { title: '商品與獎品列表', route: '/home/lottery-with-prizes' },
+      { title: '新增商品與獎品', route: '/home/lottery-with-prizes/add' },
+    ],
+  },
 
   {
     title: '營運工具',

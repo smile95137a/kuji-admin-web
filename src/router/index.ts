@@ -21,6 +21,7 @@ import referralCodeRoutes from './adminReferralCodeRoutes';
 import lotteryPrizeRoutes from './lotteryPrizeRoutes';
 import marqueeRoutes from './marqueeRoutes';
 import systemLogRoutes from './systemLogRoutes';
+import lotteryWithPrizesRoutes from './lotteryWithPrizesRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -53,6 +54,7 @@ const routes: Array<RouteRecordRaw> = [
       ...referralCodeRoutes,
       ...marqueeRoutes,
       ...systemLogRoutes,
+      ...lotteryWithPrizesRoutes,
     ],
   },
   {
