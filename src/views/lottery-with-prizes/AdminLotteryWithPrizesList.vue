@@ -42,41 +42,76 @@
           />
         </div>
 
-        <!-- 遊玩模式 -->
+        <!-- 商品名稱 title -->
         <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="遊玩模式"
-            v-model="playMode"
-            :options="playModeOptions"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
+          <FormInput
+            label="商品名稱"
+            v-model="title"
+            placeholder="鬼滅之刃一番賞..."
           />
         </div>
 
-        <!-- 關鍵字 -->
+        <!-- 關鍵字 keyword -->
         <div class="w-100 p-6">
           <FormInput
-            label="關鍵字（商品名稱/主題/標籤）"
+            label="關鍵字（模糊查詢）"
             v-model="keyword"
             placeholder="鬼滅 / 一番賞 / 熱門..."
           />
         </div>
 
-        <!-- 活動時間 -->
+        <!-- 每抽價格 priceMin / priceMax -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="活動開始時間（起）"
-            v-model="startTimeStart"
-            type="datetime-local"
+            label="每抽價格（最小）"
+            v-model="priceMin"
+            type="number"
+            placeholder="0"
           />
         </div>
 
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="活動開始時間（迄）"
-            v-model="startTimeEnd"
-            type="datetime-local"
+            label="每抽價格（最大）"
+            v-model="priceMax"
+            type="number"
+            placeholder="999999"
+          />
+        </div>
+
+        <!-- 總抽數 totalQuantityMin / totalQuantityMax -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="總抽數（最小）"
+            v-model="totalQuantityMin"
+            type="number"
+            placeholder="0"
+          />
+        </div>
+
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="總抽數（最大）"
+            v-model="totalQuantityMax"
+            type="number"
+            placeholder="999999"
+          />
+        </div>
+
+        <!-- 建立時間 createdAtStart / createdAtEnd（yyyy-MM-dd） -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="建立時間（起）"
+            v-model="createdAtStart"
+            type="date"
+          />
+        </div>
+
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="建立時間（迄）"
+            v-model="createdAtEnd"
+            type="date"
           />
         </div>
       </div>
@@ -139,10 +174,6 @@
             <span>{{ categoryText(item.category) }}</span>
           </template>
 
-          <template #cell-playMode="{ item }">
-            <span>{{ playModeText(item.playMode) }}</span>
-          </template>
-
           <template #cell-status="{ item }">
             <span>{{ statusText(item.status) }}</span>
           </template>
@@ -183,7 +214,7 @@
  * Imports
  * ============================== */
 import { ref, computed, onMounted } from 'vue';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext, useForm } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -203,8 +234,10 @@ import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import { getStoreOptions } from '@/services/adminStoreService';
-
-import { updateLotteryWithPrizes } from '@/services/adminLotteryWithPrizesService';
+import {
+  getAllLotteriesWithPrizes,
+  updateLotteryWithPrizes,
+} from '@/services/adminLotteryWithPrizesService';
 
 /* ==============================
  * Router / Store
@@ -221,10 +254,14 @@ const initValues = ref<any>({
   storeId: '',
   status: '',
   category: '',
-  playMode: '',
+  title: '',
   keyword: '',
-  startTimeStart: '',
-  startTimeEnd: '',
+  priceMin: '',
+  priceMax: '',
+  totalQuantityMin: '',
+  totalQuantityMax: '',
+  createdAtStart: '',
+  createdAtEnd: '',
 });
 
 /* ==============================
@@ -258,11 +295,6 @@ const categoryOptions = ref<SelectOption[]>([
   { label: '自製賞', value: 'CUSTOM_GACHA' },
 ]);
 
-const playModeOptions = ref<SelectOption[]>([
-  { label: '抽籤型（LOTTERY_MODE）', value: 'LOTTERY_MODE' },
-  { label: '刮刮樂型（SCRATCH_MODE）', value: 'SCRATCH_MODE' },
-]);
-
 const mapEnumOptionsToSelect = (arr: any[] = []): SelectOption[] =>
   arr.map((x) => ({
     label: x?.label ?? '',
@@ -275,7 +307,7 @@ const loadStoreOptions = async () => {
     fn: async () => getStoreOptions({ activeOnly: true }),
     onSuccess: (data) => {
       storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : []
+        Array.isArray(data) ? data : [],
       );
     },
     showSuccessDialog: false,
@@ -283,10 +315,8 @@ const loadStoreOptions = async () => {
 };
 
 /* ==============================
- * useForm defineField（用 v-model 綁定，跟你專案習慣一致）
+ * useForm defineField
  * ============================== */
-import { useForm } from 'vee-validate';
-
 const { defineField, handleSubmit, setValues } = useForm({
   initialValues: initValues.value,
 });
@@ -294,10 +324,17 @@ const { defineField, handleSubmit, setValues } = useForm({
 const [storeId] = defineField('storeId');
 const [status] = defineField('status');
 const [category] = defineField('category');
-const [playMode] = defineField('playMode');
+const [title] = defineField('title');
 const [keyword] = defineField('keyword');
-const [startTimeStart] = defineField('startTimeStart');
-const [startTimeEnd] = defineField('startTimeEnd');
+
+const [priceMin] = defineField('priceMin');
+const [priceMax] = defineField('priceMax');
+
+const [totalQuantityMin] = defineField('totalQuantityMin');
+const [totalQuantityMax] = defineField('totalQuantityMax');
+
+const [createdAtStart] = defineField('createdAtStart');
+const [createdAtEnd] = defineField('createdAtEnd');
 
 /* ==============================
  * Utils
@@ -311,34 +348,25 @@ const statusText = (s?: string) =>
   s === 'DRAFT'
     ? '草稿'
     : s === 'ON_SHELF'
-    ? '上架'
-    : s === 'OFF_SHELF'
-    ? '下架'
-    : s
-    ? String(s)
-    : '-';
+      ? '上架'
+      : s === 'OFF_SHELF'
+        ? '下架'
+        : s
+          ? String(s)
+          : '-';
 
 const categoryText = (c?: string) =>
   c === 'OFFICIAL_ICHIBAN'
     ? '官方一番賞'
     : c === 'GACHA'
-    ? '扭蛋'
-    : c === 'TRADING_CARD'
-    ? '卡牌'
-    : c === 'CUSTOM_GACHA'
-    ? '自製賞'
-    : c
-    ? String(c)
-    : '-';
-
-const playModeText = (p?: string) =>
-  p === 'LOTTERY_MODE'
-    ? '抽籤型'
-    : p === 'SCRATCH_MODE'
-    ? '刮刮樂型'
-    : p
-    ? String(p)
-    : '-';
+      ? '扭蛋'
+      : c === 'TRADING_CARD'
+        ? '卡牌'
+        : c === 'CUSTOM_GACHA'
+          ? '自製賞'
+          : c
+            ? String(c)
+            : '-';
 
 /* ==============================
  * Sorting
@@ -361,7 +389,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -388,7 +416,6 @@ const columns = [
   { field: 'storeName', label: '店家', width: 160, sortable: true },
   { field: 'title', label: '商品名稱', width: 240, sortable: true },
   { field: 'category', label: '分類', width: 140, sortable: true },
-  { field: 'playMode', label: '遊玩模式', width: 120, sortable: true },
   { field: 'pricePerDraw', label: '每抽價格', width: 110, sortable: true },
   { field: 'maxDraws', label: '總抽數', width: 90, sortable: true },
   { field: 'status', label: '狀態', width: 90, sortable: true },
@@ -401,7 +428,8 @@ const columns = [
 const onSubmit = handleSubmit(async (values: any) => {
   const req = { condition: values };
 
-  await query(() => queryLotteryWithPrizes(req));
+  // ✅ 真正打後端 /admin/lottery-with-prizes/list
+  await query(() => getAllLotteriesWithPrizes(req));
   goToPage(1);
 });
 
@@ -411,21 +439,21 @@ const onSubmit = handleSubmit(async (values: any) => {
 const selectedIds = ref<string[]>([]);
 
 const selectedRows = computed(() =>
-  list.value.filter((row: any) => selectedIds.value.includes(row.id))
+  list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
-// 上架：只有 OFF_SHELF 才能上架（你也可以改成 DRAFT + OFF_SHELF 皆可）
+// 上架：只有 OFF_SHELF 才能上架
 const canEnable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.status === 'OFF_SHELF')
+    selectedRows.value.every((r: any) => r.status === 'OFF_SHELF'),
 );
 
 // 下架：只有 ON_SHELF 才能下架
 const canDisable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.status === 'ON_SHELF')
+    selectedRows.value.every((r: any) => r.status === 'ON_SHELF'),
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
@@ -436,7 +464,7 @@ const refresh = async () => {
   selectedIds.value = [];
 };
 
-/** ✅ 批次上架：用 updateLotteryWithPrizes 做部分更新 status */
+/** ✅ 批次上架 */
 const enableSelected = async () => {
   if (!canEnable.value) {
     await dialogStore.openInfoDialog({
@@ -457,8 +485,8 @@ const enableSelected = async () => {
     fn: async () =>
       Promise.allSettled(
         selectedIds.value.map((id) =>
-          updateLotteryWithPrizes(id, { lottery: { status: 'ON_SHELF' } })
-        )
+          updateLotteryWithPrizes(id, { lottery: { status: 'ON_SHELF' } }),
+        ),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
@@ -500,8 +528,8 @@ const disableSelected = async () => {
     fn: async () =>
       Promise.allSettled(
         selectedIds.value.map((id) =>
-          updateLotteryWithPrizes(id, { lottery: { status: 'OFF_SHELF' } })
-        )
+          updateLotteryWithPrizes(id, { lottery: { status: 'OFF_SHELF' } }),
+        ),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
@@ -522,7 +550,7 @@ const disableSelected = async () => {
   });
 };
 
-/** ✅ 批次刪除 */
+/** ✅ 批次刪除（你後端還沒提供 delete API） */
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
@@ -532,27 +560,11 @@ const deleteSelected = async () => {
   });
   if (!ok) return;
 
-  await executeApi({
-    fn: async () =>
-      Promise.allSettled(
-        selectedIds.value.map((id) => deleteLotteryWithPrizes(id))
-      ),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
-      const failCount = results.length - okCount;
-
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message:
-          failCount > 0
-            ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
-            : `刪除完成：成功 ${okCount}`,
-        iconType: failCount > 0 ? 'warning' : 'success',
-      });
-
-      await refresh();
-    },
-    showSuccessDialog: false,
+  await dialogStore.openInfoDialog({
+    title: '提示訊息',
+    message:
+      '目前後端尚未提供 deleteLotteryWithPrizes API，請補上後我再幫你串。',
+    iconType: 'warning',
   });
 };
 
@@ -578,4 +590,9 @@ onMounted(async () => {
 });
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+}
+</style>
