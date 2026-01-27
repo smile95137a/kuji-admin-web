@@ -7,7 +7,7 @@
       </p>
 
       <div class="flex flex-wrap">
-        <!-- 店家（改成打 API 的 Select） -->
+        <!-- 店家 -->
         <div class="w-50 w-md-100 p-6">
           <FormSelect
             label="店家"
@@ -18,9 +18,9 @@
             allLabel="請選擇"
             :allValue="''"
           />
-          <p class="form__text m-t-6" v-if="storeLoading">店家選項載入中...</p>
         </div>
-
+      </div>
+      <div class="flex flex-wrap">
         <!-- 標題 -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
@@ -30,7 +30,8 @@
             placeholder="請輸入 Banner 標題"
           />
         </div>
-
+      </div>
+      <div class="flex flex-wrap">
         <!-- 排序 -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
@@ -38,10 +39,10 @@
             v-model="orderNum"
             :error="errors.orderNum"
             type="number"
-            placeholder="數字越小越前面"
           />
         </div>
-
+      </div>
+      <div class="flex flex-wrap">
         <!-- 狀態 -->
         <div class="w-50 w-md-100 p-6">
           <FormSelect
@@ -51,44 +52,52 @@
             :error="errors.status"
           />
         </div>
+      </div>
+      <div class="flex flex-wrap">
+        <div class="w-50 flex">
+          <!-- 開始時間 -->
+          <div class="w-50 p-6">
+            <FormInput
+              label="開始顯示時間"
+              type="datetime-local"
+              v-model="startTime"
+              :error="errors.startTime"
+            />
+          </div>
 
-        <!-- 開始顯示時間 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="開始顯示時間"
-            type="datetime-local"
-            v-model="startTime"
-            :error="errors.startTime"
-          />
+          <!-- 結束時間 -->
+          <div class="w-50 p-6">
+            <FormInput
+              label="結束顯示時間"
+              type="datetime-local"
+              v-model="endTime"
+              :error="errors.endTime"
+            />
+          </div>
         </div>
-
-        <!-- 結束顯示時間 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="結束顯示時間"
-            type="datetime-local"
-            v-model="endTime"
-            :error="errors.endTime"
-          />
-        </div>
-
+      </div>
+      <div class="flex flex-wrap">
         <!-- 圖片 -->
-        <div class="w-100 p-6">
-          <FormInput
-            label="圖片（上傳到 S3 後回填 imageUrl）"
-            type="file"
+        <div class="w-50 p-6">
+          <UploadDropzone
+            label="圖片"
             accept="image/*"
-            @change="onFileChange"
-            :error="errors.imageUrl"
+            :disabled="uploading || bulkCreating || cropOpen"
+            :fileName="uploadFileName"
+            :errorMessage="uploadErrorMessage"
+            :statusText="uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''"
+            :showDecorIcons="true"
+            :showClear="true"
+            @select="handleSelectedFile"
+            @clear="clearSelectedFileUi"
           />
 
           <!-- 也允許直接貼 URL -->
           <div class="m-t-12">
             <FormInput
-              label="圖片 URL（可直接貼）"
+              label="圖片 URL"
               v-model="imageUrl"
               :error="errors.imageUrl"
-              placeholder="https://example.com/banner.jpg（或上方上傳會自動回填）"
               @blur="syncPreviewFromUrl"
             />
           </div>
@@ -115,38 +124,34 @@
         </div>
       </div>
 
-      <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12">
-        <MButton type="button" class="mbtn--gray" @click="fillMockData">
-          快速產生資料
-        </MButton>
-
-        <!-- ✅ 批量新增 -->
-        <MButton
-          type="button"
-          class="mbtn--gray"
-          :disabled="isEdit || uploading || bulkCreating"
-          @click="bulkCreateMockBanners"
-        >
-          批量新增 15 筆
-        </MButton>
+        <MButton @click="fillMockData"> 快速產生資料 </MButton>
 
         <MButton type="submit" :disabled="uploading || bulkCreating">
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
 
-        <MButton type="button" class="mbtn--red" @click="router.back()">
-          返回
-        </MButton>
+        <MButton @click="router.back()"> 返回 </MButton>
       </div>
-
-      <p class="form__text m-t-6" v-if="bulkCreating">批量新增中...</p>
     </form>
+
+    <ImageCropDialog
+      v-model="cropOpen"
+      :src="cropSrc"
+      title="裁切 Banner 圖片"
+      :aspectRatio="16 / 9"
+      :outputWidth="1200"
+      mimeType="image/jpeg"
+      :quality="0.9"
+      :fileName="cropFileName"
+      @cancel="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </MCard>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -155,6 +160,8 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
+import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
+import UploadDropzone from '@/components/common/UploadDropzone.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore } from '@/stores';
@@ -167,14 +174,12 @@ import {
 import { uploadBannerImage } from '@/services/adminUploadService';
 import { getStoreOptions } from '@/services/adminStoreService';
 
-/* Setup */
 const route = useRoute();
 const router = useRouter();
 const dialogStore = useDialogStore();
 
 const isEdit = computed(() => Boolean(route.params.id));
 
-/* 狀態選單（對齊後端：PUBLISHED/UNPUBLISHED） */
 const statusOptions: SelectOption[] = [
   { label: '下架', value: 'UNPUBLISHED' },
   { label: '上架', value: 'PUBLISHED' },
@@ -182,15 +187,13 @@ const statusOptions: SelectOption[] = [
 
 /* 店家選項 */
 const storeOptions = ref<SelectOption[]>([]);
-const storeLoading = ref(false);
 
-const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] => {
-  return list.map((x) => ({
+const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
+  list.map((x) => ({
     label: x?.label ?? '',
     value: x?.value ?? '',
     ...(x?.description ? { description: x.description } : {}),
   }));
-};
 
 const ensureStoreOptionExists = (storeIdValue: string) => {
   if (!storeIdValue) return;
@@ -204,25 +207,18 @@ const ensureStoreOptionExists = (storeIdValue: string) => {
 };
 
 const loadStoreOptions = async () => {
-  storeLoading.value = true;
-
   await executeApi<any[]>({
-    fn: async () => getStoreOptions({ activeOnly: true }),
+    fn: () => getStoreOptions({ activeOnly: true }),
     onSuccess: (data) => {
       storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : []
+        Array.isArray(data) ? data : [],
       );
       ensureStoreOptionExists(storeId.value);
     },
-    onFinally: () => {
-      storeLoading.value = false;
-    },
-    showFailDialog: true,
-    showCatchDialog: true,
   });
 };
 
-/* schema（對齊 BannerCreateReq） */
+/* schema */
 const schema = yup.object({
   storeId: yup.string().required('店家不能為空'),
   title: yup.string().required('請輸入標題'),
@@ -232,7 +228,7 @@ const schema = yup.object({
     .typeError('排序必須是數字')
     .nullable()
     .transform((v, o) =>
-      o === '' || o === null || o === undefined ? null : v
+      o === '' || o === null || o === undefined ? null : v,
     ),
   status: yup
     .string()
@@ -265,32 +261,44 @@ const [status] = defineField('status');
 const [startTime] = defineField('startTime');
 const [endTime] = defineField('endTime');
 
-/* 預覽圖 */
 const imagePreview = ref('');
 
-/* 上傳狀態 */
 const uploading = ref(false);
-
-/* 批量新增狀態 */
 const bulkCreating = ref(false);
 
-/* datetime-local: 送出時補秒 / 載入時裁秒（避免 input 不吃秒） */
-const normalizeToBackendLocalDateTime = (v?: string | null) => {
-  if (!v) return null;
-  if (v.length === 16) return `${v}:00`;
-  return v;
-};
-const normalizeToDatetimeLocalInput = (v?: string | null) => {
-  if (!v) return '';
-  return v.length >= 16 ? v.slice(0, 16) : v;
+/* crop */
+const cropOpen = ref(false);
+const cropSrc = ref('');
+const cropFileName = ref('cropped.jpg');
+
+const uploadFileName = ref('');
+const uploadErrorMessage = ref<string | null>(null);
+
+const clearSelectedFileUi = () => {
+  uploadFileName.value = '';
+  uploadErrorMessage.value = null;
 };
 
-/* 編輯模式載入資料（GET /admin/banner/{id}） */
+const revokeCropSrc = () => {
+  if (cropSrc.value) {
+    URL.revokeObjectURL(cropSrc.value);
+    cropSrc.value = '';
+  }
+};
+
+const onCropCancel = () => {
+  cropOpen.value = false;
+  revokeCropSrc();
+};
+
+onBeforeUnmount(() => {
+  revokeCropSrc();
+});
+
+/* 編輯模式載入 */
 onMounted(async () => {
-  // 1) 先載入店家選單
   await loadStoreOptions();
 
-  // 2) 再載入 banner（若為 edit）
   if (!isEdit.value) return;
 
   await executeApi({
@@ -304,8 +312,8 @@ onMounted(async () => {
         imageUrl: d.imageUrl ?? '',
         orderNum: d.orderNum ?? null,
         status: d.status ?? 'UNPUBLISHED',
-        startTime: normalizeToDatetimeLocalInput(d.startTime),
-        endTime: normalizeToDatetimeLocalInput(d.endTime),
+        startTime: d.startTime,
+        endTime: d.endTime,
       });
 
       imagePreview.value = d.imageUrl ?? '';
@@ -314,49 +322,72 @@ onMounted(async () => {
   });
 });
 
-/** 手動貼 URL 後同步預覽 */
+/* 手動貼 URL 同步預覽 */
 const syncPreviewFromUrl = () => {
   imagePreview.value = imageUrl.value || '';
 };
 
-/** 清除圖片 */
+/* 清除圖片 */
 const clearImage = () => {
   imageUrl.value = '';
   imagePreview.value = '';
 };
 
-/**
- * ✅ 選檔後上傳到 S3 → 回填 imageUrl（URL）
- */
-const onFileChange = async (evt: Event) => {
-  const input = evt.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
+/* 由 UploadDropzone 丟進來的 file */
+const handleSelectedFile = async (file: File) => {
+  uploadErrorMessage.value = null;
 
   const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
+    uploadErrorMessage.value = '圖片大小不可超過 5MB';
     await dialogStore.openInfoDialog({
       title: '提示訊息',
       message: '圖片大小不可超過 5MB',
       iconType: 'warning',
     });
-    input.value = '';
+    clearSelectedFileUi();
     return;
   }
   if (!file.type.startsWith('image/')) {
+    uploadErrorMessage.value = '請選擇圖片檔案';
     await dialogStore.openInfoDialog({
       title: '提示訊息',
       message: '請選擇圖片檔案',
       iconType: 'warning',
     });
-    input.value = '';
+    clearSelectedFileUi();
+    return;
+  }
+
+  uploadFileName.value = file.name;
+
+  revokeCropSrc();
+  cropSrc.value = URL.createObjectURL(file);
+
+  const base = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  cropFileName.value = `${base}-cropped.jpg`;
+
+  cropOpen.value = true;
+};
+
+/* crop confirm -> upload */
+const onCropConfirm = async (croppedFile: File) => {
+  cropOpen.value = false;
+  revokeCropSrc();
+
+  if (bulkCreating.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '批量新增進行中，請稍後再上傳圖片',
+      iconType: 'warning',
+    });
     return;
   }
 
   uploading.value = true;
 
   await executeApi<{ imageUrl: string }>({
-    fn: async () => uploadBannerImage(file),
+    fn: async () => uploadBannerImage(croppedFile),
     onSuccess: async (data) => {
       const url = data?.imageUrl || '';
 
@@ -380,9 +411,7 @@ const onFileChange = async (evt: Event) => {
     },
     onFinally: async () => {
       uploading.value = false;
-      input.value = '';
     },
-    showSuccessDialog: false,
   });
 };
 
@@ -427,103 +456,14 @@ const fillMockData = async () => {
   });
 };
 
-/* ✅ 批量新增 15 筆 */
-const bulkCreateMockBanners = async () => {
-  if (isEdit.value) return;
-
-  if (uploading.value) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '圖片上傳中，請稍後再操作批量新增',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  // 先決定 storeId（優先用目前選的）
-  const pickedStoreId =
-    storeId.value || storeOptions.value.find((o) => o.value)?.value || '';
-
-  if (!pickedStoreId) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '請先選擇店家（storeId）後再批量新增',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  const ok = await dialogStore.openConfirmDialog({
-    title: '批量新增確認',
-    message: '確定要批量新增 15 筆 Banner 測試資料嗎？',
-  });
-  if (!ok) return;
-
-  bulkCreating.value = true;
-
-  const now = new Date();
-  const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const start = toDatetimeLocal(now);
-  const end = toDatetimeLocal(twoWeeksLater);
-
-  // orderNum 基準（避免全部一樣）
-  const baseOrder =
-    typeof orderNum.value === 'number' && !Number.isNaN(orderNum.value)
-      ? Number(orderNum.value)
-      : Math.floor(Math.random() * 30) + 1;
-
-  // 產生 15 筆 payload
-  const count = 15;
-  const tasks = Array.from({ length: count }).map((_, i) => {
-    const idx = i + 1;
-
-    const payload = {
-      storeId: pickedStoreId,
-      title: `批量 Banner #${idx}｜${Date.now()}`,
-      imageUrl: `https://picsum.photos/seed/banner-${Date.now()}-${idx}/1200/600`,
-      orderNum: baseOrder + i,
-      status: 'PUBLISHED',
-      startTime: normalizeToBackendLocalDateTime(start),
-      endTime: normalizeToBackendLocalDateTime(end),
-    };
-
-    return createBanner(payload);
-  });
-
-  try {
-    const results = await Promise.allSettled(tasks);
-    const okCount = results.filter((x) => x.status === 'fulfilled').length;
-    const failCount = results.length - okCount;
-
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message:
-        failCount > 0
-          ? `批量新增完成：成功 ${okCount}、失敗 ${failCount}`
-          : `批量新增完成：成功 ${okCount}`,
-      iconType: failCount > 0 ? 'warning' : 'success',
-    });
-
-    // 新增完直接回列表
-    router.push('/home/banner');
-  } catch (e) {
-    console.error(e);
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '批量新增失敗，請稍後再試',
-      iconType: 'warning',
-    });
-  } finally {
-    bulkCreating.value = false;
-  }
-};
-
-/* 提交（對齊 BannerCreateReq / BannerUpdateReq） */
+/* submit */
 const onSubmit = handleSubmit(async (values) => {
-  if (uploading.value || bulkCreating.value) {
+  if (uploading.value || bulkCreating.value || cropOpen.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '操作進行中，請稍後再送出',
+      message: cropOpen.value
+        ? '圖片裁切中，請先完成裁切再送出'
+        : '操作進行中，請稍後再送出',
       iconType: 'warning',
     });
     return;
@@ -541,7 +481,7 @@ const onSubmit = handleSubmit(async (values) => {
   if (!values.imageUrl) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '請上傳或輸入圖片 URL',
+      message: '請上傳（裁切）或輸入圖片 URL',
       iconType: 'warning',
     });
     return;
@@ -553,8 +493,8 @@ const onSubmit = handleSubmit(async (values) => {
     imageUrl: values.imageUrl,
     orderNum: values.orderNum ?? null,
     status: values.status,
-    startTime: normalizeToBackendLocalDateTime(values.startTime),
-    endTime: normalizeToBackendLocalDateTime(values.endTime),
+    startTime: values.startTime,
+    endTime: values.endTime,
   };
 
   if (!isEdit.value) {

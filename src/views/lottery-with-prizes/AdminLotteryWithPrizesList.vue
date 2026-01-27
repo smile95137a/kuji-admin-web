@@ -571,10 +571,10 @@ const deleteSelected = async () => {
 /* ==============================
  * Navigation
  * ============================== */
-const navigateToAdd = () => router.push('/admin/lottery-with-prizes/add');
+const navigateToAdd = () => router.push('/home/lottery-with-prizes/add');
 
 const navigateToEdit = (item: any) => {
-  router.push(`/admin/lottery-with-prizes/edit/${item.id}`);
+  router.push(`/home/lottery-with-prizes/edit/${item.id}`);
 };
 
 /* ==============================

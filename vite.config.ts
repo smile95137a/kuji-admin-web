@@ -12,9 +12,16 @@ export default defineConfig({
       },
     },
   },
-  plugins: [vue()],
+  plugins: [
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag) => tag.startsWith('cropper-'),
+        },
+      },
+    }),
+  ],
   resolve: {
-    // 配置路徑別名
     alias: {
       '@': path.resolve(__dirname, './src'),
     },

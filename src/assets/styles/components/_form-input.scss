@@ -44,7 +44,9 @@
   border: 1px solid $form-border;
   border-radius: $form-radius;
   background: $form-bg;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
   position: relative;
 
   &:hover {
@@ -97,7 +99,6 @@
   }
 
   .form-input__field {
-    padding-right: 36px;
   }
 }
 
