@@ -6,9 +6,9 @@
         最新消息 {{ isEdit ? '編輯' : '新增' }}
       </p>
 
+      <!-- 標題 -->
       <div class="flex flex-wrap">
-        <!-- 標題 -->
-        <div class="w-100 p-6">
+        <div class="w-50 w-md-100 p-6">
           <FormInput
             label="標題"
             v-model="title"
@@ -16,8 +16,10 @@
             placeholder="請輸入最新消息標題"
           />
         </div>
+      </div>
 
-        <!-- 狀態 -->
+      <!-- 狀態 -->
+      <div class="flex flex-wrap">
         <div class="w-50 w-md-100 p-6">
           <FormSelect
             label="狀態"
@@ -26,39 +28,50 @@
             :error="errors.status"
           />
         </div>
+      </div>
 
-        <!-- 上架時間 scheduledAt -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="上架時間（scheduledAt）"
-            v-model="scheduledAt"
-            :error="errors.scheduledAt"
-            type="datetime-local"
-            placeholder="可不填"
-          />
+      <!-- 上架 / 下架時間 -->
+      <div class="flex flex-wrap">
+        <div class="w-50 flex">
+          <div class="w-50 p-6">
+            <FormInput
+              label="上架時間（scheduledAt）"
+              v-model="scheduledAt"
+              :error="errors.scheduledAt"
+              type="datetime-local"
+              placeholder="可不填"
+            />
+          </div>
+
+          <div class="w-50 p-6">
+            <FormInput
+              label="下架時間（endTime）"
+              v-model="endTime"
+              :error="errors.endTime"
+              type="datetime-local"
+              placeholder="可不填"
+            />
+          </div>
         </div>
+      </div>
 
-        <!-- 下架時間 endTime -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="下架時間（endTime）"
-            v-model="endTime"
-            :error="errors.endTime"
-            type="datetime-local"
-            placeholder="可不填"
-          />
-        </div>
-
-        <!-- 封面圖 -->
-        <div class="w-100 p-6">
-          <FormInput
-            label="封面圖片（上傳到 S3 後回填 imageUrl）"
-            type="file"
+      <!-- 封面圖（UploadDropzone + 裁切） -->
+      <div class="flex flex-wrap">
+        <div class="w-50 p-6">
+          <UploadDropzone
+            label="封面圖片"
             accept="image/*"
-            @change="onFileChange"
-            :error="errors.imageUrl"
+            :disabled="uploading || bulkCreating || cropOpen"
+            :fileName="uploadFileName"
+            :errorMessage="uploadErrorMessage"
+            :statusText="uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''"
+            :showDecorIcons="true"
+            :showClear="true"
+            @select="handleSelectedFile"
+            @clear="clearSelectedFileUi"
           />
 
+          <!-- 也允許直接貼 URL -->
           <div class="m-t-12">
             <FormInput
               label="封面圖片 URL（imageUrl，可直接貼）"
@@ -73,7 +86,7 @@
             <MButton
               type="button"
               class="mbtn--gray"
-              :disabled="uploading"
+              :disabled="uploading || bulkCreating || cropOpen"
               @click="clearImage"
             >
               清除圖片
@@ -89,8 +102,10 @@
             />
           </div>
         </div>
+      </div>
 
-        <!-- ✅ 內容（CKEditor） -->
+      <!-- 內容（CKEditor） -->
+      <div class="flex flex-wrap">
         <div class="w-100 p-6">
           <p class="form__text form__text--red">內容（content）</p>
 
@@ -107,23 +122,24 @@
       </div>
 
       <!-- bottom button -->
-      <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12">
         <MButton type="button" class="mbtn--gray" @click="fillMockData">
           快速產生資料
         </MButton>
 
-        <!-- ✅ 新增：批量建立 -->
         <MButton
           type="button"
           class="mbtn--gray"
-          :disabled="uploading || isEdit"
+          :disabled="uploading || bulkCreating || cropOpen || isEdit"
           @click="batchCreateMockNews"
         >
           一鍵批量新增（10 筆）
         </MButton>
 
-        <MButton type="submit" :disabled="uploading">
+        <MButton
+          type="submit"
+          :disabled="uploading || bulkCreating || cropOpen"
+        >
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
 
@@ -132,11 +148,24 @@
         </MButton>
       </div>
     </form>
+
+    <ImageCropDialog
+      v-model="cropOpen"
+      :src="cropSrc"
+      title="裁切 最新消息 封面圖"
+      :aspectRatio="16 / 9"
+      :outputWidth="1200"
+      mimeType="image/jpeg"
+      :quality="0.9"
+      :fileName="cropFileName"
+      @cancel="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </MCard>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -149,6 +178,8 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
+import UploadDropzone from '@/components/common/UploadDropzone.vue';
+import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore } from '@/stores';
@@ -166,54 +197,80 @@ const router = useRouter();
 const dialogStore = useDialogStore();
 const isEdit = computed(() => Boolean(route.params.id));
 
-/** 狀態（依你的後端 NewsCreateReq：DRAFT/PUBLISHED） */
+/** 狀態 */
 const statusOptions: SelectOption[] = [
   { label: '草稿（DRAFT）', value: 'DRAFT' },
   { label: '上架（PUBLISHED）', value: 'PUBLISHED' },
 ];
 
 /** CKEditor 設定 */
-const editorConfig = {
-  placeholder: '請輸入內容...',
+class MyCustomUploadAdapter {
+  loader: any;
+
+  constructor(loader: any) {
+    this.loader = loader;
+  }
+
+  upload() {
+    return this.loader.file.then(async (file: File) => {
+      const { data } = await uploadNewsImage(file);
+
+      return {
+        default: data.imageUrl,
+      };
+    });
+  }
+
+  abort() {
+    console.log('圖片上傳被中止');
+  }
+}
+
+function CustomUploadAdapterPlugin(editor: any) {
+  editor.plugins.get('FileRepository').createUploadAdapter = (loader: any) => {
+    return new MyCustomUploadAdapter(loader);
+  };
+}
+const editorConfig: any = {
   toolbar: [
     'heading',
     '|',
     'bold',
     'italic',
-    'underline',
     'link',
-    '|',
     'bulletedList',
     'numberedList',
-    '|',
     'blockQuote',
-    'insertTable',
+    'imageUpload',
     '|',
-    'undo',
-    'redo',
+    'imageResize',
   ],
+  language: 'zh-tw',
+  image: {
+    toolbar: ['imageStyle:full', 'imageStyle:side', 'imageResize'],
+    resizeOptions: [
+      { name: 'resizeImage:original', label: '原始大小', value: null },
+      { name: 'resizeImage:50', label: '50%', value: '50' },
+      { name: 'resizeImage:75', label: '75%', value: '75' },
+    ],
+    resizeUnit: '%',
+  },
+  extraPlugins: [CustomUploadAdapterPlugin],
 };
 
-/**
- * ✅ datetime-local <-> LocalDateTime 格式處理
- * datetime-local 會是：YYYY-MM-DDTHH:mm
- * 後端 LocalDateTime 建議送：YYYY-MM-DDTHH:mm:ss
- */
+/** datetime-local <-> LocalDateTime */
 const toLocalDateTime = (v?: string | null) => {
   if (!v) return null;
-  // 如果已經有秒數就原樣回傳
   if (v.length >= 19) return v.slice(0, 19);
-  // 補上 :00 秒
   return `${v}:00`;
 };
 
-/** 後端回來可能是 2026-01-10T10:00:00，datetime-local 只吃到分鐘 */
 const toDateTimeLocalValue = (v?: string | null) => {
   if (!v) return '';
-  return String(v).slice(0, 16); // YYYY-MM-DDTHH:mm
+  return String(v).slice(0, 16);
 };
 
-/** schema（依 NewsCreateReq / NewsUpdateReq 調整） */
+/** schema */
 const schema = yup.object({
   title: yup.string().required('請輸入標題'),
   status: yup.string().required('請選擇狀態'),
@@ -244,7 +301,39 @@ const [endTime] = defineField('endTime');
 
 const imagePreview = ref('');
 const uploading = ref(false);
+const bulkCreating = ref(false);
 
+/* UploadDropzone UI */
+const uploadFileName = ref('');
+const uploadErrorMessage = ref<string | null>(null);
+
+const clearSelectedFileUi = () => {
+  uploadFileName.value = '';
+  uploadErrorMessage.value = null;
+};
+
+/* ✅ crop（比照 BannerForm） */
+const cropOpen = ref(false);
+const cropSrc = ref('');
+const cropFileName = ref('cropped.jpg');
+
+const revokeCropSrc = () => {
+  if (cropSrc.value) {
+    URL.revokeObjectURL(cropSrc.value);
+    cropSrc.value = '';
+  }
+};
+
+const onCropCancel = () => {
+  cropOpen.value = false;
+  revokeCropSrc();
+};
+
+onBeforeUnmount(() => {
+  revokeCropSrc();
+});
+
+/* 編輯模式載入 */
 onMounted(async () => {
   if (!isEdit.value) return;
 
@@ -276,37 +365,64 @@ const clearImage = () => {
   imagePreview.value = '';
 };
 
-const onFileChange = async (evt: Event) => {
-  const input = evt.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
+/* ✅ 選檔：先驗檔 -> 開裁切，不直接上傳 */
+const handleSelectedFile = async (file: File) => {
+  uploadErrorMessage.value = null;
 
   const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
+    uploadErrorMessage.value = '圖片大小不可超過 5MB';
     await dialogStore.openInfoDialog({
       title: '提示訊息',
       message: '圖片大小不可超過 5MB',
       iconType: 'warning',
     });
-    input.value = '';
+    clearSelectedFileUi();
     return;
   }
   if (!file.type.startsWith('image/')) {
+    uploadErrorMessage.value = '請選擇圖片檔案';
     await dialogStore.openInfoDialog({
       title: '提示訊息',
       message: '請選擇圖片檔案',
       iconType: 'warning',
     });
-    input.value = '';
+    clearSelectedFileUi();
+    return;
+  }
+
+  uploadFileName.value = file.name;
+
+  revokeCropSrc();
+  cropSrc.value = URL.createObjectURL(file);
+
+  const base = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  cropFileName.value = `${base}-cropped.jpg`;
+
+  cropOpen.value = true;
+};
+
+/* ✅ 裁切確認 -> 上傳 */
+const onCropConfirm = async (croppedFile: File) => {
+  cropOpen.value = false;
+  revokeCropSrc();
+
+  if (bulkCreating.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '批量新增進行中，請稍後再上傳圖片',
+      iconType: 'warning',
+    });
     return;
   }
 
   uploading.value = true;
 
   await executeApi<{ imageUrl: string }>({
-    fn: async () => uploadNewsImage(file),
+    fn: async () => uploadNewsImage(croppedFile),
     onSuccess: async (data) => {
       const url = data?.imageUrl || '';
+
       if (!url) {
         await dialogStore.openInfoDialog({
           title: '提示訊息',
@@ -327,13 +443,37 @@ const onFileChange = async (evt: Event) => {
     },
     onFinally: () => {
       uploading.value = false;
-      input.value = '';
     },
     showSuccessDialog: false,
   });
 };
 
+/* mock */
 const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const buildRichMockHtml = (seed: string) => {
+  return `
+    <h2>📣 ${seed}｜系統公告與活動資訊</h2>
+    <p>感謝各位玩家的支持！本次更新將帶來更完整的抽獎體驗與穩定性改善。</p>
+    <h3>✅ 本次更新重點</h3>
+    <ul>
+      <li><strong>抽獎流程優化</strong>：提高抽獎畫面反應速度</li>
+      <li><strong>儲值方案更新</strong>：付款流程提示更清楚</li>
+      <li><strong>賞品盒出貨體驗</strong>：支援批次出貨</li>
+    </ul>
+    <blockquote>📌 小提醒：若你遇到頁面異常，建議重新整理或稍後再試。</blockquote>
+    <table>
+      <thead><tr><th>功能</th><th>狀態</th><th>備註</th></tr></thead>
+      <tbody>
+        <tr><td>抽獎</td><td>正常</td><td>流程優化完成</td></tr>
+        <tr><td>儲值</td><td>正常</td><td>付款提示更新</td></tr>
+        <tr><td>賞品盒</td><td>正常</td><td>支援批次出貨</td></tr>
+      </tbody>
+    </table>
+    <p>祝你抽到夢想中的大獎！✨</p>
+  `;
+};
+
 const fillMockData = async () => {
   const now = new Date();
   const mockImg = imageUrl.value || 'https://picsum.photos/seed/news/1200/630';
@@ -350,7 +490,7 @@ const fillMockData = async () => {
     imageUrl: mockImg,
     scheduledAt: `${yyyy}-${MM}-${dd}T${hh}:${mm}`,
     endTime: '',
-    content: `<p>測試內容 ${yyyy}-${MM}-${dd}</p><p><strong>CKEditor</strong> 內容測試</p>`,
+    content: buildRichMockHtml(`測試公告｜${yyyy}-${MM}-${dd}`),
   });
 
   imagePreview.value = mockImg;
@@ -362,20 +502,22 @@ const fillMockData = async () => {
   });
 };
 
+/* submit */
 const onSubmit = handleSubmit(async (values) => {
-  if (uploading.value) {
+  if (uploading.value || bulkCreating.value || cropOpen.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '圖片上傳中，請稍後再送出',
+      message: cropOpen.value
+        ? '圖片裁切中，請先完成裁切再送出'
+        : '操作進行中，請稍後再送出',
       iconType: 'warning',
     });
     return;
   }
 
-  // ✅ 對齊 NewsCreateReq / NewsUpdateReq
   const payload = {
     title: values.title,
-    content: values.content, // CKEditor HTML string
+    content: values.content,
     imageUrl: values.imageUrl || '',
     status: values.status,
     scheduledAt: toLocalDateTime(values.scheduledAt),
@@ -408,88 +550,15 @@ const onSubmit = handleSubmit(async (values) => {
     });
   }
 });
-/** ✅ 產生更豐富的 CKEditor HTML（比原本長很多） */
-const buildRichMockHtml = (seed: string) => {
-  return `
-    <h2>📣 ${seed}｜系統公告與活動資訊</h2>
 
-    <p>
-      感謝各位玩家的支持！本次更新將帶來更完整的抽獎體驗與穩定性改善，
-      包含伺服器優化、抽獎流程更順暢、以及儲值與賞品盒流程調整。
-    </p>
-
-    <h3>✅ 本次更新重點</h3>
-    <ul>
-      <li><strong>抽獎流程優化</strong>：提高抽獎畫面反應速度，降低等待時間</li>
-      <li><strong>儲值方案更新</strong>：新增活動加碼，並改善付款流程提示</li>
-      <li><strong>賞品盒出貨體驗</strong>：新增分店彙總與批次出貨功能</li>
-      <li><strong>最新消息顯示</strong>：支援封面圖、內容格式完整呈現</li>
-    </ul>
-
-    <h3>🕒 活動時間</h3>
-    <p>
-      活動期間：<strong>即日起 ～ 2026/12/31</strong><br />
-      期間內不定期推出限量加碼與特殊賞項，請密切關注最新公告。
-    </p>
-
-    <blockquote>
-      📌 小提醒：若你遇到頁面異常或載入較慢，建議重新整理或稍後再試。
-      我們會持續優化系統穩定性。
-    </blockquote>
-
-    <h3>🎁 加碼說明</h3>
-    <ol>
-      <li>單筆儲值達門檻可獲得額外點數回饋</li>
-      <li>指定系列抽獎將提高稀有賞出現機率（依活動規則為準）</li>
-      <li>每日首次登入有機會獲得免費抽獎次數</li>
-    </ol>
-
-    <h3>📦 出貨資訊</h3>
-    <p>
-      若你已累積多項實體獎品，可前往「賞品盒」進行出貨。<br />
-      出貨時請確認收件資料完整，避免配送失敗。
-    </p>
-
-    <table>
-      <thead>
-        <tr>
-          <th>功能</th>
-          <th>狀態</th>
-          <th>備註</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>抽獎</td>
-          <td>正常</td>
-          <td>流程優化完成</td>
-        </tr>
-        <tr>
-          <td>儲值</td>
-          <td>正常</td>
-          <td>付款提示更新</td>
-        </tr>
-        <tr>
-          <td>賞品盒</td>
-          <td>正常</td>
-          <td>支援批次出貨</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p>
-      若你有任何問題，歡迎透過客服聯絡我們。<br />
-      再次感謝你的支持，祝你抽到夢想中的大獎！✨
-    </p>
-  `;
-};
-
-/** ✅ 批量建立 mock 最新消息（一次建立 N 筆） */
+/* batch create */
 const batchCreateMockNews = async () => {
-  if (uploading.value) {
+  if (uploading.value || cropOpen.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '圖片上傳中，請稍後再試',
+      message: cropOpen.value
+        ? '圖片裁切中，請稍後再試'
+        : '圖片上傳中，請稍後再試',
       iconType: 'warning',
     });
     return;
@@ -504,25 +573,26 @@ const batchCreateMockNews = async () => {
     return;
   }
 
-  // ✅ 你可以改成 5 / 20
   const count = 10;
+  bulkCreating.value = true;
 
   const ok = await dialogStore.openConfirmDialog({
     title: '批量新增確認',
     message: `即將建立 ${count} 筆最新消息，確定要執行嗎？`,
   });
 
-  if (!ok) return;
+  if (!ok) {
+    bulkCreating.value = false;
+    return;
+  }
 
-  // ✅ 建議用「逐筆」送，避免後端瞬間壓力太大
-  // 如果你後端扛得住，也可改 Promise.all
   await executeApi({
     fn: async () => {
       for (let i = 1; i <= count; i++) {
         const now = new Date();
         const seed = `批量公告 #${i}`;
 
-        const payload = {
+        await createNews({
           title: `${seed}｜${now.getTime()}`,
           status: 'PUBLISHED',
           imageUrl:
@@ -530,9 +600,7 @@ const batchCreateMockNews = async () => {
           content: buildRichMockHtml(seed),
           scheduledAt: null,
           endTime: null,
-        };
-
-        await createNews(payload);
+        });
       }
       return true;
     },
@@ -542,22 +610,17 @@ const batchCreateMockNews = async () => {
         message: `批量新增完成 ✅ 已建立 ${count} 筆最新消息`,
         iconType: 'success',
       });
-
-      // ✅ 新增完回列表
       router.push('/home/news');
     },
-
+    onFinally: () => {
+      bulkCreating.value = false;
+    },
     showSuccessDialog: false,
   });
 };
 </script>
 
 <style scoped>
-.error-text {
-  color: #d93025;
-  font-size: 12px;
-}
-
 :deep(.ck-editor__editable) {
   min-height: 260px;
 }
