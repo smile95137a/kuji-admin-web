@@ -1,3 +1,4 @@
+<!-- src/components/common/UploadDropzone.vue -->
 <template>
   <div class="uploadDropzoneWrap">
     <p v-if="label" class="form__text form__text--label">{{ label }}</p>

@@ -1,0 +1,202 @@
+<!-- src/components/lottery-with-prizes/PrizeFormCard.vue -->
+<template>
+  <div class="lotteryWithPrizesForm__prizeCard">
+    <div class="lotteryWithPrizesForm__prizeTop">
+      <p class="lotteryWithPrizesForm__prizeTitle">
+        獎品 #{{ index + 1 }}
+        <span v-if="prize.id" class="lotteryWithPrizesForm__badge">已存在</span>
+      </p>
+
+      <MButton size="sm" variant="danger" @click="$emit('remove')">
+        刪除
+      </MButton>
+    </div>
+
+    <div class="lotteryWithPrizesForm__grid">
+      <div class="w-50 w-md-100 p-6">
+        <FormInput label="獎品名稱" v-model="localPrize.name" required />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormSelect
+          label="等級"
+          v-model="localPrize.level"
+          :options="levelOptions"
+          placeholder="A / B / C / D / LAST"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormSelect
+          label="獎品類型"
+          v-model="localPrize.prizeType"
+          :options="prizeTypeOptions"
+          placeholder="physical / digital / point"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6" v-if="localPrize.prizeType === 'point'">
+        <FormInput
+          label="點數金額（point 類型）"
+          v-model="localPrize.pointValue"
+          type="number"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormInput
+          label="數量"
+          v-model="localPrize.quantity"
+          type="number"
+          required
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormInput
+          label="權重（0=不可抽）"
+          v-model="localPrize.weight"
+          type="number"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormInput
+          label="顯示排序（數字越小越前面）"
+          v-model="localPrize.orderNum"
+          type="number"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6" v-if="playMode === 'SCRATCH_MODE'">
+        <FormInput
+          label="籤號（刮刮樂模式用）"
+          v-model="localPrize.prizeNumber"
+          placeholder="01"
+        />
+      </div>
+
+      <!-- ✅ 獎品圖片：UploadDropzone + Crop（由父層共用裁切 Dialog 控制） -->
+      <div class="w-50 w-md-100 p-6">
+        <UploadDropzone
+          :label="`獎品圖片（#${index + 1}，1:1 裁切）`"
+          accept="image/*"
+          :disabled="uploading || cropOpen"
+          :fileName="uploadFileName || ''"
+          :errorMessage="uploadErrorMessage || null"
+          :statusText="uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''"
+          :showDecorIcons="true"
+          :showClear="true"
+          @select="(file) => $emit('selectImage', file)"
+          @clear="$emit('clearImage')"
+        />
+
+        <div class="m-t-12">
+          <FormInput
+            label="獎品圖片 URL（可直接貼）"
+            v-model="localPrize.imageUrl"
+            placeholder="https://example.com/prize.jpg"
+          />
+        </div>
+
+        <div v-if="localPrize.imageUrl" class="m-t-12">
+          <img
+            :src="localPrize.imageUrl"
+            alt="prize-preview"
+            style="
+              width: 140px;
+              height: 140px;
+              object-fit: cover;
+              border-radius: 8px;
+            "
+          />
+        </div>
+      </div>
+
+      <div class="w-100 p-6">
+        <FormInput
+          label="獎品描述"
+          v-model="localPrize.description"
+          type="textarea"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormSelect
+          label="是否最後賞"
+          v-model="localPrize.isLastPrize"
+          :options="boolOptions"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormSelect
+          label="是否大賞（降價觸發）"
+          v-model="localPrize.isGrandPrize"
+          :options="boolOptions"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+
+import MButton from '@/components/common/MButton.vue';
+import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
+import UploadDropzone from '@/components/common/UploadDropzone.vue';
+
+export type PrizeFormRow = {
+  _key: string;
+  id?: string;
+
+  name: string;
+  quantity: number;
+
+  description?: string;
+  imageUrl?: string;
+  level?: string;
+  weight?: number;
+
+  prizeNumber?: string;
+  prizeType?: string;
+  pointValue?: number;
+
+  isLastPrize?: boolean;
+  isGrandPrize?: boolean;
+
+  orderNum?: number;
+};
+
+const props = defineProps<{
+  prize: PrizeFormRow;
+  index: number;
+
+  playMode: string;
+
+  levelOptions: Array<{ label: string; value: any }>;
+  prizeTypeOptions: Array<{ label: string; value: any }>;
+  boolOptions: Array<{ label: string; value: any }>;
+
+  uploading: boolean;
+  cropOpen: boolean;
+
+  uploadFileName?: string;
+  uploadErrorMessage?: string | null;
+}>();
+
+const emit = defineEmits<{
+  (e: 'update:prize', v: PrizeFormRow): void;
+  (e: 'remove'): void;
+  (e: 'selectImage', file: File): void;
+  (e: 'clearImage'): void;
+}>();
+
+// 用 computed getter/setter 讓 v-model:prize 能「就地修改」
+const localPrize = computed<PrizeFormRow>({
+  get: () => props.prize,
+  set: (v) => emit('update:prize', v),
+});
+</script>

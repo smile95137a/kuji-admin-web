@@ -10,7 +10,9 @@
         <div class="lotteryWithPrizesForm__actions">
           <MButton variant="secondary" @click="goBack">返回</MButton>
           <MButton variant="secondary" @click="fillMockData">假資料</MButton>
-          <MButton @click="onSubmit">儲存</MButton>
+          <MButton :disabled="uploading || cropOpen" @click="onSubmit">
+            儲存
+          </MButton>
         </div>
       </div>
 
@@ -19,132 +21,140 @@
         <p class="lotteryWithPrizesForm__sectionTitle">商品資訊</p>
 
         <div class="lotteryWithPrizesForm__grid">
-          <!-- ✅ storeId：改用下拉 -->
+          <AdminLotteryWithPrizesBasicFields
+            :storeOptions="storeOptions"
+            :categoryOptions="categoryOptions"
+            :playModeOptions="playModeOptions"
+            :statusOptions="statusOptions"
+          />
+
+          <!-- ✅ 商品主圖（UploadDropzone + 1:1 Crop） -->
           <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="所屬店家"
-              v-model="storeId"
-              :options="storeOptions"
-              :error="errors.storeId"
-              :showAll="true"
-              allLabel="請選擇"
-              :allValue="''"
+            <UploadDropzone
+              label="商品主圖（1:1 裁切）"
+              accept="image/*"
+              :disabled="uploading || cropOpen"
+              :fileName="mainUploadFileName"
+              :errorMessage="mainUploadErrorMessage"
+              :statusText="
+                uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
+              "
+              :showDecorIcons="true"
+              :showClear="true"
+              @select="handleSelectedMainImage"
+              @clear="clearMainSelectedFileUi"
             />
+
+            <div class="m-t-12">
+              <FormInput
+                label="商品主圖 URL（imageUrl，可直接貼）"
+                v-model="imageUrl"
+                :error="errors.imageUrl"
+                placeholder="https://example.com/xxx.jpg（或上方上傳會自動回填）"
+                @blur="syncMainPreviewFromUrl"
+              />
+            </div>
+
+            <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
+              <MButton
+                type="button"
+                variant="secondary"
+                :disabled="uploading || cropOpen"
+                @click="clearMainImage"
+              >
+                清除圖片
+              </MButton>
+              <p class="form__text" v-if="uploading">上傳中...</p>
+            </div>
+
+            <div v-if="mainImagePreview" class="m-t-12">
+              <img
+                :src="mainImagePreview"
+                alt="preview"
+                style="
+                  width: 180px;
+                  height: 180px;
+                  object-fit: cover;
+                  border-radius: 8px;
+                "
+              />
+            </div>
           </div>
 
+          <!-- ✅ 商品圖集（galleryImages）：UploadDropzone（單張加入）+ 1:1 Crop -->
           <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="商品名稱"
-              v-model="title"
-              :error="errors.title"
-              required
+            <UploadDropzone
+              label="商品圖集（每次新增 1 張，1:1 裁切）"
+              accept="image/*"
+              :disabled="uploading || cropOpen"
+              :fileName="galleryUploadFileName"
+              :errorMessage="galleryUploadErrorMessage"
+              :statusText="
+                uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
+              "
+              :showDecorIcons="true"
+              :showClear="true"
+              @select="handleSelectedGalleryImage"
+              @clear="clearGallerySelectedFileUi"
             />
-          </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="分類"
-              v-model="category"
-              :options="categoryOptions"
-              :error="errors.category"
-              required
-            />
-          </div>
+            <div class="m-t-12" v-if="galleryImageUrls.length">
+              <p class="form__text">
+                目前圖集（{{ galleryImageUrls.length }} 張）
+              </p>
 
-          <!-- playMode -->
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="遊玩模式"
-              v-model="playMode"
-              :options="playModeOptions"
-              :error="errors.playMode"
-            />
-          </div>
+              <div class="flex flex-wrap gap-12 m-t-8">
+                <div
+                  v-for="(url, i) in galleryImageUrls"
+                  :key="url + '_' + i"
+                  style="width: 120px"
+                >
+                  <img
+                    :src="url"
+                    alt="gallery-preview"
+                    style="
+                      width: 120px;
+                      height: 120px;
+                      object-fit: cover;
+                      border-radius: 8px;
+                    "
+                  />
+                  <div class="flex justify-between m-t-6">
+                    <MButton
+                      size="sm"
+                      variant="secondary"
+                      type="button"
+                      :disabled="uploading || cropOpen"
+                      @click="removeGalleryImage(i)"
+                    >
+                      移除
+                    </MButton>
+                  </div>
+                </div>
+              </div>
 
-          <!-- subCategory: CUSTOM_GACHA 才顯示 -->
-          <div class="w-50 w-md-100 p-6" v-if="category === 'CUSTOM_GACHA'">
-            <FormSelect
-              label="自製賞子類型（CUSTOM_GACHA）"
-              v-model="subCategory"
-              :options="playModeOptions"
-              :error="errors.subCategory"
-              placeholder="LOTTERY_MODE / SCRATCH_MODE"
-            />
-          </div>
+              <div class="m-t-12">
+                <MButton
+                  type="button"
+                  variant="secondary"
+                  :disabled="uploading || cropOpen"
+                  @click="clearGalleryImages"
+                >
+                  清空圖集
+                </MButton>
+              </div>
+            </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="商品狀態"
-              v-model="status"
-              :options="statusOptions"
-              :error="errors.status"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="每抽價格"
-              v-model="pricePerDraw"
-              :error="errors.pricePerDraw"
-              type="number"
-              required
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="總抽數上限（0=無限制）"
-              v-model="maxDraws"
-              :error="errors.maxDraws"
-              type="number"
-            />
-          </div>
-
-          <!-- orderNum -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="顯示排序（數字越小越前面）"
-              v-model="orderNum"
-              :error="errors.orderNum"
-              type="number"
-            />
-          </div>
-
-          <!-- hotCount -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="熱門程度（熱門標籤用）"
-              v-model="hotCount"
-              :error="errors.hotCount"
-              type="number"
-            />
-          </div>
-
-          <!-- theme -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="主題分類（火影/航海王/鬼滅等）"
-              v-model="theme"
-              :error="errors.theme"
-            />
-          </div>
-
-          <div class="w-100 p-6">
-            <FormInput
-              label="商品主圖 URL"
-              v-model="imageUrl"
-              :error="errors.imageUrl"
-            />
-          </div>
-
-          <!-- galleryImages -->
-          <div class="w-100 p-6">
-            <FormInput
-              label="商品圖集（多張圖片 URL，用逗號分隔）"
-              v-model="galleryImagesText"
-              :error="errors.galleryImagesText"
-              placeholder="https://a.jpg, https://b.jpg"
-            />
+            <!-- 仍保留文字欄（可貼 / 可手改） -->
+            <div class="m-t-12">
+              <FormInput
+                label="商品圖集 URL（逗號分隔，可直接貼 / 編輯）"
+                v-model="galleryImagesText"
+                :error="errors.galleryImagesText"
+                placeholder="https://a.jpg, https://b.jpg"
+                @blur="syncGalleryArrayFromText"
+              />
+            </div>
           </div>
 
           <div class="w-100 p-6">
@@ -156,15 +166,17 @@
             />
           </div>
 
-          <!-- content -->
+          <!-- ✅ content CKEditor -->
           <div class="w-100 p-6">
-            <FormInput
-              label="商品詳細內容（可貼活動說明）"
+            <p class="form__text form__text--red">商品詳細內容（content）</p>
+            <Ckeditor
+              :editor="ClassicEditor"
               v-model="content"
-              :error="errors.content"
-              type="textarea"
-              placeholder="【活動說明】&#10;- 單抽 / 多抽&#10;- 注意事項..."
+              :config="editorConfig"
             />
+            <p class="error-text m-t-8" v-if="errors.content">
+              {{ errors.content }}
+            </p>
           </div>
 
           <!-- tags -->
@@ -287,154 +299,98 @@
       <div class="lotteryWithPrizesForm__section">
         <div class="lotteryWithPrizesForm__sectionHeader">
           <p class="lotteryWithPrizesForm__sectionTitle">獎品清單</p>
-
-          <MButton size="sm" variant="secondary" @click="addPrize">
-            + 新增獎品
-          </MButton>
+          <MButton size="sm" variant="secondary" @click="addPrize"
+            >+ 新增獎品</MButton
+          >
         </div>
 
         <div v-if="prizes.length === 0" class="lotteryWithPrizesForm__empty">
           尚未建立獎品（建議至少新增 1 個）
         </div>
 
-        <div
+        <PrizeFormCard
           v-for="(p, idx) in prizes"
           :key="p._key"
-          class="lotteryWithPrizesForm__prizeCard"
-        >
-          <div class="lotteryWithPrizesForm__prizeTop">
-            <p class="lotteryWithPrizesForm__prizeTitle">
-              獎品 #{{ idx + 1 }}
-              <span v-if="p.id" class="lotteryWithPrizesForm__badge"
-                >已存在</span
-              >
-            </p>
-
-            <MButton size="sm" variant="danger" @click="removePrize(idx)">
-              刪除
-            </MButton>
-          </div>
-
-          <div class="lotteryWithPrizesForm__grid">
-            <div class="w-50 w-md-100 p-6">
-              <FormInput label="獎品名稱" v-model="p.name" required />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormSelect
-                label="等級"
-                v-model="p.level"
-                :options="levelOptions"
-                placeholder="A / B / C / D / LAST"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormSelect
-                label="獎品類型"
-                v-model="p.prizeType"
-                :options="prizeTypeOptions"
-                placeholder="physical / digital / point"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6" v-if="p.prizeType === 'point'">
-              <FormInput
-                label="點數金額（point 類型）"
-                v-model="p.pointValue"
-                type="number"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormInput
-                label="數量"
-                v-model="p.quantity"
-                type="number"
-                required
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormInput
-                label="權重（0=不可抽）"
-                v-model="p.weight"
-                type="number"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormInput
-                label="顯示排序（數字越小越前面）"
-                v-model="p.orderNum"
-                type="number"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6" v-if="playMode === 'SCRATCH_MODE'">
-              <FormInput
-                label="籤號（刮刮樂模式用）"
-                v-model="p.prizeNumber"
-                placeholder="01"
-              />
-            </div>
-
-            <div class="w-100 p-6">
-              <FormInput label="獎品圖片 URL" v-model="p.imageUrl" />
-            </div>
-
-            <div class="w-100 p-6">
-              <FormInput
-                label="獎品描述"
-                v-model="p.description"
-                type="textarea"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormSelect
-                label="是否最後賞"
-                v-model="p.isLastPrize"
-                :options="boolOptions"
-              />
-            </div>
-
-            <div class="w-50 w-md-100 p-6">
-              <FormSelect
-                label="是否大賞（降價觸發）"
-                v-model="p.isGrandPrize"
-                :options="boolOptions"
-              />
-            </div>
-          </div>
-        </div>
+          v-model:prize="prizes[idx]"
+          :index="idx"
+          :playMode="playMode"
+          :levelOptions="levelOptions"
+          :prizeTypeOptions="prizeTypeOptions"
+          :boolOptions="boolOptions"
+          :uploading="uploading"
+          :cropOpen="cropOpen"
+          :uploadFileName="prizeUploadFileNames[p._key] || ''"
+          :uploadErrorMessage="prizeUploadErrorMessages[p._key] || null"
+          @remove="removePrize(idx)"
+          @selectImage="
+            (file) => handleSelectedPrizeImage(file, prizes[idx], idx)
+          "
+          @clearImage="() => clearPrizeImage(prizes[idx])"
+        />
       </div>
     </MCard>
+
+    <!-- ✅ 共用裁切 Dialog（主圖/圖集/獎品圖），全部 1:1 -->
+    <ImageCropDialog
+      v-model="cropOpen"
+      :src="cropSrc"
+      :title="cropTitle"
+      :aspectRatio="cropAspectRatio"
+      :outputWidth="cropOutputWidth"
+      mimeType="image/jpeg"
+      :quality="0.9"
+      :fileName="cropFileName"
+      @cancel="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import AdminLotteryWithPrizesBasicFields from '@/components/lottery-with-prizes/AdminLotteryWithPrizesBasicFields.vue';
+import PrizeFormCard, {
+  type PrizeFormRow,
+} from '@/components/lottery-with-prizes/PrizeFormCard.vue';
+
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import * as yup from 'yup';
 import { useForm } from 'vee-validate';
+
+/* CKEditor */
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { Ckeditor } from '@ckeditor/ckeditor5-vue';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
+import UploadDropzone from '@/components/common/UploadDropzone.vue';
+import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
 
 import { useDialogStore } from '@/stores';
 
-// ✅ ✅ ✅ service
 import {
   createLotteryWithPrizes,
   updateLotteryWithPrizes,
   getLotteryWithPrizes,
 } from '@/services/adminLotteryWithPrizesService';
 
-// ✅ 店家下拉 options（參考 AdminUserForm）
 import { getStoreOptions } from '@/services/adminStoreService';
+import {
+  uploadLotteryImage,
+  uploadPrizeImage,
+} from '@/services/adminUploadService';
+
+/** ✅ options 抽出改用 import */
+import {
+  categoryOptions,
+  playModeOptions,
+  statusOptions,
+  levelOptions,
+  prizeTypeOptions,
+  boolOptions,
+} from '@/constants/lotteryOptions';
 
 const router = useRouter();
 const route = useRoute();
@@ -442,48 +398,6 @@ const dialogStore = useDialogStore();
 
 const id = computed(() => route.params.id as string | undefined);
 const isEdit = computed(() => !!id.value);
-
-/** ========== options ========== */
-const categoryOptions = [
-  { label: '官方一番賞', value: 'OFFICIAL_ICHIBAN' },
-  { label: '扭蛋', value: 'GACHA' },
-  { label: '卡牌', value: 'TRADING_CARD' },
-  { label: '自製賞', value: 'CUSTOM_GACHA' },
-];
-
-const playModeOptions = [
-  { label: '抽籤型（LOTTERY_MODE）', value: 'LOTTERY_MODE' },
-  { label: '刮刮樂型（SCRATCH_MODE）', value: 'SCRATCH_MODE' },
-];
-
-const statusOptions = [
-  { label: '草稿（DRAFT）', value: 'DRAFT' },
-  { label: '上架（ON_SHELF）', value: 'ON_SHELF' },
-  { label: '下架（OFF_SHELF）', value: 'OFF_SHELF' },
-];
-
-const levelOptions = [
-  { label: 'A', value: 'A' },
-  { label: 'B', value: 'B' },
-  { label: 'C', value: 'C' },
-  { label: 'D', value: 'D' },
-  { label: 'E', value: 'E' },
-  { label: 'F', value: 'F' },
-  { label: 'G', value: 'G' },
-  { label: 'LAST', value: 'LAST' },
-  { label: 'GRAND', value: 'GRAND' },
-];
-
-const prizeTypeOptions = [
-  { label: '實體（physical）', value: 'physical' },
-  { label: '數位（digital）', value: 'digital' },
-  { label: '點數（point）', value: 'point' },
-];
-
-const boolOptions = [
-  { label: '是', value: true },
-  { label: '否', value: false },
-];
 
 /** ========== 店家下拉 ========== */
 interface SelectOption {
@@ -516,7 +430,7 @@ const loadStoreOptions = async () => {
     const res = await getStoreOptions({ activeOnly: true });
     const data = (res as any)?.data ?? res;
     storeOptions.value = mapEnumOptionsToSelect(
-      Array.isArray(data) ? data : []
+      Array.isArray(data) ? data : [],
     );
     ensureStoreOptionExists(storeId.value);
   } catch (e) {
@@ -534,12 +448,10 @@ const parseCsvText = (text: string) =>
     .filter(Boolean);
 
 const toLocalDateTimeOrUndefined = (v: string) => {
-  // ✅ LocalDateTime 最穩：直接送 "YYYY-MM-DDTHH:mm"
   if (!v) return undefined;
   return v;
 };
 
-// 轉換： "10, 50" => [10,50]
 const parseMultiDrawOptions = (text: string) => {
   if (!text) return [];
   return text
@@ -668,19 +580,7 @@ const { defineField, errors, setValues, handleSubmit } = useForm({
 });
 
 const [storeId] = defineField('storeId');
-
-const [title] = defineField('title');
-const [category] = defineField('category');
 const [playMode] = defineField('playMode');
-const [subCategory] = defineField('subCategory');
-const [status] = defineField('status');
-
-const [pricePerDraw] = defineField('pricePerDraw');
-const [maxDraws] = defineField('maxDraws');
-
-const [orderNum] = defineField('orderNum');
-const [hotCount] = defineField('hotCount');
-const [theme] = defineField('theme');
 
 const [imageUrl] = defineField('imageUrl');
 const [galleryImagesText] = defineField('galleryImagesText');
@@ -706,28 +606,6 @@ const [bonusPointsPerDraw] = defineField('bonusPointsPerDraw');
 const [bonusCostPerDraw] = defineField('bonusCostPerDraw');
 
 /** ========== prizes (local state) ========== */
-type PrizeFormRow = {
-  _key: string;
-  id?: string;
-
-  name: string;
-  quantity: number;
-
-  description?: string;
-  imageUrl?: string;
-  level?: string;
-  weight?: number;
-
-  prizeNumber?: string;
-  prizeType?: string;
-  pointValue?: number;
-
-  isLastPrize?: boolean;
-  isGrandPrize?: boolean;
-
-  orderNum?: number;
-};
-
 const prizes = reactive<PrizeFormRow[]>([]);
 
 const addPrize = () => {
@@ -753,6 +631,366 @@ const removePrize = (index: number) => prizes.splice(index, 1);
 
 const goBack = () => router.push('/admin/lottery-with-prizes');
 
+/** ========== ✅ Upload + Crop（主圖/圖集/獎品圖共用） ========== */
+const uploading = ref(false);
+
+/* main image UI */
+const mainImagePreview = ref('');
+const mainUploadFileName = ref('');
+const mainUploadErrorMessage = ref<string | null>(null);
+
+const clearMainSelectedFileUi = () => {
+  mainUploadFileName.value = '';
+  mainUploadErrorMessage.value = null;
+};
+
+/* prize image UI */
+const prizeUploadFileNames = reactive<Record<string, string>>({});
+const prizeUploadErrorMessages = reactive<Record<string, string | null>>({});
+
+const clearPrizeUi = (key: string) => {
+  prizeUploadFileNames[key] = '';
+  prizeUploadErrorMessages[key] = null;
+};
+
+const clearPrizeImage = (p: PrizeFormRow) => {
+  p.imageUrl = '';
+  clearPrizeUi(p._key);
+};
+
+/* ✅ gallery state */
+const galleryImageUrls = ref<string[]>([]);
+const galleryUploadFileName = ref('');
+const galleryUploadErrorMessage = ref<string | null>(null);
+
+const syncGalleryTextFromArray = () => {
+  galleryImagesText.value = galleryImageUrls.value.join(',');
+};
+
+const syncGalleryArrayFromText = () => {
+  galleryImageUrls.value = parseCsvText(galleryImagesText.value);
+};
+
+const removeGalleryImage = (index: number) => {
+  galleryImageUrls.value.splice(index, 1);
+  syncGalleryTextFromArray();
+};
+
+const clearGalleryImages = () => {
+  galleryImageUrls.value = [];
+  galleryImagesText.value = '';
+};
+
+const clearGallerySelectedFileUi = () => {
+  galleryUploadFileName.value = '';
+  galleryUploadErrorMessage.value = null;
+};
+
+/* crop dialog */
+type CropTarget =
+  | { type: 'main' }
+  | { type: 'gallery' }
+  | { type: 'prize'; prizeKey: string; prizeIndex: number };
+
+const cropOpen = ref(false);
+const cropSrc = ref('');
+const cropFileName = ref('cropped.jpg');
+const cropTarget = ref<CropTarget | null>(null);
+
+const cropTitle = computed(() => {
+  if (!cropTarget.value) return '裁切圖片';
+  if (cropTarget.value.type === 'main') return '裁切 商品主圖（1:1）';
+  if (cropTarget.value.type === 'gallery') return '裁切 商品圖集（1:1）';
+  return `裁切 獎品圖片（#${cropTarget.value.prizeIndex + 1}，1:1）`;
+});
+
+/** ✅ 全部固定 1:1 */
+const cropAspectRatio = computed(() => 1);
+
+/** 輸出尺寸可不同，但比例固定 1:1 */
+const cropOutputWidth = computed(() => {
+  if (!cropTarget.value) return 800;
+  if (cropTarget.value.type === 'prize') return 600;
+  return 800; // main / gallery
+});
+
+const revokeCropSrc = () => {
+  if (cropSrc.value) {
+    URL.revokeObjectURL(cropSrc.value);
+    cropSrc.value = '';
+  }
+};
+
+const onCropCancel = () => {
+  cropOpen.value = false;
+  cropTarget.value = null;
+  revokeCropSrc();
+};
+
+onBeforeUnmount(() => {
+  revokeCropSrc();
+});
+
+/* 共用驗檔 */
+const validateImageFile = async (file: File) => {
+  const maxSize = 5 * 1024 * 1024;
+
+  if (file.size > maxSize) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '圖片大小不可超過 5MB',
+      iconType: 'warning',
+    });
+    return '圖片大小不可超過 5MB';
+  }
+
+  if (!file.type.startsWith('image/')) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '請選擇圖片檔案',
+      iconType: 'warning',
+    });
+    return '請選擇圖片檔案';
+  }
+
+  return null;
+};
+
+/* 主圖：選檔 -> 開裁切 */
+const handleSelectedMainImage = async (file: File) => {
+  mainUploadErrorMessage.value = null;
+
+  const err = await validateImageFile(file);
+  if (err) {
+    mainUploadErrorMessage.value = err;
+    clearMainSelectedFileUi();
+    return;
+  }
+
+  mainUploadFileName.value = file.name;
+
+  revokeCropSrc();
+  cropSrc.value = URL.createObjectURL(file);
+
+  const base = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  cropFileName.value = `${base}-cropped.jpg`;
+
+  cropTarget.value = { type: 'main' };
+  cropOpen.value = true;
+};
+
+const syncMainPreviewFromUrl = () => {
+  mainImagePreview.value = imageUrl.value || '';
+};
+
+const clearMainImage = () => {
+  imageUrl.value = '';
+  mainImagePreview.value = '';
+};
+
+/* 圖集：選檔 -> 開裁切（一次加入一張） */
+const handleSelectedGalleryImage = async (file: File) => {
+  galleryUploadErrorMessage.value = null;
+
+  const err = await validateImageFile(file);
+  if (err) {
+    galleryUploadErrorMessage.value = err;
+    clearGallerySelectedFileUi();
+    return;
+  }
+
+  galleryUploadFileName.value = file.name;
+
+  revokeCropSrc();
+  cropSrc.value = URL.createObjectURL(file);
+
+  const base = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  cropFileName.value = `${base}-cropped.jpg`;
+
+  cropTarget.value = { type: 'gallery' };
+  cropOpen.value = true;
+};
+
+/* 獎品圖：選檔 -> 開裁切 */
+const handleSelectedPrizeImage = async (
+  file: File,
+  p: PrizeFormRow,
+  idx: number,
+) => {
+  prizeUploadErrorMessages[p._key] = null;
+
+  const err = await validateImageFile(file);
+  if (err) {
+    prizeUploadErrorMessages[p._key] = err;
+    clearPrizeUi(p._key);
+    return;
+  }
+
+  prizeUploadFileNames[p._key] = file.name;
+
+  revokeCropSrc();
+  cropSrc.value = URL.createObjectURL(file);
+
+  const base = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  cropFileName.value = `${base}-cropped.jpg`;
+
+  cropTarget.value = { type: 'prize', prizeKey: p._key, prizeIndex: idx };
+  cropOpen.value = true;
+};
+
+/* 裁切確認 -> 上傳 -> 回填 URL */
+const onCropConfirm = async (croppedFile: File) => {
+  cropOpen.value = false;
+  revokeCropSrc();
+
+  if (!cropTarget.value) return;
+
+  uploading.value = true;
+
+  try {
+    // 主圖
+    if (cropTarget.value.type === 'main') {
+      const { data } = await uploadLotteryImage(croppedFile);
+      const url = data?.imageUrl || '';
+
+      if (!url) {
+        await dialogStore.openInfoDialog({
+          title: '提示訊息',
+          message: '上傳成功但未取得 imageUrl，請檢查後端回傳格式',
+          iconType: 'warning',
+        });
+        return;
+      }
+
+      imageUrl.value = url;
+      mainImagePreview.value = url;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: '商品主圖上傳成功',
+        iconType: 'success',
+      });
+      return;
+    }
+
+    // 圖集（加入一張）
+    if (cropTarget.value.type === 'gallery') {
+      const { data } = await uploadLotteryImage(croppedFile);
+      const url = data?.imageUrl || '';
+
+      if (!url) {
+        await dialogStore.openInfoDialog({
+          title: '提示訊息',
+          message: '上傳成功但未取得 imageUrl，請檢查後端回傳格式',
+          iconType: 'warning',
+        });
+        return;
+      }
+
+      galleryImageUrls.value.push(url);
+      syncGalleryTextFromArray();
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: '商品圖集新增成功',
+        iconType: 'success',
+      });
+      return;
+    }
+
+    // 獎品圖
+    if (cropTarget.value.type === 'prize') {
+      const prizeKey = cropTarget.value.prizeKey;
+      const prizeIndex = cropTarget.value.prizeIndex;
+
+      const row = prizes.find((x) => x._key === prizeKey);
+      if (!row) return;
+
+      const { data } = await uploadPrizeImage(croppedFile);
+      const url = data?.imageUrl || '';
+
+      if (!url) {
+        await dialogStore.openInfoDialog({
+          title: '提示訊息',
+          message: '上傳成功但未取得 imageUrl，請檢查後端回傳格式',
+          iconType: 'warning',
+        });
+        return;
+      }
+
+      row.imageUrl = url;
+
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: `獎品圖片（#${prizeIndex + 1}）上傳成功`,
+        iconType: 'success',
+      });
+      return;
+    }
+  } catch (e: any) {
+    await dialogStore.openInfoDialog({
+      title: '圖片上傳失敗',
+      message: e?.message ?? '請稍後再試',
+      iconType: 'warning',
+    });
+  } finally {
+    uploading.value = false;
+    cropTarget.value = null;
+  }
+};
+
+/** ========== ✅ CKEditor 圖片上傳 ========== */
+class MyCustomUploadAdapter {
+  loader: any;
+  constructor(loader: any) {
+    this.loader = loader;
+  }
+
+  upload() {
+    return this.loader.file.then(async (file: File) => {
+      const { data } = await uploadLotteryImage(file);
+      return { default: data.imageUrl };
+    });
+  }
+
+  abort() {
+    console.log('CKEditor 圖片上傳被中止');
+  }
+}
+
+function CustomUploadAdapterPlugin(editor: any) {
+  editor.plugins.get('FileRepository').createUploadAdapter = (loader: any) => {
+    return new MyCustomUploadAdapter(loader);
+  };
+}
+
+const editorConfig: any = {
+  toolbar: [
+    'heading',
+    '|',
+    'bold',
+    'italic',
+    'link',
+    'bulletedList',
+    'numberedList',
+    'blockQuote',
+    'imageUpload',
+    '|',
+    'imageResize',
+  ],
+  language: 'zh-tw',
+  image: {
+    toolbar: ['imageStyle:full', 'imageStyle:side', 'imageResize'],
+    resizeOptions: [
+      { name: 'resizeImage:original', label: '原始大小', value: null },
+      { name: 'resizeImage:50', label: '50%', value: '50' },
+      { name: 'resizeImage:75', label: '75%', value: '75' },
+    ],
+    resizeUnit: '%',
+  },
+  extraPlugins: [CustomUploadAdapterPlugin],
+};
+
 const normalizePrizePayload = (p: PrizeFormRow) => {
   return {
     ...(p.id ? { id: p.id } : {}),
@@ -763,7 +1001,6 @@ const normalizePrizePayload = (p: PrizeFormRow) => {
     imageUrl: cleanText(p.imageUrl),
     level: cleanText(p.level),
 
-    // ⚠️ 你後端 req 沒寫 weight，但你原本有，就先保留（後端若沒用也不會影響）
     weight: p.weight == null ? undefined : Number(p.weight),
 
     prizeNumber: cleanText(p.prizeNumber),
@@ -833,10 +1070,21 @@ const loadDetail = async () => {
 
     ensureStoreOptionExists(data?.storeId ?? '');
 
+    // ✅ 主圖預覽
+    mainImagePreview.value = data?.imageUrl ?? '';
+
+    // ✅ 圖集回填（array + text 同步）
+    galleryImageUrls.value = Array.isArray(data?.galleryImages)
+      ? data.galleryImages
+      : [];
+    syncGalleryTextFromArray();
+
+    // prizes
     prizes.splice(0, prizes.length);
     (data?.prizes ?? []).forEach((p: any) => {
+      const key = crypto.randomUUID();
       prizes.push({
-        _key: crypto.randomUUID(),
+        _key: key,
         id: p.id,
 
         name: p.name ?? '',
@@ -856,6 +1104,9 @@ const loadDetail = async () => {
 
         orderNum: p.orderNum ?? undefined,
       });
+
+      prizeUploadFileNames[key] = '';
+      prizeUploadErrorMessages[key] = null;
     });
 
     if (prizes.length === 0) addPrize();
@@ -867,9 +1118,9 @@ const loadDetail = async () => {
   }
 };
 
-/** ========== mock data (更完整) ========== */
-const randomPick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
-
+/** ========== mock data（保留） ========== */
+const randomPick = <T,>(arr: T[]) =>
+  arr[Math.floor(Math.random() * arr.length)];
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 const mockContentBlocks = [
@@ -899,14 +1150,13 @@ const fillMockData = () => {
   const hh = pad2(date.getHours());
   const mi = pad2(date.getMinutes());
 
-  // ✅ datetime-local 的格式：YYYY-MM-DDTHH:mm
   const nowLocal = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 
   const plusHours = (h: number) => {
     const d = new Date(date.getTime() + h * 60 * 60 * 1000);
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(
-      d.getDate()
-    )}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(
+      d.getHours(),
+    )}:${pad2(d.getMinutes())}`;
   };
 
   const pickCategory = randomPick([
@@ -915,24 +1165,27 @@ const fillMockData = () => {
     'TRADING_CARD',
     'CUSTOM_GACHA',
   ]);
-
   const pickPlayMode = randomPick(['LOTTERY_MODE', 'SCRATCH_MODE']);
 
   const enableBonus = randomPick([true, false]);
   const multiOptions = randomPick(['10', '10,20,50', '5,10', '10,50']);
 
-  // ✅ 若你有 storeOptions，幫你自動挑第一個店家
   const firstStoreId = storeOptions.value.find((x) => !!x.value)?.value || '';
+
+  // ✅ 1:1 mock
+  const mockMainUrl = `https://picsum.photos/seed/lottery_${ts}/800/800`;
+  const mockGallery = [
+    `https://picsum.photos/seed/gallery_${ts}_1/800/800`,
+    `https://picsum.photos/seed/gallery_${ts}_2/800/800`,
+    `https://picsum.photos/seed/gallery_${ts}_3/800/800`,
+  ];
 
   setValues({
     storeId: firstStoreId,
 
-    title: `${randomPick([
-      '鬼滅之刃',
-      '航海王',
-      '火影忍者',
-      '咒術迴戰',
-    ])} 一番賞 ${Math.floor(Math.random() * 999)}`,
+    title: `${randomPick(['鬼滅之刃', '航海王', '火影忍者', '咒術迴戰'])} 一番賞 ${Math.floor(
+      Math.random() * 999,
+    )}`,
     category: pickCategory,
 
     playMode: pickPlayMode,
@@ -947,12 +1200,8 @@ const fillMockData = () => {
     hotCount: randomPick([0, 9, 99, 999]) as any,
     theme: randomPick(['鬼滅之刃', '航海王', '火影忍者', '咒術迴戰']),
 
-    imageUrl: `https://picsum.photos/seed/lottery_${ts}/1200/600`,
-    galleryImagesText: [
-      `https://picsum.photos/seed/gallery_${ts}_1/900/600`,
-      `https://picsum.photos/seed/gallery_${ts}_2/900/600`,
-      `https://picsum.photos/seed/gallery_${ts}_3/900/600`,
-    ].join(','),
+    imageUrl: mockMainUrl,
+    galleryImagesText: mockGallery.join(','),
 
     description: `這是一筆快速產生的測試資料（商品+獎品整合），ID:${ts}`,
     content: randomPick(mockContentBlocks),
@@ -984,9 +1233,13 @@ const fillMockData = () => {
       : (undefined as any),
   });
 
+  mainImagePreview.value = mockMainUrl;
+
+  galleryImageUrls.value = mockGallery.slice();
+  syncGalleryTextFromArray();
+
   prizes.splice(0, prizes.length);
 
-  // ✅ 更完整的獎品模板（含 point/digital/physical + 籤號）
   const base = [
     {
       level: 'A',
@@ -994,29 +1247,10 @@ const fillMockData = () => {
       weight: 1,
       isGrandPrize: true,
       prizeType: 'physical',
-      pointValue: undefined,
     },
-    {
-      level: 'B',
-      quantity: 2,
-      weight: 2,
-      prizeType: 'physical',
-      pointValue: undefined,
-    },
-    {
-      level: 'C',
-      quantity: 4,
-      weight: 4,
-      prizeType: 'digital',
-      pointValue: undefined,
-    },
-    {
-      level: 'D',
-      quantity: 8,
-      weight: 8,
-      prizeType: 'point',
-      pointValue: 100,
-    },
+    { level: 'B', quantity: 2, weight: 2, prizeType: 'physical' },
+    { level: 'C', quantity: 4, weight: 4, prizeType: 'digital' },
+    { level: 'D', quantity: 8, weight: 8, prizeType: 'point', pointValue: 100 },
     {
       level: 'E',
       quantity: 12,
@@ -1030,39 +1264,40 @@ const fillMockData = () => {
       weight: 0,
       isLastPrize: true,
       prizeType: 'physical',
-      pointValue: undefined,
     },
   ];
 
-  base.forEach((b, idx) => {
+  base.forEach((b: any, idx) => {
     const prizeName =
       b.level === 'A'
         ? 'A賞 角色大型公仔'
         : b.level === 'LAST'
-        ? '最後賞 LAST 保底大獎'
-        : `${b.level}賞 精緻週邊`;
+          ? '最後賞 LAST 保底大獎'
+          : `${b.level}賞 精緻週邊`;
+
+    const key = crypto.randomUUID();
 
     prizes.push({
-      _key: crypto.randomUUID(),
+      _key: key,
       name: prizeName,
       description: `這是 ${b.level} 獎項的測試描述（第 ${idx + 1} 個獎品）`,
-      imageUrl: `https://picsum.photos/seed/prize_${ts}_${idx}/600/600`,
-
+      imageUrl: `https://picsum.photos/seed/prize_${ts}_${idx}/600/600`, // ✅ 1:1
       level: b.level,
       quantity: b.quantity,
       weight: b.weight,
 
-      prizeType: (b as any).prizeType,
-      pointValue: (b as any).pointValue,
+      prizeType: b.prizeType,
+      pointValue: b.pointValue,
 
-      isLastPrize: (b as any).isLastPrize ?? false,
-      isGrandPrize: (b as any).isGrandPrize ?? false,
+      isLastPrize: b.isLastPrize ?? false,
+      isGrandPrize: b.isGrandPrize ?? false,
 
       orderNum: idx + 1,
-
-      // ✅ 刮刮樂才需要籤號，但有填也不影響
       prizeNumber: pad2(idx + 1),
     });
+
+    prizeUploadFileNames[key] = '';
+    prizeUploadErrorMessages[key] = null;
   });
 
   dialogStore.openInfoDialog({
@@ -1073,23 +1308,40 @@ const fillMockData = () => {
 
 /** ========== submit ========== */
 const onSubmit = handleSubmit(async (values) => {
+  if (uploading.value || cropOpen.value) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: cropOpen.value
+        ? '圖片裁切中，請先完成裁切再送出'
+        : '圖片上傳中，請稍後再送出',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   try {
+    // 防止使用者只改文字欄：再同步一次
+    syncGalleryArrayFromText();
+
     const payload = {
       lottery: {
         storeId: cleanText(values.storeId),
 
-        title: values.title,
-        category: values.category,
+        title: (values as any).title,
+        category: (values as any).category,
 
-        playMode: cleanText(values.playMode),
+        playMode: cleanText((values as any).playMode),
         subCategory:
-          values.category === 'CUSTOM_GACHA'
-            ? cleanText(values.subCategory || values.playMode)
+          (values as any).category === 'CUSTOM_GACHA'
+            ? cleanText((values as any).subCategory || (values as any).playMode)
             : undefined,
 
-        status: cleanText(values.status),
+        status: cleanText((values as any).status),
 
-        pricePerDraw: Number(values.pricePerDraw),
+        pricePerDraw: Number((values as any).pricePerDraw),
+
+        // ✅ 主圖
+        imageUrl: cleanText(values.imageUrl),
 
         discountedPrice: values.discountedPrice ?? undefined,
         autoDiscountEnabled: values.autoDiscountEnabled ?? false,
@@ -1101,15 +1353,23 @@ const onSubmit = handleSubmit(async (values) => {
         startTime: toLocalDateTimeOrUndefined(values.startTime),
         endTime: toLocalDateTimeOrUndefined(values.endTime),
 
-        maxDraws: Number(values.maxDraws ?? 0),
+        maxDraws: Number((values as any).maxDraws ?? 0),
 
-        orderNum: values.orderNum == null ? undefined : Number(values.orderNum),
+        orderNum:
+          (values as any).orderNum == null
+            ? undefined
+            : Number((values as any).orderNum),
         remark: cleanText(values.remark),
 
-        hotCount: values.hotCount == null ? undefined : Number(values.hotCount),
-        theme: cleanText(values.theme),
+        hotCount:
+          (values as any).hotCount == null
+            ? undefined
+            : Number((values as any).hotCount),
+        theme: cleanText((values as any).theme),
 
-        galleryImages: parseCsvText(values.galleryImagesText),
+        // ✅ 圖集：以 array 為準
+        galleryImages: galleryImageUrls.value,
+
         content: cleanText(values.content),
         tags: parseCsvText(values.tagsText),
 
@@ -1138,23 +1398,19 @@ const onSubmit = handleSubmit(async (values) => {
 
     if (!isEdit.value) {
       await createLotteryWithPrizes(payload);
-
       dialogStore.openInfoDialog({
         title: '新增成功',
         message: '商品與獎品已建立完成',
       });
-
       router.push('/admin/lottery-with-prizes');
       return;
     }
 
     await updateLotteryWithPrizes(id.value!, payload);
-
     dialogStore.openInfoDialog({
       title: '更新成功',
       message: '商品與獎品已更新',
     });
-
     await loadDetail();
   } catch (e: any) {
     dialogStore.openInfoDialog({
@@ -1172,6 +1428,12 @@ onMounted(async () => {
   else addPrize();
 });
 </script>
+
+<style scoped>
+:deep(.ck-editor__editable) {
+  min-height: 260px;
+}
+</style>
 
 <style scoped lang="scss">
 .lotteryWithPrizesForm {
