@@ -1,4 +1,4 @@
-<!-- src/views/admin/lottery-with-prizes/AdminLotteryWithPrizesForm.vue -->
+<!-- src/views/lottery-with-prizes/AdminLotteryWithPrizesForm.vue -->
 <template>
   <div class="lotteryWithPrizesForm">
     <MCard>
@@ -6,14 +6,6 @@
         <p class="lotteryWithPrizesForm__title">
           {{ isEdit ? '編輯商品與獎品' : '新增商品與獎品' }}
         </p>
-
-        <div class="lotteryWithPrizesForm__actions">
-          <MButton variant="secondary" @click="goBack">返回</MButton>
-          <MButton variant="secondary" @click="fillMockData">假資料</MButton>
-          <MButton :disabled="uploading || cropOpen" @click="onSubmit">
-            儲存
-          </MButton>
-        </div>
       </div>
 
       <!-- 商品資訊 -->
@@ -26,12 +18,26 @@
             :categoryOptions="categoryOptions"
             :playModeOptions="playModeOptions"
             :statusOptions="statusOptions"
+            :boolOptions="boolOptions"
           />
-
-          <!-- ✅ 商品主圖（UploadDropzone + 1:1 Crop） -->
+        </div>
+        <div class="lotteryWithPrizesForm__grid">
+          <div class="w-100 p-6">
+            <p class="form__text form__text--red">商品詳細內容（content）</p>
+            <Ckeditor
+              :editor="ClassicEditor"
+              v-model="content"
+              :config="editorConfig"
+            />
+            <p class="error-text m-t-8" v-if="errors.content">
+              {{ errors.content }}
+            </p>
+          </div>
+        </div>
+        <div class="lotteryWithPrizesForm__grid">
           <div class="w-50 w-md-100 p-6">
             <UploadDropzone
-              label="商品主圖（1:1 裁切）"
+              label="商品主圖"
               accept="image/*"
               :disabled="uploading || cropOpen"
               :fileName="mainUploadFileName"
@@ -80,11 +86,9 @@
               />
             </div>
           </div>
-
-          <!-- ✅ 商品圖集（galleryImages）：UploadDropzone（單張加入）+ 1:1 Crop -->
           <div class="w-50 w-md-100 p-6">
             <UploadDropzone
-              label="商品圖集（每次新增 1 張，1:1 裁切）"
+              label="商品圖集"
               accept="image/*"
               :disabled="uploading || cropOpen"
               :fileName="galleryUploadFileName"
@@ -97,7 +101,15 @@
               @select="handleSelectedGalleryImage"
               @clear="clearGallerySelectedFileUi"
             />
-
+            <div class="m-t-12">
+              <FormInput
+                label="商品圖集 URL（逗號分隔，可直接貼 / 編輯）"
+                v-model="galleryImagesText"
+                :error="errors.galleryImagesText"
+                placeholder="https://a.jpg, https://b.jpg"
+                @blur="syncGalleryArrayFromText"
+              />
+            </div>
             <div class="m-t-12" v-if="galleryImageUrls.length">
               <p class="form__text">
                 目前圖集（{{ galleryImageUrls.length }} 張）
@@ -144,157 +156,11 @@
                 </MButton>
               </div>
             </div>
-
-            <!-- 仍保留文字欄（可貼 / 可手改） -->
-            <div class="m-t-12">
-              <FormInput
-                label="商品圖集 URL（逗號分隔，可直接貼 / 編輯）"
-                v-model="galleryImagesText"
-                :error="errors.galleryImagesText"
-                placeholder="https://a.jpg, https://b.jpg"
-                @blur="syncGalleryArrayFromText"
-              />
-            </div>
-          </div>
-
-          <div class="w-100 p-6">
-            <FormInput
-              label="商品描述"
-              v-model="description"
-              :error="errors.description"
-              type="textarea"
-            />
-          </div>
-
-          <!-- ✅ content CKEditor -->
-          <div class="w-100 p-6">
-            <p class="form__text form__text--red">商品詳細內容（content）</p>
-            <Ckeditor
-              :editor="ClassicEditor"
-              v-model="content"
-              :config="editorConfig"
-            />
-            <p class="error-text m-t-8" v-if="errors.content">
-              {{ errors.content }}
-            </p>
-          </div>
-
-          <!-- tags -->
-          <div class="w-100 p-6">
-            <FormInput
-              label="標籤（逗號分隔）"
-              v-model="tagsText"
-              :error="errors.tagsText"
-              placeholder="鬼滅之刃, 一番賞, 熱門"
-            />
-          </div>
-
-          <!-- remark -->
-          <div class="w-100 p-6">
-            <FormInput
-              label="內部備註（不對外顯示）"
-              v-model="remark"
-              :error="errors.remark"
-              type="textarea"
-            />
-          </div>
-
-          <!-- scheduledAt / startTime / endTime -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="定時上架時間（留空=手動上架）"
-              v-model="scheduledAt"
-              :error="errors.scheduledAt"
-              type="datetime-local"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="活動開始時間"
-              v-model="startTime"
-              :error="errors.startTime"
-              type="datetime-local"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="活動結束時間"
-              v-model="endTime"
-              :error="errors.endTime"
-              type="datetime-local"
-            />
-          </div>
-
-          <!-- discount -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="折扣價（大獎售完後）"
-              v-model="discountedPrice"
-              :error="errors.discountedPrice"
-              type="number"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="大獎售完自動降價"
-              v-model="autoDiscountEnabled"
-              :options="boolOptions"
-              :error="errors.autoDiscountEnabled"
-            />
-          </div>
-
-          <!-- multi draw -->
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="允許多抽"
-              v-model="allowMultiDraw"
-              :options="boolOptions"
-              :error="errors.allowMultiDraw"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="多抽選項（逗號分隔，例如：10,50）"
-              v-model="multiDrawOptionsText"
-              :error="errors.multiDrawOptionsText"
-              placeholder="10,50"
-            />
-          </div>
-
-          <!-- bonus -->
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="是否啟用紅利點數"
-              v-model="bonusEnabled"
-              :options="boolOptions"
-              :error="errors.bonusEnabled"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6" v-if="bonusEnabled">
-            <FormInput
-              label="每抽贈送紅利點數"
-              v-model="bonusPointsPerDraw"
-              :error="errors.bonusPointsPerDraw"
-              type="number"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6" v-if="bonusEnabled">
-            <FormInput
-              label="每抽消耗紅利點數"
-              v-model="bonusCostPerDraw"
-              :error="errors.bonusCostPerDraw"
-              type="number"
-            />
           </div>
         </div>
       </div>
-
+    </MCard>
+    <MCard>
       <!-- 獎品清單 -->
       <div class="lotteryWithPrizesForm__section">
         <div class="lotteryWithPrizesForm__sectionHeader">
@@ -329,8 +195,15 @@
         />
       </div>
     </MCard>
-
-    <!-- ✅ 共用裁切 Dialog（主圖/圖集/獎品圖），全部 1:1 -->
+    <MCard>
+      <div class="lotteryWithPrizesForm__actions">
+        <MButton variant="secondary" @click="goBack">返回</MButton>
+        <MButton variant="secondary" @click="fillMockData">假資料</MButton>
+        <MButton :disabled="uploading || cropOpen" @click="onSubmit">
+          儲存
+        </MButton>
+      </div>
+    </MCard>
     <ImageCropDialog
       v-model="cropOpen"
       :src="cropSrc"
@@ -354,7 +227,7 @@ import PrizeFormCard, {
 
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import * as yup from 'yup';
+
 import { useForm } from 'vee-validate';
 
 /* CKEditor */
@@ -382,7 +255,6 @@ import {
   uploadPrizeImage,
 } from '@/services/adminUploadService';
 
-/** ✅ options 抽出改用 import */
 import {
   categoryOptions,
   playModeOptions,
@@ -391,6 +263,10 @@ import {
   prizeTypeOptions,
   boolOptions,
 } from '@/constants/lotteryOptions';
+import {
+  lotteryWithPrizesInitialValues,
+  lotteryWithPrizesSchema,
+} from '@/validators/lotteryWithPrizesSchema';
 
 const router = useRouter();
 const route = useRoute();
@@ -400,11 +276,6 @@ const id = computed(() => route.params.id as string | undefined);
 const isEdit = computed(() => !!id.value);
 
 /** ========== 店家下拉 ========== */
-interface SelectOption {
-  label: string;
-  value: any;
-  description?: string;
-}
 const storeOptions = ref<SelectOption[]>([]);
 
 const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
@@ -462,121 +333,10 @@ const parseMultiDrawOptions = (text: string) => {
     .filter((n) => Number.isFinite(n) && n > 0);
 };
 
-/** ========== schema ========== */
-const schema = yup.object({
-  storeId: yup.string().notRequired(),
-
-  title: yup.string().required('商品名稱不可為空'),
-  category: yup.string().required('分類不可為空'),
-
-  playMode: yup.string().notRequired(),
-  subCategory: yup.string().notRequired(),
-  status: yup.string().notRequired(),
-
-  pricePerDraw: yup
-    .number()
-    .typeError('每抽價格必須為數字')
-    .min(0, '價格不可為負數')
-    .required('每抽價格不可為空'),
-
-  maxDraws: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '抽數上限不可為負數')
-    .notRequired(),
-
-  orderNum: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '排序不可為負數')
-    .notRequired(),
-
-  hotCount: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '熱門程度不可為負數')
-    .notRequired(),
-
-  theme: yup.string().notRequired(),
-
-  imageUrl: yup.string().notRequired(),
-  galleryImagesText: yup.string().notRequired(),
-
-  description: yup.string().notRequired(),
-  content: yup.string().notRequired(),
-  tagsText: yup.string().notRequired(),
-
-  remark: yup.string().notRequired(),
-
-  scheduledAt: yup.string().notRequired(),
-  startTime: yup.string().notRequired(),
-  endTime: yup.string().notRequired(),
-
-  discountedPrice: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '折扣價不可為負數')
-    .notRequired(),
-
-  autoDiscountEnabled: yup.boolean().notRequired(),
-  allowMultiDraw: yup.boolean().notRequired(),
-  multiDrawOptionsText: yup.string().notRequired(),
-
-  bonusEnabled: yup.boolean().notRequired(),
-  bonusPointsPerDraw: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '紅利點數不可為負數')
-    .notRequired(),
-  bonusCostPerDraw: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '紅利消耗不可為負數')
-    .notRequired(),
-});
-
 /** ========== useForm ========== */
 const { defineField, errors, setValues, handleSubmit } = useForm({
-  validationSchema: schema,
-  initialValues: {
-    storeId: '',
-
-    title: '',
-    category: 'OFFICIAL_ICHIBAN',
-    playMode: 'LOTTERY_MODE',
-    subCategory: '',
-    status: 'DRAFT',
-
-    pricePerDraw: 0,
-    maxDraws: 0,
-
-    orderNum: undefined as any,
-    hotCount: undefined as any,
-    theme: '',
-
-    imageUrl: '',
-    galleryImagesText: '',
-
-    description: '',
-    content: '',
-    tagsText: '',
-
-    remark: '',
-
-    scheduledAt: '',
-    startTime: '',
-    endTime: '',
-
-    discountedPrice: undefined as any,
-    autoDiscountEnabled: false,
-
-    allowMultiDraw: true,
-    multiDrawOptionsText: '10',
-
-    bonusEnabled: false,
-    bonusPointsPerDraw: undefined as any,
-    bonusCostPerDraw: undefined as any,
-  },
+  validationSchema: lotteryWithPrizesSchema,
+  initialValues: lotteryWithPrizesInitialValues,
 });
 
 const [storeId] = defineField('storeId');
@@ -585,25 +345,7 @@ const [playMode] = defineField('playMode');
 const [imageUrl] = defineField('imageUrl');
 const [galleryImagesText] = defineField('galleryImagesText');
 
-const [description] = defineField('description');
 const [content] = defineField('content');
-const [tagsText] = defineField('tagsText');
-
-const [remark] = defineField('remark');
-
-const [scheduledAt] = defineField('scheduledAt');
-const [startTime] = defineField('startTime');
-const [endTime] = defineField('endTime');
-
-const [discountedPrice] = defineField('discountedPrice');
-const [autoDiscountEnabled] = defineField('autoDiscountEnabled');
-
-const [allowMultiDraw] = defineField('allowMultiDraw');
-const [multiDrawOptionsText] = defineField('multiDrawOptionsText');
-
-const [bonusEnabled] = defineField('bonusEnabled');
-const [bonusPointsPerDraw] = defineField('bonusPointsPerDraw');
-const [bonusCostPerDraw] = defineField('bonusCostPerDraw');
 
 /** ========== prizes (local state) ========== */
 const prizes = reactive<PrizeFormRow[]>([]);
@@ -613,7 +355,6 @@ const addPrize = () => {
     _key: crypto.randomUUID(),
     name: '',
     quantity: 1,
-    weight: 1,
     level: 'A',
 
     prizeType: 'physical',
@@ -631,7 +372,7 @@ const removePrize = (index: number) => prizes.splice(index, 1);
 
 const goBack = () => router.push('/admin/lottery-with-prizes');
 
-/** ========== ✅ Upload + Crop（主圖/圖集/獎品圖共用） ========== */
+/** ==========  Upload + Crop（主圖/圖集/獎品圖共用） ========== */
 const uploading = ref(false);
 
 /* main image UI */
@@ -658,7 +399,6 @@ const clearPrizeImage = (p: PrizeFormRow) => {
   clearPrizeUi(p._key);
 };
 
-/* ✅ gallery state */
 const galleryImageUrls = ref<string[]>([]);
 const galleryUploadFileName = ref('');
 const galleryUploadErrorMessage = ref<string | null>(null);
@@ -704,7 +444,7 @@ const cropTitle = computed(() => {
   return `裁切 獎品圖片（#${cropTarget.value.prizeIndex + 1}，1:1）`;
 });
 
-/** ✅ 全部固定 1:1 */
+/**  全部固定 1:1 */
 const cropAspectRatio = computed(() => 1);
 
 /** 輸出尺寸可不同，但比例固定 1:1 */
@@ -939,7 +679,7 @@ const onCropConfirm = async (croppedFile: File) => {
   }
 };
 
-/** ========== ✅ CKEditor 圖片上傳 ========== */
+/** ==========  CKEditor 圖片上傳 ========== */
 class MyCustomUploadAdapter {
   loader: any;
   constructor(loader: any) {
@@ -1000,8 +740,6 @@ const normalizePrizePayload = (p: PrizeFormRow) => {
     description: cleanText(p.description),
     imageUrl: cleanText(p.imageUrl),
     level: cleanText(p.level),
-
-    weight: p.weight == null ? undefined : Number(p.weight),
 
     prizeNumber: cleanText(p.prizeNumber),
     prizeType: cleanText(p.prizeType),
@@ -1070,10 +808,10 @@ const loadDetail = async () => {
 
     ensureStoreOptionExists(data?.storeId ?? '');
 
-    // ✅ 主圖預覽
+    //  主圖預覽
     mainImagePreview.value = data?.imageUrl ?? '';
 
-    // ✅ 圖集回填（array + text 同步）
+    //  圖集回填（array + text 同步）
     galleryImageUrls.value = Array.isArray(data?.galleryImages)
       ? data.galleryImages
       : [];
@@ -1093,7 +831,6 @@ const loadDetail = async () => {
         description: p.description ?? '',
         imageUrl: p.imageUrl ?? '',
         level: p.level ?? 'A',
-        weight: p.weight ?? 1,
 
         prizeNumber: p.prizeNumber ?? '',
         prizeType: p.prizeType ?? 'physical',
@@ -1172,7 +909,7 @@ const fillMockData = () => {
 
   const firstStoreId = storeOptions.value.find((x) => !!x.value)?.value || '';
 
-  // ✅ 1:1 mock
+  //  1:1 mock
   const mockMainUrl = `https://picsum.photos/seed/lottery_${ts}/800/800`;
   const mockGallery = [
     `https://picsum.photos/seed/gallery_${ts}_1/800/800`,
@@ -1244,24 +981,21 @@ const fillMockData = () => {
     {
       level: 'A',
       quantity: 1,
-      weight: 1,
       isGrandPrize: true,
       prizeType: 'physical',
     },
-    { level: 'B', quantity: 2, weight: 2, prizeType: 'physical' },
-    { level: 'C', quantity: 4, weight: 4, prizeType: 'digital' },
-    { level: 'D', quantity: 8, weight: 8, prizeType: 'point', pointValue: 100 },
+    { level: 'B', quantity: 2, prizeType: 'physical' },
+    { level: 'C', quantity: 4, prizeType: 'digital' },
+    { level: 'D', quantity: 8, prizeType: 'point', pointValue: 100 },
     {
       level: 'E',
       quantity: 12,
-      weight: 12,
       prizeType: 'point',
       pointValue: 50,
     },
     {
       level: 'LAST',
       quantity: 1,
-      weight: 0,
       isLastPrize: true,
       prizeType: 'physical',
     },
@@ -1281,10 +1015,9 @@ const fillMockData = () => {
       _key: key,
       name: prizeName,
       description: `這是 ${b.level} 獎項的測試描述（第 ${idx + 1} 個獎品）`,
-      imageUrl: `https://picsum.photos/seed/prize_${ts}_${idx}/600/600`, // ✅ 1:1
+      imageUrl: `https://picsum.photos/seed/prize_${ts}_${idx}/600/600`, //  1:1
       level: b.level,
       quantity: b.quantity,
-      weight: b.weight,
 
       prizeType: b.prizeType,
       pointValue: b.pointValue,
@@ -1340,7 +1073,7 @@ const onSubmit = handleSubmit(async (values) => {
 
         pricePerDraw: Number((values as any).pricePerDraw),
 
-        // ✅ 主圖
+        //  主圖
         imageUrl: cleanText(values.imageUrl),
 
         discountedPrice: values.discountedPrice ?? undefined,
@@ -1367,7 +1100,6 @@ const onSubmit = handleSubmit(async (values) => {
             : Number((values as any).hotCount),
         theme: cleanText((values as any).theme),
 
-        // ✅ 圖集：以 array 為準
         galleryImages: galleryImageUrls.value,
 
         content: cleanText(values.content),
@@ -1429,14 +1161,14 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 :deep(.ck-editor__editable) {
   min-height: 260px;
 }
-</style>
-
-<style scoped lang="scss">
 .lotteryWithPrizesForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   &__header {
     display: flex;
     align-items: center;
@@ -1452,6 +1184,7 @@ onMounted(async () => {
 
   &__actions {
     display: flex;
+    justify-content: end;
     gap: 10px;
     flex-wrap: wrap;
   }

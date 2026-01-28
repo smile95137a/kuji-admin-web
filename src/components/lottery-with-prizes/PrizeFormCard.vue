@@ -54,14 +54,6 @@
 
       <div class="w-50 w-md-100 p-6">
         <FormInput
-          label="權重（0=不可抽）"
-          v-model="localPrize.weight"
-          type="number"
-        />
-      </div>
-
-      <div class="w-50 w-md-100 p-6">
-        <FormInput
           label="顯示排序（數字越小越前面）"
           v-model="localPrize.orderNum"
           type="number"
@@ -76,7 +68,29 @@
         />
       </div>
 
-      <!-- ✅ 獎品圖片：UploadDropzone + Crop（由父層共用裁切 Dialog 控制） -->
+      <div class="w-50 w-md-100 p-6">
+        <FormInput
+          label="獎品描述"
+          v-model="localPrize.description"
+          type="textarea"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormSelect
+          label="是否最後賞"
+          v-model="localPrize.isLastPrize"
+          :options="boolOptions"
+        />
+      </div>
+
+      <div class="w-50 w-md-100 p-6">
+        <FormSelect
+          label="是否大賞（降價觸發）"
+          v-model="localPrize.isGrandPrize"
+          :options="boolOptions"
+        />
+      </div>
       <div class="w-50 w-md-100 p-6">
         <UploadDropzone
           :label="`獎品圖片（#${index + 1}，1:1 裁切）`"
@@ -112,30 +126,6 @@
           />
         </div>
       </div>
-
-      <div class="w-100 p-6">
-        <FormInput
-          label="獎品描述"
-          v-model="localPrize.description"
-          type="textarea"
-        />
-      </div>
-
-      <div class="w-50 w-md-100 p-6">
-        <FormSelect
-          label="是否最後賞"
-          v-model="localPrize.isLastPrize"
-          :options="boolOptions"
-        />
-      </div>
-
-      <div class="w-50 w-md-100 p-6">
-        <FormSelect
-          label="是否大賞（降價觸發）"
-          v-model="localPrize.isGrandPrize"
-          :options="boolOptions"
-        />
-      </div>
     </div>
   </div>
 </template>
@@ -158,7 +148,6 @@ export type PrizeFormRow = {
   description?: string;
   imageUrl?: string;
   level?: string;
-  weight?: number;
 
   prizeNumber?: string;
   prizeType?: string;
