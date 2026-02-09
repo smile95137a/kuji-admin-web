@@ -7,7 +7,6 @@ import NotFound from '@/views/NotFound.vue';
 import bannerRoutes from './bannerRoutes';
 import newsRoutes from './newsRoutes';
 import adminUserRoutes from './adminUserRoutes';
-import lotteryRoutes from './lotteryRoutes';
 
 import { useAuthStore } from '@/stores';
 import orderRoutes from './orderRoutes';
@@ -42,7 +41,6 @@ const routes: Array<RouteRecordRaw> = [
       ...bannerRoutes,
       ...newsRoutes,
       ...adminUserRoutes,
-      ...lotteryRoutes,
       ...lotteryPrizeRoutes,
       ...orderRoutes,
       ...rechargePlanRoutes,

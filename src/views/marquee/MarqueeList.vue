@@ -105,7 +105,9 @@
 
           <!-- 狀態 -->
           <template #cell-isActive="{ item }">
-            <span>{{ item.isActive === 1 ? '啟用' : '停用' }}</span>
+            <span>{{
+              normalizeIsActiveNum(item.isActive) === 1 ? '啟用' : '停用'
+            }}</span>
           </template>
 
           <!-- 日期 -->
@@ -163,7 +165,6 @@ import ReportTable from '@/components/common/ReportTable.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
-
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { useDialogStore } from '@/stores';
@@ -172,9 +173,11 @@ import { executeApi } from '@/utils/executeApiUtils';
 import {
   getAllMarquees,
   deleteMarquee,
-  updateMarqueeStatus,
+  updateMarqueeStatus, // ✅ 後端 @RequestParam status: string
   broadcastMarquees,
 } from '@/services/adminMarqueeService';
+
+type SelectOption = { label: string; value: any };
 
 const router = useRouter();
 const dialogStore = useDialogStore();
@@ -190,9 +193,22 @@ const initValues = ref<any>({
 });
 
 /* Search Hook */
-const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
+const { list, hasData, noDataMessage, query } = useSearchPage({
   useLocalList: true,
 });
+
+/* ✅ 後端 isActive 可能回來 true/false/1/0/'1'/'0'：統一轉成 1/0 */
+const normalizeIsActiveNum = (v: any): 1 | 0 => {
+  if (v === 1 || v === '1' || v === true || v === 'true') return 1;
+  return 0;
+};
+
+const normalizeRows = (rows: any[]) => {
+  return (rows || []).map((r: any) => ({
+    ...r,
+    isActive: normalizeIsActiveNum(r?.isActive),
+  }));
+};
 
 /* Select Options */
 const activeOptions = ref<SelectOption[]>([
@@ -238,6 +254,8 @@ const doQuery = async (condition: any) => {
     return res;
   });
 
+  // ✅ 先把 isActive 正規化，再做 filter（避免 boolean 對不上 '1'/'0'）
+  list.value = normalizeRows(list.value);
   list.value = filterRows(list.value, condition);
 };
 
@@ -266,7 +284,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -300,18 +318,18 @@ const columns = [
 /* Selection */
 const selectedIds = ref<string[]>([]);
 const selectedRows = computed(() =>
-  list.value.filter((row: any) => selectedIds.value.includes(row.id))
+  list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
 const canEnable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r) => r.isActive !== 1)
+    selectedRows.value.every((r) => normalizeIsActiveNum(r.isActive) !== 1),
 );
 const canDisable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r) => r.isActive === 1)
+    selectedRows.value.every((r) => normalizeIsActiveNum(r.isActive) === 1),
 );
 const canDelete = computed(() => selectedRows.value.length > 0);
 
@@ -333,7 +351,8 @@ const enableSelected = async () => {
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) => updateMarqueeStatus(id, true))
+        // ✅ 後端是 status=String，所以傳 '1'
+        selectedIds.value.map((id) => updateMarqueeStatus(id, '1')),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
@@ -366,7 +385,8 @@ const disableSelected = async () => {
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) => updateMarqueeStatus(id, false))
+        // ✅ 後端是 status=String，所以傳 '0'
+        selectedIds.value.map((id) => updateMarqueeStatus(id, '0')),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;

@@ -125,8 +125,6 @@
       </div>
 
       <div class="flex justify-center m-y-12 gap-x-12">
-        <MButton @click="fillMockData"> 快速產生資料 </MButton>
-
         <MButton type="submit" :disabled="uploading || bulkCreating">
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
@@ -424,36 +422,6 @@ const toDatetimeLocal = (date: Date) => {
   const hh = pad2(date.getHours());
   const mm = pad2(date.getMinutes());
   return `${y}-${m}-${d}T${hh}:${mm}`;
-};
-
-const fillMockData = async () => {
-  const now = new Date();
-  const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const mockOrder = Math.floor(Math.random() * 20) + 1;
-
-  const firstStoreId =
-    storeOptions.value.find((o) => o.value)?.value || 'STORE_001';
-
-  const mockImg =
-    imageUrl.value || 'https://picsum.photos/seed/banner/1200/600';
-
-  setValues({
-    storeId: firstStoreId,
-    title: `測試 Banner ${now.getTime()}`,
-    imageUrl: mockImg,
-    orderNum: mockOrder,
-    status: 'PUBLISHED',
-    startTime: toDatetimeLocal(now),
-    endTime: toDatetimeLocal(twoWeeksLater),
-  });
-
-  imagePreview.value = mockImg;
-
-  await dialogStore.openInfoDialog({
-    title: '提示訊息',
-    message: '已帶入測試資料',
-    iconType: 'success',
-  });
 };
 
 /* submit */

@@ -205,15 +205,6 @@ const menuItems = ref([
   },
 
   {
-    title: '商品管理（一番賞）',
-    submenu: [
-      { title: '商品列表', route: '/home/lottery' },
-      { title: '新增商品', route: '/home/lottery/add' },
-      { title: '獎項管理（從商品列表進入）', route: '/home/lottery' },
-    ],
-  },
-
-  {
     title: '訂單管理',
     submenu: [{ title: '訂單列表', route: '/home/order' }],
   },
@@ -225,7 +216,7 @@ const dialogStore = useDialogStore();
 const breadcrumbs = useBreadcrumbsStore();
 
 const userName = computed(
-  () => authStore.user?.displayName || authStore.user?.username || '使用者'
+  () => authStore.user?.displayName || authStore.user?.username || '使用者',
 );
 
 const toggleSidebar = () => {

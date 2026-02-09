@@ -123,19 +123,6 @@
 
       <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12">
-        <MButton type="button" class="mbtn--gray" @click="fillMockData">
-          快速產生資料
-        </MButton>
-
-        <MButton
-          type="button"
-          class="mbtn--gray"
-          :disabled="uploading || bulkCreating || cropOpen || isEdit"
-          @click="batchCreateMockNews"
-        >
-          一鍵批量新增（10 筆）
-        </MButton>
-
         <MButton
           type="submit"
           :disabled="uploading || bulkCreating || cropOpen"
@@ -448,60 +435,6 @@ const onCropConfirm = async (croppedFile: File) => {
   });
 };
 
-/* mock */
-const pad2 = (n: number) => String(n).padStart(2, '0');
-
-const buildRichMockHtml = (seed: string) => {
-  return `
-    <h2>📣 ${seed}｜系統公告與活動資訊</h2>
-    <p>感謝各位玩家的支持！本次更新將帶來更完整的抽獎體驗與穩定性改善。</p>
-    <h3>✅ 本次更新重點</h3>
-    <ul>
-      <li><strong>抽獎流程優化</strong>：提高抽獎畫面反應速度</li>
-      <li><strong>儲值方案更新</strong>：付款流程提示更清楚</li>
-      <li><strong>賞品盒出貨體驗</strong>：支援批次出貨</li>
-    </ul>
-    <blockquote>📌 小提醒：若你遇到頁面異常，建議重新整理或稍後再試。</blockquote>
-    <table>
-      <thead><tr><th>功能</th><th>狀態</th><th>備註</th></tr></thead>
-      <tbody>
-        <tr><td>抽獎</td><td>正常</td><td>流程優化完成</td></tr>
-        <tr><td>儲值</td><td>正常</td><td>付款提示更新</td></tr>
-        <tr><td>賞品盒</td><td>正常</td><td>支援批次出貨</td></tr>
-      </tbody>
-    </table>
-    <p>祝你抽到夢想中的大獎！✨</p>
-  `;
-};
-
-const fillMockData = async () => {
-  const now = new Date();
-  const mockImg = imageUrl.value || 'https://picsum.photos/seed/news/1200/630';
-
-  const yyyy = now.getFullYear();
-  const MM = pad2(now.getMonth() + 1);
-  const dd = pad2(now.getDate());
-  const hh = pad2(now.getHours());
-  const mm = pad2(now.getMinutes());
-
-  setValues({
-    title: `測試最新消息 ${now.getTime()}`,
-    status: 'PUBLISHED',
-    imageUrl: mockImg,
-    scheduledAt: `${yyyy}-${MM}-${dd}T${hh}:${mm}`,
-    endTime: '',
-    content: buildRichMockHtml(`測試公告｜${yyyy}-${MM}-${dd}`),
-  });
-
-  imagePreview.value = mockImg;
-
-  await dialogStore.openInfoDialog({
-    title: '提示訊息',
-    message: '已帶入測試資料',
-    iconType: 'success',
-  });
-};
-
 /* submit */
 const onSubmit = handleSubmit(async (values) => {
   if (uploading.value || bulkCreating.value || cropOpen.value) {
@@ -550,74 +483,6 @@ const onSubmit = handleSubmit(async (values) => {
     });
   }
 });
-
-/* batch create */
-const batchCreateMockNews = async () => {
-  if (uploading.value || cropOpen.value) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: cropOpen.value
-        ? '圖片裁切中，請稍後再試'
-        : '圖片上傳中，請稍後再試',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  if (isEdit.value) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '目前是編輯模式，批量新增只允許在新增頁使用',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  const count = 10;
-  bulkCreating.value = true;
-
-  const ok = await dialogStore.openConfirmDialog({
-    title: '批量新增確認',
-    message: `即將建立 ${count} 筆最新消息，確定要執行嗎？`,
-  });
-
-  if (!ok) {
-    bulkCreating.value = false;
-    return;
-  }
-
-  await executeApi({
-    fn: async () => {
-      for (let i = 1; i <= count; i++) {
-        const now = new Date();
-        const seed = `批量公告 #${i}`;
-
-        await createNews({
-          title: `${seed}｜${now.getTime()}`,
-          status: 'PUBLISHED',
-          imageUrl:
-            imageUrl.value || `https://picsum.photos/seed/news-${i}/1200/630`,
-          content: buildRichMockHtml(seed),
-          scheduledAt: null,
-          endTime: null,
-        });
-      }
-      return true;
-    },
-    onSuccess: async () => {
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message: `批量新增完成 ✅ 已建立 ${count} 筆最新消息`,
-        iconType: 'success',
-      });
-      router.push('/home/news');
-    },
-    onFinally: () => {
-      bulkCreating.value = false;
-    },
-    showSuccessDialog: false,
-  });
-};
 </script>
 
 <style scoped>

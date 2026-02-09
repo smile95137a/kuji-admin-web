@@ -7,12 +7,9 @@ interface RequestData {
   [key: string]: any;
 }
 
-/** 查詢訂單列表（支援動態條件） */
-export const queryOrders = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
+/** 查詢訂單列表（POST /admin/order/list，body 可為空） */
+export const queryOrders = async (req?: RequestData): Promise<any> => {
   try {
-    // 後端：POST /admin/order/list (body 可為空)
     const res = await api.post(`${basePath}/list`, req ?? null);
     return res.data;
   } catch (e) {
@@ -21,27 +18,21 @@ export const queryOrders = async (
   }
 };
 
-/** 取得訂單詳情 */
-export const getOrderById = async (
-  orderId: string
-): Promise<ApiResponse<any>> => {
+/** 查詢訂單詳情（GET /admin/order/{orderId}） */
+export const getOrderDetail = async (orderId: string): Promise<any> => {
   try {
-    // 後端：GET /admin/order/{orderId}
     const res = await api.get(`${basePath}/${orderId}`);
     return res.data;
   } catch (e) {
-    console.error('AdminOrder - getOrderById error:', e);
+    console.error('AdminOrder - getOrderDetail error:', e);
     throw e;
   }
 };
 
-/** 準備出貨（店家確認備貨完成） */
-export const prepareShipping = async (
-  orderId: string
-): Promise<ApiResponse<any>> => {
+/** 準備出貨（PUT /admin/order/{orderId}/prepare） */
+export const prepareShipping = async (orderId: string): Promise<any> => {
   try {
-    // 後端：PUT /admin/order/{orderId}/prepare
-    const res = await api.put(`${basePath}/${orderId}/prepare`, null);
+    const res = await api.put(`${basePath}/${orderId}/prepare`);
     return res.data;
   } catch (e) {
     console.error('AdminOrder - prepareShipping error:', e);
@@ -49,13 +40,15 @@ export const prepareShipping = async (
   }
 };
 
-/** 訂單出貨（填寫物流單號） */
+/**
+ * 訂單出貨（PUT /admin/order/{orderId}/ship）
+ * body: OrderShipReq（例如 { trackingNo: 'xxx', ... }）
+ */
 export const shipOrder = async (
   orderId: string,
-  req: RequestData
-): Promise<ApiResponse<any>> => {
+  req: RequestData,
+): Promise<any> => {
   try {
-    // 後端：PUT /admin/order/{orderId}/ship
     const res = await api.put(`${basePath}/${orderId}/ship`, req);
     return res.data;
   } catch (e) {
@@ -64,13 +57,10 @@ export const shipOrder = async (
   }
 };
 
-/** 完成訂單 */
-export const completeOrder = async (
-  orderId: string
-): Promise<ApiResponse<any>> => {
+/** 完成訂單（PUT /admin/order/{orderId}/complete） */
+export const completeOrder = async (orderId: string): Promise<any> => {
   try {
-    // 後端：PUT /admin/order/{orderId}/complete
-    const res = await api.put(`${basePath}/${orderId}/complete`, null);
+    const res = await api.put(`${basePath}/${orderId}/complete`);
     return res.data;
   } catch (e) {
     console.error('AdminOrder - completeOrder error:', e);
@@ -78,13 +68,15 @@ export const completeOrder = async (
   }
 };
 
-/** 取消訂單（僅 ADMIN、通常限 PENDING） */
+/**
+ * 取消訂單（PUT /admin/order/{orderId}/cancel）
+ * body: OrderCancelReq（例如 { reason: 'xxx' }）
+ */
 export const cancelOrder = async (
   orderId: string,
-  req: RequestData
-): Promise<ApiResponse<any>> => {
+  req: RequestData,
+): Promise<any> => {
   try {
-    // 後端：PUT /admin/order/{orderId}/cancel
     const res = await api.put(`${basePath}/${orderId}/cancel`, req);
     return res.data;
   } catch (e) {

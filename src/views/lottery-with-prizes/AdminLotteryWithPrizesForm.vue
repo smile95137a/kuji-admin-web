@@ -198,7 +198,6 @@
     <MCard>
       <div class="lotteryWithPrizesForm__actions">
         <MButton variant="secondary" @click="goBack">返回</MButton>
-        <MButton variant="secondary" @click="fillMockData">假資料</MButton>
         <MButton :disabled="uploading || cropOpen" @click="onSubmit">
           儲存
         </MButton>
@@ -855,190 +854,6 @@ const loadDetail = async () => {
   }
 };
 
-/** ========== mock data（保留） ========== */
-const randomPick = <T,>(arr: T[]) =>
-  arr[Math.floor(Math.random() * arr.length)];
-const pad2 = (n: number) => String(n).padStart(2, '0');
-
-const mockContentBlocks = [
-  `【活動說明】
-- 單抽 / 多抽（10、50）
-- 大獎售完後可自動降價
-- 最後賞 LAST 會保底（最後一抽獲得）
-
-【注意事項】
-- 本商品為測試資料
-- 圖片僅供示意，請以實際出貨為準`,
-  `【玩法】
-- 每抽皆可獲得紅利點數
-- 支援自動輪播開獎動畫（前端預留）
-
-【提醒】
-- 建議先建立完整獎項與數量
-- 總抽數可設定 0 表示不限量`,
-];
-
-const fillMockData = () => {
-  const ts = Date.now();
-  const date = new Date();
-  const yyyy = date.getFullYear();
-  const mm = pad2(date.getMonth() + 1);
-  const dd = pad2(date.getDate());
-  const hh = pad2(date.getHours());
-  const mi = pad2(date.getMinutes());
-
-  const nowLocal = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-
-  const plusHours = (h: number) => {
-    const d = new Date(date.getTime() + h * 60 * 60 * 1000);
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(
-      d.getHours(),
-    )}:${pad2(d.getMinutes())}`;
-  };
-
-  const pickCategory = randomPick([
-    'OFFICIAL_ICHIBAN',
-    'GACHA',
-    'TRADING_CARD',
-    'CUSTOM_GACHA',
-  ]);
-  const pickPlayMode = randomPick(['LOTTERY_MODE', 'SCRATCH_MODE']);
-
-  const enableBonus = randomPick([true, false]);
-  const multiOptions = randomPick(['10', '10,20,50', '5,10', '10,50']);
-
-  const firstStoreId = storeOptions.value.find((x) => !!x.value)?.value || '';
-
-  //  1:1 mock
-  const mockMainUrl = `https://picsum.photos/seed/lottery_${ts}/800/800`;
-  const mockGallery = [
-    `https://picsum.photos/seed/gallery_${ts}_1/800/800`,
-    `https://picsum.photos/seed/gallery_${ts}_2/800/800`,
-    `https://picsum.photos/seed/gallery_${ts}_3/800/800`,
-  ];
-
-  setValues({
-    storeId: firstStoreId,
-
-    title: `${randomPick(['鬼滅之刃', '航海王', '火影忍者', '咒術迴戰'])} 一番賞 ${Math.floor(
-      Math.random() * 999,
-    )}`,
-    category: pickCategory,
-
-    playMode: pickPlayMode,
-    subCategory: pickCategory === 'CUSTOM_GACHA' ? pickPlayMode : '',
-
-    status: randomPick(['DRAFT', 'ON_SHELF', 'OFF_SHELF']),
-
-    pricePerDraw: randomPick([80, 120, 150, 200, 350]),
-    maxDraws: randomPick([0, 80, 100, 120]),
-
-    orderNum: randomPick([1, 2, 3, 5, 10]) as any,
-    hotCount: randomPick([0, 9, 99, 999]) as any,
-    theme: randomPick(['鬼滅之刃', '航海王', '火影忍者', '咒術迴戰']),
-
-    imageUrl: mockMainUrl,
-    galleryImagesText: mockGallery.join(','),
-
-    description: `這是一筆快速產生的測試資料（商品+獎品整合），ID:${ts}`,
-    content: randomPick(mockContentBlocks),
-    tagsText: randomPick([
-      '熱門,必抽,限量',
-      '新品,一番賞,收藏',
-      '官方,一番賞,保底',
-      '自製賞,抽翻天,超值',
-    ]),
-
-    remark: `內部備註：mock-${ts}`,
-
-    scheduledAt: randomPick(['', nowLocal, plusHours(2)]),
-    startTime: randomPick(['', nowLocal, plusHours(1)]),
-    endTime: randomPick(['', plusHours(24), plusHours(72)]),
-
-    discountedPrice: randomPick([undefined, 50, 80, 100, 150]) as any,
-    autoDiscountEnabled: randomPick([true, false]),
-
-    allowMultiDraw: true,
-    multiDrawOptionsText: multiOptions,
-
-    bonusEnabled: enableBonus,
-    bonusPointsPerDraw: enableBonus
-      ? randomPick([5, 10, 20])
-      : (undefined as any),
-    bonusCostPerDraw: enableBonus
-      ? randomPick([50, 100, 200])
-      : (undefined as any),
-  });
-
-  mainImagePreview.value = mockMainUrl;
-
-  galleryImageUrls.value = mockGallery.slice();
-  syncGalleryTextFromArray();
-
-  prizes.splice(0, prizes.length);
-
-  const base = [
-    {
-      level: 'A',
-      quantity: 1,
-      isGrandPrize: true,
-      prizeType: 'physical',
-    },
-    { level: 'B', quantity: 2, prizeType: 'physical' },
-    { level: 'C', quantity: 4, prizeType: 'digital' },
-    { level: 'D', quantity: 8, prizeType: 'point', pointValue: 100 },
-    {
-      level: 'E',
-      quantity: 12,
-      prizeType: 'point',
-      pointValue: 50,
-    },
-    {
-      level: 'LAST',
-      quantity: 1,
-      isLastPrize: true,
-      prizeType: 'physical',
-    },
-  ];
-
-  base.forEach((b: any, idx) => {
-    const prizeName =
-      b.level === 'A'
-        ? 'A賞 角色大型公仔'
-        : b.level === 'LAST'
-          ? '最後賞 LAST 保底大獎'
-          : `${b.level}賞 精緻週邊`;
-
-    const key = crypto.randomUUID();
-
-    prizes.push({
-      _key: key,
-      name: prizeName,
-      description: `這是 ${b.level} 獎項的測試描述（第 ${idx + 1} 個獎品）`,
-      imageUrl: `https://picsum.photos/seed/prize_${ts}_${idx}/600/600`, //  1:1
-      level: b.level,
-      quantity: b.quantity,
-
-      prizeType: b.prizeType,
-      pointValue: b.pointValue,
-
-      isLastPrize: b.isLastPrize ?? false,
-      isGrandPrize: b.isGrandPrize ?? false,
-
-      orderNum: idx + 1,
-      prizeNumber: pad2(idx + 1),
-    });
-
-    prizeUploadFileNames[key] = '';
-    prizeUploadErrorMessages[key] = null;
-  });
-
-  dialogStore.openInfoDialog({
-    title: '已填入假資料',
-    message: '商品與獎品已自動生成（含完整欄位），可直接按儲存送出',
-  });
-};
-
 /** ========== submit ========== */
 const onSubmit = handleSubmit(async (values) => {
   if (uploading.value || cropOpen.value) {
@@ -1134,7 +949,7 @@ const onSubmit = handleSubmit(async (values) => {
         title: '新增成功',
         message: '商品與獎品已建立完成',
       });
-      router.push('/admin/lottery-with-prizes');
+      router.push('/home/lottery-with-prizes');
       return;
     }
 

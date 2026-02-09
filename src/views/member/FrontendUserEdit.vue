@@ -54,23 +54,9 @@
           />
         </div>
 
-        <!-- ===== 可編輯欄位（對齊 FrontendUserUpdateReq） ===== -->
+        <!-- ===== 會員資料（可編輯：對齊 FrontendUserUpdateReq） ===== -->
         <div class="w-100 p-6">
-          <p class="form__text form__text--red">會員資料</p>
-        </div>
-
-        <!-- status -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="狀態"
-            v-model="status"
-            :options="statusOptions"
-            :error="errors.status"
-            required
-          />
-          <p class="form__text m-t-6" v-if="detail?.statusName">
-            目前狀態名稱：{{ detail.statusName }}
-          </p>
+          <p class="form__text form__text--red">會員資料（可編輯）</p>
         </div>
 
         <!-- email -->
@@ -103,6 +89,16 @@
           />
         </div>
 
+        <!-- lineId -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="LINE ID"
+            v-model="lineId"
+            :error="errors.lineId"
+            placeholder="例如：mylineid"
+          />
+        </div>
+
         <!-- avatar -->
         <div class="w-100 p-6">
           <FormInput
@@ -113,41 +109,118 @@
           />
         </div>
 
-        <!-- coins (editable) -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="金幣餘額"
-            type="number"
-            v-model="goldCoins"
-            :error="errors.goldCoins"
-            placeholder="例如：2500"
-          />
-          <p class="form__text m-t-6">
-            顯示：<NumberFormatter :number="goldCoins || 0" locale="zh-TW" />
-          </p>
+        <!-- ===== 收件資訊（地址先改唯讀） ===== -->
+        <div class="w-100 p-6">
+          <p class="form__text form__text--red">收件資訊（地址目前唯讀）</p>
         </div>
 
+        <!-- recipientName -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="紅利幣餘額"
-            type="number"
-            v-model="bonusCoins"
-            :error="errors.bonusCoins"
-            placeholder="例如：300"
+            label="收件人姓名"
+            v-model="recipientName"
+            :error="errors.recipientName"
+            placeholder="例如：王小明"
           />
-          <p class="form__text m-t-6">
-            顯示：<NumberFormatter :number="bonusCoins || 0" locale="zh-TW" />
-          </p>
         </div>
 
-        <!-- remark -->
+        <!-- recipientPhone -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="收件人電話"
+            v-model="recipientPhone"
+            :error="errors.recipientPhone"
+            placeholder="例如：0912345678"
+          />
+        </div>
+
+        <!-- city (readonly) -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput label="城市（唯讀）" :modelValue="city" disabled />
+        </div>
+
+        <!-- district (readonly) -->
+        <div class="w-50 w-md-100 p-6">
+          <FormInput label="區域（唯讀）" :modelValue="district" disabled />
+        </div>
+
+        <!-- addressDetail (readonly) -->
         <div class="w-100 p-6">
           <FormInput
-            label="備註（可選）"
-            v-model="remark"
-            :error="errors.remark"
-            placeholder="可留空"
+            label="詳細地址（唯讀）"
+            :modelValue="addressDetail"
+            disabled
           />
+        </div>
+
+        <!-- ===== 發票資訊（可連動） ===== -->
+        <div class="w-100 p-6">
+          <p class="form__text form__text--red">發票資訊</p>
+        </div>
+
+        <!-- invoiceType -->
+        <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="發票類型"
+            v-model="invoiceType"
+            :options="invoiceTypeOptions"
+            :error="errors.invoiceType"
+            :showAll="true"
+            allLabel="不設定"
+            :allValue="''"
+          />
+        </div>
+
+        <!-- DUPLICATE -> invoiceEmail -->
+        <div class="w-50 w-md-100 p-6" v-if="isInvoiceDuplicate">
+          <FormInput
+            label="發票 Email"
+            v-model="invoiceEmail"
+            :error="errors.invoiceEmail"
+            placeholder="invoice@example.com"
+            required
+          />
+        </div>
+
+        <!-- CARRIER -> carrierCode -->
+        <div class="w-50 w-md-100 p-6" v-if="isInvoiceCarrier">
+          <FormInput
+            label="載具條碼"
+            v-model="carrierCode"
+            :error="errors.carrierCode"
+            placeholder="/ABCD1234"
+            required
+          />
+        </div>
+
+        <!-- TRIPLICATE -> taxId -->
+        <div class="w-50 w-md-100 p-6" v-if="isInvoiceTriplicate">
+          <FormInput
+            label="統一編號（三聯式）"
+            v-model="taxId"
+            :error="errors.taxId"
+            placeholder="8 碼，例如：12345678"
+            maxlength="8"
+            required
+          />
+        </div>
+
+        <!-- TRIPLICATE -> companyName -->
+        <div class="w-50 w-md-100 p-6" v-if="isInvoiceTriplicate">
+          <FormInput
+            label="公司名稱（三聯式）"
+            v-model="companyName"
+            :error="errors.companyName"
+            placeholder="例如：測試股份有限公司"
+            required
+          />
+        </div>
+
+        <!-- DONATE hint -->
+        <div class="w-100 p-6" v-if="isInvoiceDonate">
+          <p class="form__text" style="opacity: 0.8">
+            已選擇捐贈發票（不需要填寫 Email / 載具 / 統編資訊）
+          </p>
         </div>
       </div>
 
@@ -157,6 +230,7 @@
 
         <MButton type="button" class="mbtn--red" @click="goBack">返回</MButton>
 
+        <!-- 管理員操作（不屬於 FrontendUserUpdateReq） -->
         <MButton type="button" :disabled="!canActivate" @click="activateOne">
           啟用
         </MButton>
@@ -185,7 +259,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -194,7 +268,6 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
-import NumberFormatter from '@/components/common/NumberFormatter.vue';
 
 import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -226,35 +299,82 @@ const detail = ref<any>(null);
 
 const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
 
-/* 下拉 */
-const statusOptions = ref<SelectOption[]>([
-  { label: 'ACTIVE', value: 'ACTIVE' },
-  { label: 'INACTIVE', value: 'INACTIVE' },
-  { label: 'SUSPENDED', value: 'SUSPENDED' },
-  { label: 'DELETED', value: 'DELETED' },
-]);
+/* 發票類型 options（req: DUPLICATE/TRIPLICATE/CARRIER/DONATE） */
+const invoiceTypeOptions: SelectOption[] = [
+  { label: '二聯式（DUPLICATE）', value: 'DUPLICATE' },
+  { label: '三聯式（TRIPLICATE）', value: 'TRIPLICATE' },
+  { label: '載具（CARRIER）', value: 'CARRIER' },
+  { label: '捐贈（DONATE）', value: 'DONATE' },
+];
 
-/* schema：對齊 FrontendUserUpdateReq（最基本約束） */
+/**
+ * ✅ schema：對齊 FrontendUserUpdateReq
+ * - 地址先唯讀：仍可顯示在畫面，但不送更新（payload 會排除 city/district/addressDetail）
+ */
 const schema = yup.object({
   email: yup.string().nullable().email('Email 格式不正確'),
   nickname: yup.string().nullable(),
   avatar: yup.string().nullable(),
-  status: yup
+  phoneNumber: yup.string().nullable(),
+  lineId: yup.string().nullable(),
+
+  recipientName: yup.string().nullable(),
+  recipientPhone: yup.string().nullable(),
+
+  // 這三個先唯讀，不做驗證（也不會送出）
+  city: yup.string().nullable(),
+  district: yup.string().nullable(),
+  addressDetail: yup.string().nullable(),
+
+  invoiceType: yup
     .string()
     .nullable()
-    .oneOf(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED'], '狀態不正確'),
-  goldCoins: yup
-    .number()
-    .transform((v, o) => (o === '' || o === null || o === undefined ? null : v))
+    .transform((v, o) => (o === '' ? null : v))
+    .oneOf(
+      [null, 'DUPLICATE', 'TRIPLICATE', 'CARRIER', 'DONATE'],
+      '發票類型不正確',
+    ),
+
+  invoiceEmail: yup
+    .string()
     .nullable()
-    .min(0, '金幣不可為負數'),
-  bonusCoins: yup
-    .number()
-    .transform((v, o) => (o === '' || o === null || o === undefined ? null : v))
+    .email('發票 Email 格式不正確')
+    .when('invoiceType', {
+      is: (v: any) => v === 'DUPLICATE',
+      then: (s) => s.required('二聯式發票 Email 建議必填'),
+      otherwise: (s) => s.notRequired(),
+    }),
+
+  carrierCode: yup
+    .string()
     .nullable()
-    .min(0, '紅利幣不可為負數'),
-  phoneNumber: yup.string().nullable(),
-  remark: yup.string().nullable(),
+    .when('invoiceType', {
+      is: (v: any) => v === 'CARRIER',
+      then: (s) => s.required('選擇載具時，載具條碼必填'),
+      otherwise: (s) => s.notRequired(),
+    }),
+
+  taxId: yup
+    .string()
+    .nullable()
+    .transform((v, o) => (o === '' ? null : v))
+    .when('invoiceType', {
+      is: (v: any) => v === 'TRIPLICATE',
+      then: (s) =>
+        s
+          .required('選擇三聯式時，統一編號必填')
+          .matches(/^\d{8}$/, '統一編號需為 8 碼數字'),
+      otherwise: (s) => s.notRequired(),
+    }),
+
+  companyName: yup
+    .string()
+    .nullable()
+    .when('invoiceType', {
+      is: (v: any) => v === 'TRIPLICATE',
+      then: (s) => s.required('選擇三聯式時，公司名稱必填'),
+      otherwise: (s) => s.notRequired(),
+    }),
 });
 
 /* useForm */
@@ -264,22 +384,91 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
     email: '',
     nickname: '',
     avatar: '',
-    status: 'ACTIVE',
-    goldCoins: 0,
-    bonusCoins: 0,
     phoneNumber: '',
-    remark: '',
+    lineId: '',
+
+    recipientName: '',
+    recipientPhone: '',
+    city: '',
+    district: '',
+    addressDetail: '',
+
+    invoiceType: '', // ✅ 空字串 = 不設定
+    invoiceEmail: '',
+    carrierCode: '',
+    taxId: '',
+    companyName: '',
   },
 });
 
+/* defineField */
 const [email] = defineField('email');
 const [nickname] = defineField('nickname');
 const [avatar] = defineField('avatar');
-const [status] = defineField('status');
-const [goldCoins] = defineField('goldCoins');
-const [bonusCoins] = defineField('bonusCoins');
 const [phoneNumber] = defineField('phoneNumber');
-const [remark] = defineField('remark');
+const [lineId] = defineField('lineId');
+
+const [recipientName] = defineField('recipientName');
+const [recipientPhone] = defineField('recipientPhone');
+const [city] = defineField('city');
+const [district] = defineField('district');
+const [addressDetail] = defineField('addressDetail');
+
+const [invoiceType] = defineField('invoiceType');
+const [invoiceEmail] = defineField('invoiceEmail');
+const [carrierCode] = defineField('carrierCode');
+const [taxId] = defineField('taxId');
+const [companyName] = defineField('companyName');
+
+/* invoiceType 連動顯示 */
+const isInvoiceDuplicate = computed(() => invoiceType.value === 'DUPLICATE');
+const isInvoiceCarrier = computed(() => invoiceType.value === 'CARRIER');
+const isInvoiceTriplicate = computed(() => invoiceType.value === 'TRIPLICATE');
+const isInvoiceDonate = computed(() => invoiceType.value === 'DONATE');
+
+/* invoiceType 連動：切換時清空不相關欄位，避免髒資料 */
+watch(
+  () => invoiceType.value,
+  (t) => {
+    const type = String(t || '').trim();
+
+    if (!type) {
+      invoiceEmail.value = '';
+      carrierCode.value = '';
+      taxId.value = '';
+      companyName.value = '';
+      return;
+    }
+
+    if (type === 'DUPLICATE') {
+      carrierCode.value = '';
+      taxId.value = '';
+      companyName.value = '';
+      return;
+    }
+
+    if (type === 'CARRIER') {
+      invoiceEmail.value = '';
+      taxId.value = '';
+      companyName.value = '';
+      return;
+    }
+
+    if (type === 'TRIPLICATE') {
+      invoiceEmail.value = '';
+      carrierCode.value = '';
+      return;
+    }
+
+    if (type === 'DONATE') {
+      invoiceEmail.value = '';
+      carrierCode.value = '';
+      taxId.value = '';
+      companyName.value = '';
+      return;
+    }
+  },
+);
 
 /* load detail */
 const loadDetail = async () => {
@@ -295,11 +484,20 @@ const loadDetail = async () => {
         email: data?.email ?? '',
         nickname: data?.nickname ?? '',
         avatar: data?.avatar ?? '',
-        status: data?.status ?? 'ACTIVE',
-        goldCoins: data?.goldCoins ?? 0,
-        bonusCoins: data?.bonusCoins ?? 0,
         phoneNumber: data?.phoneNumber ?? '',
-        remark: data?.remark ?? '',
+        lineId: data?.lineId ?? '',
+
+        recipientName: data?.recipientName ?? '',
+        recipientPhone: data?.recipientPhone ?? '',
+        city: data?.city ?? '',
+        district: data?.district ?? '',
+        addressDetail: data?.addressDetail ?? '',
+
+        invoiceType: data?.invoiceType ?? '',
+        invoiceEmail: data?.invoiceEmail ?? '',
+        carrierCode: data?.carrierCode ?? '',
+        taxId: data?.taxId ?? '',
+        companyName: data?.companyName ?? '',
       });
     },
     showSuccessDialog: false,
@@ -308,19 +506,19 @@ const loadDetail = async () => {
   });
 };
 
-/* status buttons enabled */
+/* 管理員操作按鈕 enabled（不屬於 update req，但保留） */
 const canActivate = computed(
   () =>
     detail.value?.status &&
     detail.value.status !== 'ACTIVE' &&
-    detail.value.status !== 'DELETED'
+    detail.value.status !== 'DELETED',
 );
 const canDeactivate = computed(() => detail.value?.status === 'ACTIVE');
 const canSuspend = computed(
   () =>
     detail.value?.status &&
     detail.value.status !== 'SUSPENDED' &&
-    detail.value.status !== 'DELETED'
+    detail.value.status !== 'DELETED',
 );
 const canDelete = computed(() => detail.value?.status !== 'DELETED');
 
@@ -332,23 +530,44 @@ const onSubmit = handleSubmit(async (values) => {
   });
   if (!ok) return;
 
-  // 對齊 FrontendUserUpdateReq
-  const payload = {
-    email: values.email || null,
-    nickname: values.nickname || null,
-    avatar: values.avatar || null,
-    status: values.status || null,
-    goldCoins:
-      values.goldCoins === null || values.goldCoins === undefined
-        ? null
-        : Number(values.goldCoins),
-    bonusCoins:
-      values.bonusCoins === null || values.bonusCoins === undefined
-        ? null
-        : Number(values.bonusCoins),
-    phoneNumber: values.phoneNumber || null,
-    remark: values.remark || null,
+  const toNull = (v: any) => {
+    const s = String(v ?? '').trim();
+    return s ? s : null;
   };
+
+  const payload: any = {
+    email: toNull(values.email),
+    nickname: toNull(values.nickname),
+    avatar: toNull(values.avatar),
+    phoneNumber: toNull(values.phoneNumber),
+    lineId: toNull(values.lineId),
+
+    recipientName: toNull(values.recipientName),
+    recipientPhone: toNull(values.recipientPhone),
+
+    invoiceType: toNull(values.invoiceType),
+    invoiceEmail: toNull(values.invoiceEmail),
+    carrierCode: toNull(values.carrierCode),
+    taxId: toNull(values.taxId),
+    companyName: toNull(values.companyName),
+  };
+
+  /**
+   * 你若希望「空值不更新」=> 刪 null
+   * 但發票為了能清空，我們保留 null 送出
+   * 其他欄位若你要不更新可刪掉（這裡我保守：只刪 email/nickname/... 的 null）
+   */
+  const keepNullKeys = new Set([
+    'invoiceType',
+    'invoiceEmail',
+    'carrierCode',
+    'taxId',
+    'companyName',
+  ]);
+
+  Object.keys(payload).forEach((k) => {
+    if (payload[k] === null && !keepNullKeys.has(k)) delete payload[k];
+  });
 
   await executeApi({
     fn: async () => updateFrontendUser(id.value, payload),
@@ -364,7 +583,7 @@ const onSubmit = handleSubmit(async (values) => {
   });
 });
 
-/* actions */
+/* actions（管理員操作） */
 const activateOne = async () => {
   const ok = await dialogStore.openConfirmDialog({
     title: '啟用確認',
