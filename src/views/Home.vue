@@ -97,6 +97,8 @@ import {
   useDialogStore,
   useLoadingStore,
 } from '@/stores';
+import { executeApi } from '@/utils/executeApiUtils';
+import { getMenuTree } from '@/services/adminMenuService';
 
 const router = useRouter();
 const route = useRoute();
@@ -120,13 +122,43 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
-onMounted(() => {
+const transformMenu = (raw: any[]): any[] => {
+  return (Array.isArray(raw) ? raw : [])
+    .filter((m) => m?.isVisible !== false)
+    .sort((a, b) => (a?.orderNum ?? 9999) - (b?.orderNum ?? 9999))
+    .map((m) => ({
+      title: m?.name ?? '',
+      // 如果你之後要支援「點父層就導頁」，可以用到
+      route: m?.path ?? '',
+      submenu: (Array.isArray(m?.children) ? m.children : [])
+        .filter((c) => c?.isVisible !== false)
+        .sort((a, b) => (a?.orderNum ?? 9999) - (b?.orderNum ?? 9999))
+        .map((c) => ({
+          title: c?.name ?? '',
+          route: c?.path ?? '',
+        })),
+    }));
+};
+
+onMounted(async () => {
   window.addEventListener('resize', handleResize);
   window.addEventListener('keydown', handleKeydown);
   // 初始同步一次
   handleResize();
   initPrivilege();
   updateActiveMenu();
+
+  await executeApi({
+    fn: async () => getMenuTree(),
+    onSuccess: async (data) => {
+      menuItems.value = transformMenu(data);
+
+      // 重新同步目前路由的 active / breadcrumbs
+      updateActiveMenu();
+    },
+
+    showSuccessDialog: false,
+  });
 });
 
 onBeforeUnmount(() => {
@@ -142,6 +174,7 @@ watch([isMobile, sidebarVisible], ([mobile, open]) => {
     document.body.classList.remove('no-scroll');
   }
 });
+
 // ----- Menu data -----
 const menuItems = ref([
   {
@@ -246,18 +279,6 @@ const setActiveSubmenu = (menuIndex: number, submenuIndex: number) => {
   ]);
 
   if (isMobile.value) closeSidebar();
-};
-
-const transformMenu = (rawMenu: any[]): any[] => {
-  return rawMenu.map((menu) => ({
-    title: menu.menuName,
-    submenu: Array.isArray(menu.children)
-      ? menu.children.map((sub) => ({
-          title: sub.menuName,
-          route: sub.url,
-        }))
-      : [],
-  }));
 };
 
 const updateActiveMenu = () => {

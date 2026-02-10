@@ -1,6 +1,6 @@
 <!-- src/components/lottery-with-prizes/AdminLotteryWithPrizesBasicFields.vue -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useFormContext } from 'vee-validate';
 
 import FormInput from '@/components/common/FormInput.vue';
@@ -56,6 +56,20 @@ const [bonusPointsPerDraw] = defineField('bonusPointsPerDraw');
 const [bonusCostPerDraw] = defineField('bonusCostPerDraw');
 
 const isCustomGacha = computed(() => category.value === 'CUSTOM_GACHA');
+
+/** ✅ 刮刮樂才需要設定總抽數 */
+const isScratchMode = computed(
+  () => String(playMode.value || '') === 'SCRATCH_MODE',
+);
+
+/** ✅ 如果不是刮刮樂，就把 maxDraws 清掉，避免送錯 */
+watch(
+  isScratchMode,
+  (yes) => {
+    if (!yes) maxDraws.value = ''; // 或 0，看你後端怎麼定義
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -133,13 +147,14 @@ const isCustomGacha = computed(() => category.value === 'CUSTOM_GACHA');
     />
   </div>
 
-  <!-- maxDraws -->
-  <div class="w-50 w-md-100 p-6">
+  <!-- ✅ maxDraws：只有刮刮樂顯示（且必填） -->
+  <div class="w-50 w-md-100 p-6" v-if="isScratchMode">
     <FormInput
-      label="總抽數上限（0=無限制）"
+      label="總抽數上限（刮刮樂必填）"
       v-model="maxDraws"
       :error="errors.maxDraws"
       type="number"
+      required
     />
   </div>
 

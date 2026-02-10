@@ -202,7 +202,7 @@ const schema = computed(() => {
       .number()
       .nullable()
       .transform((v, orig) =>
-        orig === '' || orig === null || orig === undefined ? null : v
+        orig === '' || orig === null || orig === undefined ? null : v,
       ),
     isVisible: yup.boolean().required('是否可見必填'),
   });
@@ -285,7 +285,7 @@ const loadDetail = async () => {
           orderNum: d?.orderNum ?? null,
           isVisible: typeof d?.isVisible === 'boolean' ? d.isVisible : true,
         },
-        false
+        false,
       );
     },
     showSuccessDialog: false,
