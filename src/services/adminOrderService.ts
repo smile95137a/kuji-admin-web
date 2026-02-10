@@ -1,7 +1,7 @@
 // services/adminOrderService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/admin/order';
+const basePath = '/admin/orders';
 
 interface RequestData {
   [key: string]: any;
