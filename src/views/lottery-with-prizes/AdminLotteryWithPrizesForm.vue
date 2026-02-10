@@ -21,143 +21,142 @@
             :boolOptions="boolOptions"
           />
         </div>
-        <div class="lotteryWithPrizesForm__grid">
-          <div class="w-100 p-6">
-            <p class="form__text form__text--red">商品詳細內容（content）</p>
-            <Ckeditor
-              :editor="ClassicEditor"
-              v-model="content"
-              :config="editorConfig"
-            />
-            <p class="error-text m-t-8" v-if="errors.content">
-              {{ errors.content }}
-            </p>
-          </div>
-        </div>
-        <div class="lotteryWithPrizesForm__grid">
-          <div class="w-50 w-md-100 p-6">
-            <UploadDropzone
-              label="商品主圖"
-              accept="image/*"
-              :disabled="uploading || cropOpen"
-              :fileName="mainUploadFileName"
-              :errorMessage="mainUploadErrorMessage"
-              :statusText="
-                uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
-              "
-              :showDecorIcons="true"
-              :showClear="true"
-              @select="handleSelectedMainImage"
-              @clear="clearMainSelectedFileUi"
-            />
-
-            <div class="m-t-12">
-              <FormInput
-                label="商品主圖 URL（imageUrl，可直接貼）"
-                v-model="imageUrl"
-                :error="errors.imageUrl"
-                placeholder="https://example.com/xxx.jpg（或上方上傳會自動回填）"
-                @blur="syncMainPreviewFromUrl"
+        <MCard class="m-t-12">
+          <div class="lotteryWithPrizesForm__grid">
+            <div class="w-100 p-6">
+              <p class="form__text form__text--red">商品詳細內容（content）</p>
+              <Ckeditor
+                :editor="ClassicEditor"
+                v-model="content"
+                :config="editorConfig"
               />
-            </div>
-
-            <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
-              <MButton
-                type="button"
-                variant="secondary"
-                :disabled="uploading || cropOpen"
-                @click="clearMainImage"
-              >
-                清除圖片
-              </MButton>
-              <p class="form__text" v-if="uploading">上傳中...</p>
-            </div>
-
-            <div v-if="mainImagePreview" class="m-t-12">
-              <img
-                :src="mainImagePreview"
-                alt="preview"
-                style="
-                  width: 180px;
-                  height: 180px;
-                  object-fit: cover;
-                  border-radius: 8px;
-                "
-              />
-            </div>
-          </div>
-          <div class="w-50 w-md-100 p-6">
-            <UploadDropzone
-              label="商品圖集"
-              accept="image/*"
-              :disabled="uploading || cropOpen"
-              :fileName="galleryUploadFileName"
-              :errorMessage="galleryUploadErrorMessage"
-              :statusText="
-                uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
-              "
-              :showDecorIcons="true"
-              :showClear="true"
-              @select="handleSelectedGalleryImage"
-              @clear="clearGallerySelectedFileUi"
-            />
-            <div class="m-t-12">
-              <FormInput
-                label="商品圖集 URL（逗號分隔，可直接貼 / 編輯）"
-                v-model="galleryImagesText"
-                :error="errors.galleryImagesText"
-                placeholder="https://a.jpg, https://b.jpg"
-                @blur="syncGalleryArrayFromText"
-              />
-            </div>
-            <div class="m-t-12" v-if="galleryImageUrls.length">
-              <p class="form__text">
-                目前圖集（{{ galleryImageUrls.length }} 張）
+              <p class="error-text m-t-8" v-if="errors.content">
+                {{ errors.content }}
               </p>
-
-              <div class="flex flex-wrap gap-12 m-t-8">
-                <div
-                  v-for="(url, i) in galleryImageUrls"
-                  :key="url + '_' + i"
-                  style="width: 120px"
-                >
-                  <img
-                    :src="url"
-                    alt="gallery-preview"
-                    style="
-                      width: 120px;
-                      height: 120px;
-                      object-fit: cover;
-                      border-radius: 8px;
-                    "
-                  />
-                  <div class="flex justify-between m-t-6">
-                    <MButton
-                      size="sm"
-                      variant="secondary"
-                      type="button"
-                      :disabled="uploading || cropOpen"
-                      @click="removeGalleryImage(i)"
-                    >
-                      移除
-                    </MButton>
-                  </div>
-                </div>
-              </div>
+            </div>
+          </div>
+          <div class="lotteryWithPrizesForm__grid">
+            <div class="w-50 w-md-100 p-6">
+              <UploadDropzone
+                label="商品主圖"
+                accept="image/*"
+                :disabled="uploading || cropOpen"
+                :fileName="mainUploadFileName"
+                :errorMessage="mainUploadErrorMessage"
+                :statusText="
+                  uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
+                "
+                :showDecorIcons="true"
+                :showClear="true"
+                @select="handleSelectedMainImage"
+                @clear="clearMainSelectedFileUi"
+              />
 
               <div class="m-t-12">
+                <FormInput
+                  label="商品主圖 URL（imageUrl，可直接貼）"
+                  v-model="imageUrl"
+                  :error="errors.imageUrl"
+                  placeholder="https://example.com/xxx.jpg（或上方上傳會自動回填）"
+                  @blur="syncMainPreviewFromUrl"
+                />
+              </div>
+
+              <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
                 <MButton
                   type="button"
                   variant="secondary"
                   :disabled="uploading || cropOpen"
-                  @click="clearGalleryImages"
+                  @click="clearMainImage"
                 >
-                  清空圖集
+                  清除圖片
                 </MButton>
+                <p class="form__text" v-if="uploading">上傳中...</p>
+              </div>
+
+              <div v-if="mainImagePreview" class="m-t-12">
+                <img
+                  :src="mainImagePreview"
+                  alt="preview"
+                  style="
+                    width: 180px;
+                    height: 180px;
+                    object-fit: cover;
+                    border-radius: 8px;
+                  "
+                />
+              </div>
+            </div>
+            <div class="w-50 w-md-100 p-6">
+              <UploadDropzone
+                label="商品圖集"
+                accept="image/*"
+                :disabled="uploading || cropOpen"
+                :fileName="galleryUploadFileName"
+                :errorMessage="galleryUploadErrorMessage"
+                :statusText="
+                  uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
+                "
+                :showDecorIcons="true"
+                :showClear="true"
+                @select="handleSelectedGalleryImage"
+                @clear="clearGallerySelectedFileUi"
+              />
+              <div class="m-t-12">
+                <FormInput
+                  label="商品圖集 URL（逗號分隔，可直接貼 / 編輯）"
+                  v-model="galleryImagesText"
+                  :error="errors.galleryImagesText"
+                  placeholder="https://a.jpg, https://b.jpg"
+                  @blur="syncGalleryArrayFromText"
+                />
+              </div>
+              <div class="m-t-12" v-if="galleryImageUrls.length">
+                <div class="m-t-12">
+                  <MButton
+                    type="button"
+                    variant="secondary"
+                    :disabled="uploading || cropOpen"
+                    @click="clearGalleryImages"
+                  >
+                    清空圖集
+                  </MButton>
+                </div>
+                <p class="form__text">
+                  目前圖集（{{ galleryImageUrls.length }} 張）
+                </p>
+
+                <div class="flex flex-wrap gap-12 m-t-8">
+                  <div
+                    v-for="(url, i) in galleryImageUrls"
+                    :key="url + '_' + i"
+                    class="lotteryWithPrizesForm__galleryItem"
+                  >
+                    <img
+                      :src="url"
+                      alt="gallery-preview"
+                      class="lotteryWithPrizesForm__galleryImg"
+                    />
+
+                    <!-- 紅色叉叉（右上角浮動） -->
+                    <button
+                      type="button"
+                      class="lotteryWithPrizesForm__galleryRemove"
+                      :disabled="uploading || cropOpen"
+                      aria-label="移除圖片"
+                      @click="removeGalleryImage(i)"
+                    >
+                      <font-awesome-icon
+                        icon="fa-solid fa-xmark"
+                        class="lotteryWithPrizesForm__galleryRemoveIcon"
+                      />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </MCard>
       </div>
     </MCard>
     <MCard>
@@ -976,14 +975,18 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
+/* AdminLotteryWithPrizesForm.vue (scoped) */
+
 :deep(.ck-editor__editable) {
   min-height: 260px;
 }
+
 .lotteryWithPrizesForm {
   display: flex;
   flex-direction: column;
   gap: 12px;
+
   &__header {
     display: flex;
     align-items: center;
@@ -1060,6 +1063,176 @@ onMounted(async () => {
     padding: 2px 8px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.06);
+  }
+
+  &__badge--muted {
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  /* =========================
+   * Gallery (圖集) 右上角叉叉
+   * ========================= */
+
+  &__galleryItem {
+    position: relative;
+    width: 120px;
+  }
+
+  &__galleryImg {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+  }
+
+  &__galleryRemove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+
+    border: 0;
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #e53935;
+    color: #fff;
+
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+
+    transition:
+      transform 0.12s ease,
+      opacity 0.12s ease;
+  }
+
+  &__galleryRemove:hover {
+    transform: scale(1.06);
+  }
+
+  &__galleryRemove:active {
+    transform: scale(0.96);
+  }
+
+  &__galleryRemove:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &__galleryRemoveIcon {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* =========================
+   * Prize layout (左表單 / 右圖片)
+   * ========================= */
+
+  &__prizeBody {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  &__prizeLeft {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__prizeRight {
+    width: 340px;
+    min-width: 340px;
+  }
+
+  &__prizeSection {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  }
+
+  &__prizeSectionTitle {
+    font-size: 13px;
+    font-weight: 800;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+
+  /* Prize image preview + remove button */
+  &__prizePreviewWrap {
+    position: relative;
+    width: 140px;
+  }
+
+  &__prizePreview {
+    width: 140px;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+  }
+
+  &__prizePreviewRemove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 0;
+
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #e53935;
+    color: #fff;
+
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+
+    transition:
+      transform 0.12s ease,
+      opacity 0.12s ease;
+  }
+
+  &__prizePreviewRemove:hover {
+    transform: scale(1.06);
+  }
+
+  &__prizePreviewRemove:active {
+    transform: scale(0.96);
+  }
+
+  &__prizePreviewRemove:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &__prizePreviewRemoveIcon {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* RWD */
+  @media (max-width: 768px) {
+    &__prizeBody {
+      flex-direction: column;
+    }
+
+    &__prizeRight {
+      width: 100%;
+      min-width: 0;
+    }
   }
 }
 </style>
