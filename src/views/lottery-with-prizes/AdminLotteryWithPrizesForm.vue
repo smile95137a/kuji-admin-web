@@ -369,7 +369,7 @@ const addPrize = () => {
 
 const removePrize = (index: number) => prizes.splice(index, 1);
 
-const goBack = () => router.push('/admin/lottery-with-prizes');
+const goBack = () => router.push('/home/lottery-with-prizes');
 
 /** ==========  Upload + Crop（主圖/圖集/獎品圖共用） ========== */
 const uploading = ref(false);
@@ -958,7 +958,7 @@ const onSubmit = handleSubmit(async (values) => {
       title: '更新成功',
       message: '商品與獎品已更新',
     });
-    await loadDetail();
+    router.push('/home/lottery-with-prizes');
   } catch (e: any) {
     dialogStore.openInfoDialog({
       title: '儲存失敗',
