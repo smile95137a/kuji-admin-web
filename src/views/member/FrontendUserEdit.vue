@@ -244,15 +244,6 @@
         <MButton type="button" :disabled="!canSuspend" @click="suspendOne">
           暫停
         </MButton>
-
-        <MButton
-          type="button"
-          class="mbtn--red"
-          :disabled="!canDelete"
-          @click="deleteOne"
-        >
-          刪除
-        </MButton>
       </div>
     </form>
   </MCard>
@@ -278,7 +269,6 @@ import {
   activateFrontendUser,
   deactivateFrontendUser,
   suspendFrontendUser,
-  deleteFrontendUser,
 } from '@/services/adminFrontendUserService';
 
 interface SelectOption {
@@ -510,17 +500,14 @@ const loadDetail = async () => {
 const canActivate = computed(
   () =>
     detail.value?.status &&
-    detail.value.status !== 'ACTIVE' &&
-    detail.value.status !== 'DELETED',
+    detail.value.status !== 'ACTIVE',
 );
 const canDeactivate = computed(() => detail.value?.status === 'ACTIVE');
 const canSuspend = computed(
   () =>
     detail.value?.status &&
-    detail.value.status !== 'SUSPENDED' &&
-    detail.value.status !== 'DELETED',
+    detail.value.status !== 'SUSPENDED',
 );
-const canDelete = computed(() => detail.value?.status !== 'DELETED');
 
 /* submit (update) */
 const onSubmit = handleSubmit(async (values) => {
@@ -642,27 +629,6 @@ const suspendOne = async () => {
         iconType: 'success',
       });
       await loadDetail();
-    },
-    showSuccessDialog: false,
-  });
-};
-
-const deleteOne = async () => {
-  const ok = await dialogStore.openConfirmDialog({
-    title: '刪除確認',
-    message: '確定要刪除此會員嗎？（軟刪除）',
-  });
-  if (!ok) return;
-
-  await executeApi({
-    fn: async () => deleteFrontendUser(id.value),
-    onSuccess: async () => {
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message: '刪除成功',
-        iconType: 'success',
-      });
-      goBack();
     },
     showSuccessDialog: false,
   });

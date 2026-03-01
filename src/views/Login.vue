@@ -51,24 +51,18 @@ const onSubmit = handleSubmit(async (values) => {
       }),
 
     onSuccess: async (data: any) => {
-      const accessToken = data?.accessToken;
-      const refreshToken = data?.refreshToken;
-      const tokenType = data?.tokenType ?? 'Bearer';
-      const expiresIn = data?.expiresIn ?? 0;
-      const forceChangePassword = !!data?.forceChangePassword;
-      const user = data?.user;
+      const accessToken = data?.token ?? data?.accessToken;
+      const user = data?.adminUser ?? data?.user;
+      const forceChangePassword = !!(
+        data?.isFirstLogin ?? data?.forceChangePassword
+      );
 
       if (!accessToken || !user) {
         setFieldError('password', '登入回傳資料異常，請聯絡系統管理員');
         return;
       }
 
-      authStore.setUser(user);
-      authStore.setToken(accessToken);
-      authStore.setRefreshToken?.(refreshToken);
-      authStore.setTokenType?.(tokenType);
-      authStore.setExpiresIn?.(expiresIn);
-      authStore.setForceChangePassword?.(forceChangePassword);
+      authStore.setAuthFromLogin?.(data);
 
       if (forceChangePassword) {
         router.push('/first-login/change-password');

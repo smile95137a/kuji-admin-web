@@ -98,7 +98,7 @@ api.interceptors.response.use(
         throw new Error(payload?.error?.message || 'refresh failed');
       }
 
-      const newAccessToken = payload?.data?.accessToken;
+      const newAccessToken = payload?.data?.token ?? payload?.data?.accessToken;
       const newRefreshToken = payload?.data?.refreshToken;
       const newTokenType = payload?.data?.tokenType || 'Bearer';
       const newExpiresIn = payload?.data?.expiresIn ?? 0;

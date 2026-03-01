@@ -253,6 +253,8 @@ import {
   uploadPrizeImage,
 } from '@/services/adminUploadService';
 
+import { generateUUID } from '@/utils/RandomUtils';
+
 import {
   categoryOptions,
   playModeOptions,
@@ -350,7 +352,7 @@ const prizes = reactive<PrizeFormRow[]>([]);
 
 const addPrize = () => {
   prizes.push({
-    _key: crypto.randomUUID(),
+    _key: generateUUID(),
     name: '',
     quantity: 1,
     level: 'A',
@@ -818,7 +820,7 @@ const loadDetail = async () => {
     // prizes
     prizes.splice(0, prizes.length);
     (data?.prizes ?? []).forEach((p: any) => {
-      const key = crypto.randomUUID();
+      const key = generateUUID();
       prizes.push({
         _key: key,
         id: p.id,

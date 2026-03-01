@@ -7,8 +7,8 @@ interface RequestData {
   [key: string]: any;
 }
 
-/** 查詢訂單列表（POST /admin/order/list，body 可為空） */
-export const queryOrders = async (req?: RequestData): Promise<any> => {
+/** 查詢訂單列表（POST /admin/orders/list，body 可為空） */
+export const queryOrders = async (req?: RequestData): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/list`, req ?? null);
     return res.data;
@@ -18,8 +18,8 @@ export const queryOrders = async (req?: RequestData): Promise<any> => {
   }
 };
 
-/** 查詢訂單詳情（GET /admin/order/{orderId}） */
-export const getOrderDetail = async (orderId: string): Promise<any> => {
+/** 查詢訂單詳情（GET /admin/orders/{orderId}） */
+export const getOrderDetail = async (orderId: string): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}/${orderId}`);
     return res.data;
@@ -29,8 +29,8 @@ export const getOrderDetail = async (orderId: string): Promise<any> => {
   }
 };
 
-/** 準備出貨（PUT /admin/order/{orderId}/prepare） */
-export const prepareShipping = async (orderId: string): Promise<any> => {
+/** 準備出貨（PUT /admin/orders/{orderId}/prepare） */
+export const prepareShipping = async (orderId: string): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${orderId}/prepare`);
     return res.data;
@@ -41,13 +41,13 @@ export const prepareShipping = async (orderId: string): Promise<any> => {
 };
 
 /**
- * 訂單出貨（PUT /admin/order/{orderId}/ship）
+ * 訂單出貨（PUT /admin/orders/{orderId}/ship）
  * body: OrderShipReq（例如 { trackingNo: 'xxx', ... }）
  */
 export const shipOrder = async (
   orderId: string,
   req: RequestData,
-): Promise<any> => {
+): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${orderId}/ship`, req);
     return res.data;
@@ -57,8 +57,8 @@ export const shipOrder = async (
   }
 };
 
-/** 完成訂單（PUT /admin/order/{orderId}/complete） */
-export const completeOrder = async (orderId: string): Promise<any> => {
+/** 完成訂單（PUT /admin/orders/{orderId}/complete） */
+export const completeOrder = async (orderId: string): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${orderId}/complete`);
     return res.data;
@@ -69,13 +69,13 @@ export const completeOrder = async (orderId: string): Promise<any> => {
 };
 
 /**
- * 取消訂單（PUT /admin/order/{orderId}/cancel）
+ * 取消訂單（PUT /admin/orders/{orderId}/cancel）
  * body: OrderCancelReq（例如 { reason: 'xxx' }）
  */
 export const cancelOrder = async (
   orderId: string,
   req: RequestData,
-): Promise<any> => {
+): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${orderId}/cancel`, req);
     return res.data;

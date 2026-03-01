@@ -49,6 +49,83 @@ export const searchStores = async (params: {
   }
 };
 
+/** 取得所有店家選單（ADMIN ONLY，含非活躍）（GET /admin/stores/all-options） */
+export const getAllStoreOptions = async (): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/all-options`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - getAllStoreOptions error:', e);
+    throw e;
+  }
+};
+
+/** 查詢店家列表（POST /admin/stores/list） */
+export const queryStores = async (
+  req?: RequestData
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/list`, req ?? null);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - queryStores error:', e);
+    throw e;
+  }
+};
+
+/** 取得店家詳情（GET /admin/stores/{storeId}） */
+export const getStoreById = async (
+  storeId: string
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/${storeId}`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - getStoreById error:', e);
+    throw e;
+  }
+};
+
+/** 更新店家資訊（PUT /admin/stores/{storeId}） */
+export const updateStore = async (
+  storeId: string,
+  req: RequestData
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.put(`${basePath}/${storeId}`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - updateStore error:', e);
+    throw e;
+  }
+};
+
+/** 啟用店家（POST /admin/stores/{storeId}/activate）（ADMIN ONLY） */
+export const activateStore = async (
+  storeId: string
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/${storeId}/activate`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - activateStore error:', e);
+    throw e;
+  }
+};
+
+/** 停用店家（POST /admin/stores/{storeId}/deactivate）（ADMIN ONLY） */
+export const deactivateStore = async (
+  storeId: string
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/${storeId}/deactivate`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - deactivateStore error:', e);
+    throw e;
+  }
+};
+
 /**
  * （可選）給 BannerForm 用的 helper：把 options 統一成 SelectOption[]
  * 你專案若已經有 SelectOption 型別可直接拿掉 any

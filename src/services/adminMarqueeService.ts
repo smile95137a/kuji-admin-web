@@ -7,7 +7,7 @@ interface RequestData {
 }
 
 /** 取得所有跑馬燈（GET /admin/marquee） */
-export const getAllMarquees = async (): Promise<any> => {
+export const getAllMarquees = async (): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}`);
     return res.data;
@@ -18,7 +18,7 @@ export const getAllMarquees = async (): Promise<any> => {
 };
 
 /** 取得單一跑馬燈（GET /admin/marquee/{id}） */
-export const getMarquee = async (id: string): Promise<any> => {
+export const getMarquee = async (id: string): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}/${id}`);
     return res.data;
@@ -29,7 +29,7 @@ export const getMarquee = async (id: string): Promise<any> => {
 };
 
 /** 新增跑馬燈（POST /admin/marquee） */
-export const createMarquee = async (data: RequestData): Promise<any> => {
+export const createMarquee = async (data: RequestData): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}`, data);
     return res.data;
@@ -43,7 +43,7 @@ export const createMarquee = async (data: RequestData): Promise<any> => {
 export const updateMarquee = async (
   id: string,
   data: RequestData,
-): Promise<any> => {
+): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${id}`, data);
     return res.data;
@@ -54,7 +54,7 @@ export const updateMarquee = async (
 };
 
 /** 刪除跑馬燈（DELETE /admin/marquee/{id}） */
-export const deleteMarquee = async (id: string): Promise<any> => {
+export const deleteMarquee = async (id: string): Promise<ApiResponse<any>> => {
   try {
     const res = await api.delete(`${basePath}/${id}`);
     return res.data;
@@ -71,7 +71,7 @@ export const deleteMarquee = async (id: string): Promise<any> => {
 export const updateMarqueeStatus = async (
   id: string,
   status: string,
-): Promise<any> => {
+): Promise<ApiResponse<any>> => {
   try {
     const res = await api.patch(`${basePath}/${id}/status`, null, {
       params: { status },
@@ -84,7 +84,7 @@ export const updateMarqueeStatus = async (
 };
 
 /** 手動廣播所有啟用中的跑馬燈（POST /admin/marquee/broadcast） */
-export const broadcastMarquees = async (): Promise<any> => {
+export const broadcastMarquees = async (): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/broadcast`);
     return res.data;

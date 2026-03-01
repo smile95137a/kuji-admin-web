@@ -19,6 +19,19 @@ export const queryRechargePlans = async (): Promise<ApiResponse<any>> => {
   }
 };
 
+/** 查詢儲值方案（帶條件）（POST /admin/recharge-plan/query） */
+export const queryRechargePlansWithCondition = async (
+  req?: RequestData
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/query`, req ?? null);
+    return res.data;
+  } catch (e) {
+    console.error('AdminRechargePlan - queryRechargePlansWithCondition error:', e);
+    throw e;
+  }
+};
+
 /** 取得儲值方案詳情 */
 export const getRechargePlanById = async (
   id: string

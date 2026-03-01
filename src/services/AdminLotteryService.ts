@@ -99,3 +99,16 @@ export const offShelfLottery = async (
     throw e;
   }
 };
+
+/** 複製商品（POST /admin/lottery/copy） */
+export const copyLottery = async (
+  req: { sourceLotteryId: string; newTitle?: string }
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/copy`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminLottery - copyLottery error:', e);
+    throw e;
+  }
+};

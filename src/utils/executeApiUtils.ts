@@ -42,6 +42,8 @@ export async function executeApi<T = any>({
         : { success: true, code: '', data: res as T, message: '' };
 
     const { success, data, message } = normalized;
+    const failMessage =
+      (normalized as any)?.error?.message || message || errorMessage;
 
     if (success) {
       if (showSuccessDialog) {
@@ -58,7 +60,7 @@ export async function executeApi<T = any>({
       if (showFailDialog) {
         await dialogStore.openInfoDialog({
           title: errorTitle,
-          message: message || errorMessage,
+          message: failMessage,
           iconType: 'warning',
         });
       }

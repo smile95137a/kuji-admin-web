@@ -58,13 +58,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 後端 login 成功後直接丟整包 data 進來 */
   const setAuthFromLogin = (data: any) => {
-    // data: { accessToken, refreshToken, tokenType, expiresIn, forceChangePassword, user }
-    setToken(data?.accessToken ?? null);
+    // data (new): { token, refreshToken, adminUser, isFirstLogin }
+    // data (legacy): { accessToken, refreshToken, user, forceChangePassword }
+    setToken(data?.token ?? data?.accessToken ?? null);
     setRefreshToken(data?.refreshToken ?? null);
     setTokenType(data?.tokenType ?? 'Bearer');
     setExpiresIn(data?.expiresIn ?? 0);
-    setForceChangePassword(data?.forceChangePassword ?? false);
-    setUser(data?.user ?? null);
+    setForceChangePassword(data?.isFirstLogin ?? data?.forceChangePassword ?? false);
+    setUser(data?.adminUser ?? data?.user ?? null);
   };
 
   const clearAuthData = () => {

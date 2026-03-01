@@ -25,14 +25,6 @@
           >停用</MButton
         >
         <MButton :disabled="!canSuspend" @click="suspendSelected">暫停</MButton>
-
-        <MButton
-          class="mbtn--red"
-          :disabled="!canDelete"
-          @click="deleteSelected"
-        >
-          刪除
-        </MButton>
       </div>
 
       <template v-if="!hasData">
@@ -145,7 +137,6 @@ import {
   activateFrontendUser,
   deactivateFrontendUser,
   suspendFrontendUser,
-  deleteFrontendUser,
 } from '@/services/adminFrontendUserService';
 
 /* ==============================
@@ -189,10 +180,8 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
 const statusOptions = ref<SelectOption[]>([
   { label: '全部', value: '' },
   { label: 'ACTIVE', value: 'ACTIVE' },
-  { label: 'INACTIVE', value: 'INACTIVE' },
+  { label: 'DEACTIVATED', value: 'DEACTIVATED' },
   { label: 'SUSPENDED', value: 'SUSPENDED' },
-  // 後端如果真的有回 DELETED 也能顯示/篩選（若後端不支援，選了也只是查不到）
-  { label: 'DELETED', value: 'DELETED' },
 ]);
 
 const providerOptions = ref<SelectOption[]>([
@@ -215,12 +204,10 @@ const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
 const statusText = (status?: string) =>
   status === 'ACTIVE'
     ? '啟用'
-    : status === 'INACTIVE'
+    : status === 'DEACTIVATED'
     ? '停用'
     : status === 'SUSPENDED'
     ? '暫停'
-    : status === 'DELETED'
-    ? '已刪除'
     : '-';
 
 const providerText = (p?: string) =>
@@ -329,11 +316,10 @@ const selectedRows = computed(() =>
 );
 
 const canActivateRow = (r: any) =>
-  r?.status && r.status !== 'ACTIVE' && r.status !== 'DELETED';
+  r?.status && r.status !== 'ACTIVE';
 const canDeactivateRow = (r: any) => r?.status === 'ACTIVE';
 const canSuspendRow = (r: any) =>
-  r?.status && r.status !== 'SUSPENDED' && r.status !== 'DELETED';
-const canDeleteRow = (r: any) => r?.status !== 'DELETED';
+  r?.status && r.status !== 'SUSPENDED';
 
 const canActivate = computed(
   () =>
@@ -346,9 +332,6 @@ const canDeactivate = computed(
 const canSuspend = computed(
   () => selectedRows.value.length > 0 && selectedRows.value.every(canSuspendRow)
 );
-const canDelete = computed(
-  () => selectedRows.value.length > 0 && selectedRows.value.every(canDeleteRow)
-);
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
@@ -360,7 +343,7 @@ const activateSelected = async () => {
   if (!canActivate.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '選中的會員需為非 ACTIVE / 非 DELETED 才能啟用。',
+      message: '選中的會員需為非 ACTIVE 才能啟用。',
       iconType: 'warning',
     });
     return;
@@ -440,7 +423,7 @@ const suspendSelected = async () => {
   if (!canSuspend.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '選中的會員需為非 SUSPENDED / 非 DELETED 才能暫停。',
+      message: '選中的會員需為非 SUSPENDED 才能暫停。',
       iconType: 'warning',
     });
     return;
@@ -467,37 +450,6 @@ const suspendSelected = async () => {
           failCount > 0
             ? `暫停完成：成功 ${okCount}、失敗 ${failCount}`
             : `暫停完成：成功 ${okCount}`,
-        iconType: failCount > 0 ? 'warning' : 'success',
-      });
-
-      await refresh();
-    },
-    showSuccessDialog: false,
-  });
-};
-
-const deleteSelected = async () => {
-  if (!canDelete.value) return;
-
-  const ok = await dialogStore.openConfirmDialog({
-    title: '刪除確認',
-    message: `確定要刪除選中的 ${selectedIds.value.length} 位會員嗎？（軟刪除）`,
-  });
-  if (!ok) return;
-
-  await executeApi({
-    fn: async () =>
-      Promise.allSettled(selectedIds.value.map((id) => deleteFrontendUser(id))),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
-      const failCount = results.length - okCount;
-
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message:
-          failCount > 0
-            ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
-            : `刪除完成：成功 ${okCount}`,
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 

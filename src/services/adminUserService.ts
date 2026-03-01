@@ -130,3 +130,14 @@ export const deleteAdminUser = async (
     throw e;
   }
 };
+
+/** 取得使用者下拉選單（GET /admin/users/all-options） */
+export const getAllAdminUserOptions = async (): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/all-options`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminUser - getAllAdminUserOptions error:', e);
+    throw e;
+  }
+};
