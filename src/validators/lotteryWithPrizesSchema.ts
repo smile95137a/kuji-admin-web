@@ -8,7 +8,8 @@ export const lotteryWithPrizesSchema = yup.object({
   category: yup.string().required('分類不可為空'),
 
   playMode: yup.string().notRequired(),
-  subCategory: yup.string().notRequired(),
+  gameMode: yup.string().notRequired(),
+  designatedPrizeNumbers: yup.string().notRequired(),
   status: yup.string().notRequired(),
 
   pricePerDraw: yup
@@ -21,12 +22,6 @@ export const lotteryWithPrizesSchema = yup.object({
     .number()
     .transform((v, o) => (o === '' || o == null ? undefined : v))
     .min(0, '抽數上限不可為負數')
-    .notRequired(),
-
-  orderNum: yup
-    .number()
-    .transform((v, o) => (o === '' || o == null ? undefined : v))
-    .min(0, '排序不可為負數')
     .notRequired(),
 
   hotCount: yup
@@ -81,13 +76,13 @@ export const lotteryWithPrizesInitialValues = {
   title: '',
   category: 'OFFICIAL_ICHIBAN',
   playMode: 'LOTTERY_MODE',
-  subCategory: '',
+  gameMode: '',
+  designatedPrizeNumbers: '',
   status: 'DRAFT',
 
   pricePerDraw: 0,
   maxDraws: 0,
 
-  orderNum: undefined as any,
   hotCount: undefined as any,
   theme: '',
 

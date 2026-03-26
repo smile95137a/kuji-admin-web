@@ -51,15 +51,6 @@
           />
         </div>
 
-        <!-- 關鍵字 keyword -->
-        <div class="w-100 p-6">
-          <FormInput
-            label="關鍵字（模糊查詢）"
-            v-model="keyword"
-            placeholder="鬼滅 / 一番賞 / 熱門..."
-          />
-        </div>
-
         <!-- 每抽價格 priceMin / priceMax -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
@@ -79,41 +70,6 @@
           />
         </div>
 
-        <!-- 總抽數 totalQuantityMin / totalQuantityMax -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="總抽數（最小）"
-            v-model="totalQuantityMin"
-            type="number"
-            placeholder="0"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="總抽數（最大）"
-            v-model="totalQuantityMax"
-            type="number"
-            placeholder="999999"
-          />
-        </div>
-
-        <!-- 建立時間 createdAtStart / createdAtEnd（yyyy-MM-dd） -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="建立時間（起）"
-            v-model="createdAtStart"
-            type="date"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="建立時間（迄）"
-            v-model="createdAtEnd"
-            type="date"
-          />
-        </div>
       </div>
 
       <div class="flex justify-center m-y-8">
@@ -172,6 +128,10 @@
 
           <template #cell-category="{ item }">
             <span>{{ categoryText(item.category) }}</span>
+          </template>
+
+          <template #cell-gameMode="{ item }">
+            <span>{{ gameModeText(item) }}</span>
           </template>
 
           <template #cell-status="{ item }">
@@ -255,13 +215,8 @@ const initValues = ref<any>({
   status: '',
   category: '',
   title: '',
-  keyword: '',
   priceMin: '',
   priceMax: '',
-  totalQuantityMin: '',
-  totalQuantityMax: '',
-  createdAtStart: '',
-  createdAtEnd: '',
 });
 
 /* ==============================
@@ -325,16 +280,8 @@ const [storeId] = defineField('storeId');
 const [status] = defineField('status');
 const [category] = defineField('category');
 const [title] = defineField('title');
-const [keyword] = defineField('keyword');
-
 const [priceMin] = defineField('priceMin');
 const [priceMax] = defineField('priceMax');
-
-const [totalQuantityMin] = defineField('totalQuantityMin');
-const [totalQuantityMax] = defineField('totalQuantityMax');
-
-const [createdAtStart] = defineField('createdAtStart');
-const [createdAtEnd] = defineField('createdAtEnd');
 
 /* ==============================
  * Utils
@@ -367,6 +314,20 @@ const categoryText = (c?: string) =>
           : c
             ? String(c)
             : '-';
+
+const gameModeText = (item: any) => {
+  if (String(item?.playMode || '') !== 'SCRATCH_MODE') return '-';
+  const m = item?.gameMode;
+  return m === 'RANDOM'
+    ? '隨機'
+    : m === 'SCRATCH_STORE'
+      ? '店家指定'
+      : m === 'SCRATCH_PLAYER'
+        ? '玩家指定'
+        : m
+          ? String(m)
+          : '-';
+};
 
 /* ==============================
  * Sorting
@@ -416,6 +377,7 @@ const columns = [
   { field: 'storeName', label: '店家', width: 160, sortable: true },
   { field: 'title', label: '商品名稱', width: 240, sortable: true },
   { field: 'category', label: '分類', width: 140, sortable: true },
+  { field: 'gameMode', label: '遊戲模式', width: 120, sortable: true },
   { field: 'pricePerDraw', label: '每抽價格', width: 110, sortable: true },
   { field: 'maxDraws', label: '總抽數', width: 90, sortable: true },
   { field: 'status', label: '狀態', width: 90, sortable: true },

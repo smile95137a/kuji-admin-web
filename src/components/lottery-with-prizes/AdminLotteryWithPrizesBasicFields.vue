@@ -3,6 +3,7 @@
 import { computed, watch } from 'vue';
 import { useFormContext } from 'vee-validate';
 import MCard from '@/components/common/MCard.vue';
+import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 
@@ -10,8 +11,11 @@ const props = defineProps<{
   storeOptions: SelectOption[];
   categoryOptions: SelectOption[];
   playModeOptions: SelectOption[];
+  gameModeOptions: SelectOption[];
+  themeOptions: SelectOption[];
   statusOptions: SelectOption[];
   boolOptions: SelectOption[];
+  isAdmin?: boolean;
 }>();
 
 const { defineField, errors } = useFormContext();
@@ -21,13 +25,13 @@ const [storeId] = defineField('storeId');
 const [title] = defineField('title');
 const [category] = defineField('category');
 const [playMode] = defineField('playMode');
-const [subCategory] = defineField('subCategory');
+const [gameMode] = defineField('gameMode');
+const [designatedPrizeNumbers] = defineField('designatedPrizeNumbers');
 const [status] = defineField('status');
 
 const [pricePerDraw] = defineField('pricePerDraw');
 const [maxDraws] = defineField('maxDraws');
 
-const [orderNum] = defineField('orderNum');
 const [hotCount] = defineField('hotCount');
 const [theme] = defineField('theme');
 const [description] = defineField('description');
@@ -50,6 +54,37 @@ const [bonusEnabled] = defineField('bonusEnabled');
 const [bonusPointsPerDraw] = defineField('bonusPointsPerDraw');
 const [bonusCostPerDraw] = defineField('bonusCostPerDraw');
 
+// 自動帶入店家（非 admin 且只有一間店）
+watch(
+  () => props.storeOptions,
+  (opts) => {
+    if (props.isAdmin === false && opts.length === 1 && !storeId.value) {
+      storeId.value = opts[0]?.value ?? '';
+    }
+  },
+  { immediate: true },
+);
+
+// 常用標籤
+ const presetTags = ['熱門', '限定', '新品', '特價', '日系', '限量', '經典', '聯名', '徵貨中', '特別版'];
+const addTag = (tag: string) => {
+  const current = (tagsText.value || '')
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  if (!current.includes(tag)) {
+    current.push(tag);
+    tagsText.value = current.join(',');
+  }
+};
+
+// 常用備註
+const presetRemarks = ['全新商品', '客服補發', '活動加碼', '限時特價', '場地限定', '自製賞', '注意事項請詳閱說明'];
+const addRemark = (r: string) => {
+  const current = (remark.value || '').trim();
+  remark.value = current ? `${current}\n${r}` : r;
+};
+
 const isCustomGacha = computed(() => category.value === 'CUSTOM_GACHA');
 
 /** ✅ 刮刮樂才需要設定總抽數 */
@@ -57,13 +92,31 @@ const isScratchMode = computed(
   () => String(playMode.value || '') === 'SCRATCH_MODE',
 );
 
-/** ✅ 如果不是刮刮樂，就把 maxDraws 清掉，避免送錯 */
+const isScratchStore = computed(
+  () => isScratchMode.value && String(gameMode.value || '') === 'SCRATCH_STORE',
+);
+
+/** ✅ 如果不是刮刮樂，就把 maxDraws 和 gameMode 清掉，避免送錯 */
 watch(
   isScratchMode,
   (yes) => {
-    if (!yes) maxDraws.value = ''; // 或 0，看你後端怎麼定義
+    if (!yes) {
+      maxDraws.value = '';
+      gameMode.value = '';
+      designatedPrizeNumbers.value = '';
+    }
   },
   { immediate: true },
+);
+
+/** ✅ 如果不是 SCRATCH_STORE，就清掉 designatedPrizeNumbers */
+watch(
+  () => gameMode.value,
+  (val) => {
+    if (String(val || '') !== 'SCRATCH_STORE') {
+      designatedPrizeNumbers.value = '';
+    }
+  },
 );
 </script>
 <template>
@@ -78,7 +131,9 @@ watch(
 
       <div class="flex">
         <div class="w-50 w-md-100 p-6">
+          <!-- 管理員 or 多店：下拉選單 -->
           <FormSelect
+            v-if="props.isAdmin !== false || props.storeOptions.length > 1"
             label="所屬店家"
             v-model="storeId"
             :options="props.storeOptions"
@@ -86,6 +141,13 @@ watch(
             :showAll="true"
             allLabel="請選擇"
             :allValue="''"
+          />
+          <!-- 非管理員且只有一間店：顯示店家名稱（唯讀） -->
+          <FormInput
+            v-else
+            label="所屬店家"
+            :modelValue="props.storeOptions[0]?.label ?? '-'"
+            disabled
           />
         </div>
 
@@ -117,13 +179,25 @@ watch(
           />
         </div>
 
-        <div class="w-50 w-md-100 p-6" v-if="isCustomGacha">
+        <div class="w-50 w-md-100 p-6" v-if="isScratchMode">
           <FormSelect
-            label="自製賞子類型（CUSTOM_GACHA）"
-            v-model="subCategory"
-            :options="props.playModeOptions"
-            :error="errors.subCategory"
-            placeholder="LOTTERY_MODE / SCRATCH_MODE"
+            label="遊戲模式（刮刮樂大獎策略）"
+            v-model="gameMode"
+            :options="props.gameModeOptions"
+            :error="errors.gameMode"
+            :showAll="true"
+            allLabel="請選擇"
+            :allValue="''"
+          />
+        </div>
+
+        <div class="w-100 w-md-100 p-6" v-if="isScratchStore">
+          <FormInput
+            label="指定大獎號碼（designatedPrizeNumbers，JSON 格式）"
+            v-model="designatedPrizeNumbers"
+            :error="errors.designatedPrizeNumbers"
+            type="textarea"
+            placeholder='[{"revealedNumber": 42, "prizeId": "uuid"}, ...]'
           />
         </div>
 
@@ -179,28 +253,14 @@ watch(
 
       <div class="flex">
         <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="顯示排序（數字越小越前面）"
-            v-model="orderNum"
-            :error="errors.orderNum"
-            type="number"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="熱門程度（熱門標籤用）"
-            v-model="hotCount"
-            :error="errors.hotCount"
-            type="number"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
+          <FormSelect
             label="主題分類（火影/航海王/鬼滅等）"
             v-model="theme"
+            :options="props.themeOptions"
             :error="errors.theme"
+            :showAll="true"
+            allLabel="請選擇"
+            :allValue="''"
           />
         </div>
       </div>
@@ -274,35 +334,6 @@ watch(
     </MCard>
 
     <!-- =========================
-     * F. 多抽設定
-     * ========================= -->
-    <MCard class="basicFields__card">
-      <div class="basicFields__header">
-        <p class="basicFields__title">多抽設定</p>
-      </div>
-
-      <div class="flex">
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="允許多抽"
-            v-model="allowMultiDraw"
-            :options="props.boolOptions"
-            :error="errors.allowMultiDraw"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="多抽選項（逗號分隔，例如：10,50）"
-            v-model="multiDrawOptionsText"
-            :error="errors.multiDrawOptionsText"
-            placeholder="10,50"
-          />
-        </div>
-      </div>
-    </MCard>
-
-    <!-- =========================
      * G. 紅利點數
      * ========================= -->
     <MCard class="basicFields__card">
@@ -359,20 +390,45 @@ watch(
         </div>
 
         <div class="w-100 p-6">
+          <p class="form__text">商品標籤</p>
+          <div class="flex flex-wrap gap-8 m-t-4 m-b-8">
+            <button
+              v-for="tag in presetTags"
+              :key="tag"
+              type="button"
+              class="basicFields__presetBtn"
+              @click="addTag(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
           <FormInput
-            label="標籤（逗號分隔）"
+            label="已選標籤（可直接編輯，逗號分隔）"
             v-model="tagsText"
             :error="errors.tagsText"
-            placeholder="鬼滅之刃, 一番賞, 熱門"
+            placeholder="熱門, 限定, 日系..."
           />
         </div>
 
         <div class="w-100 p-6">
+          <p class="form__text">內部備註（不對外顯示）</p>
+          <div class="flex flex-wrap gap-8 m-t-4 m-b-8">
+            <button
+              v-for="r in presetRemarks"
+              :key="r"
+              type="button"
+              class="basicFields__presetBtn basicFields__presetBtn--secondary"
+              @click="addRemark(r)"
+            >
+              {{ r }}
+            </button>
+          </div>
           <FormInput
-            label="內部備註（不對外顯示）"
+            label="備註"
             v-model="remark"
             :error="errors.remark"
             type="textarea"
+            placeholder="點選常用備註或直接輸入..."
           />
         </div>
       </div>
@@ -404,6 +460,32 @@ watch(
   &__grid {
     display: flex;
     flex-wrap: wrap;
+  }
+
+  &__presetBtn {
+    padding: 4px 10px;
+    border: 1px solid var(--color-primary, #6366f1);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--color-primary, #6366f1);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: var(--color-primary, #6366f1);
+      color: #fff;
+    }
+
+    &--secondary {
+      border-color: var(--color-secondary, #64748b);
+      color: var(--color-secondary, #64748b);
+
+      &:hover {
+        background: var(--color-secondary, #64748b);
+        color: #fff;
+      }
+    }
   }
 }
 </style>

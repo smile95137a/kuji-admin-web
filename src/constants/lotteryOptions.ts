@@ -12,6 +12,12 @@ export const playModeOptions = [
   { label: '刮刮樂型（SCRATCH_MODE）', value: 'SCRATCH_MODE' },
 ];
 
+export const gameModeOptions = [
+  { label: '隨機（RANDOM）', value: 'RANDOM' },
+  { label: '店家指定（SCRATCH_STORE）', value: 'SCRATCH_STORE' },
+  { label: '玩家指定（SCRATCH_PLAYER）', value: 'SCRATCH_PLAYER' },
+];
+
 export const statusOptions = [
   { label: '草稿（DRAFT）', value: 'DRAFT' },
   { label: '上架（ON_SHELF）', value: 'ON_SHELF' },

@@ -17,8 +17,11 @@
             :storeOptions="storeOptions"
             :categoryOptions="categoryOptions"
             :playModeOptions="playModeOptions"
+            :gameModeOptions="gameModeOptions"
+            :themeOptions="themeOptions"
             :statusOptions="statusOptions"
             :boolOptions="boolOptions"
+            :isAdmin="isAdmin"
           />
         </div>
         <MCard class="m-t-12">
@@ -51,16 +54,6 @@
                 @select="handleSelectedMainImage"
                 @clear="clearMainSelectedFileUi"
               />
-
-              <div class="m-t-12">
-                <FormInput
-                  label="商品主圖 URL（imageUrl，可直接貼）"
-                  v-model="imageUrl"
-                  :error="errors.imageUrl"
-                  placeholder="https://example.com/xxx.jpg（或上方上傳會自動回填）"
-                  @blur="syncMainPreviewFromUrl"
-                />
-              </div>
 
               <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
                 <MButton
@@ -240,6 +233,7 @@ import UploadDropzone from '@/components/common/UploadDropzone.vue';
 import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
 
 import { useDialogStore } from '@/stores';
+import { useAuthStore } from '@/stores';
 
 import {
   createLotteryWithPrizes,
@@ -255,9 +249,12 @@ import {
 
 import { generateUUID } from '@/utils/RandomUtils';
 
+import { queryThemes } from '@/services/adminCategoryService';
+
 import {
   categoryOptions,
   playModeOptions,
+  gameModeOptions,
   statusOptions,
   levelOptions,
   prizeTypeOptions,
@@ -271,12 +268,35 @@ import {
 const router = useRouter();
 const route = useRoute();
 const dialogStore = useDialogStore();
+const authStore = useAuthStore();
 
 const id = computed(() => route.params.id as string | undefined);
 const isEdit = computed(() => !!id.value);
 
+/** isAdmin 判斷（可依實際後端 role 欄位名稱調整） */
+const isAdmin = computed(() => {
+  const role = String(authStore.user?.role ?? authStore.user?.roleCode ?? '').toUpperCase();
+  return ['ADMIN', 'SUPER_ADMIN'].includes(role);
+});
+
 /** ========== 店家下拉 ========== */
 const storeOptions = ref<SelectOption[]>([]);
+
+/** ========== 主題下拉 ========== */
+const themeOptions = ref<SelectOption[]>([]);
+
+const loadThemeOptions = async () => {
+  try {
+    const res = await queryThemes();
+    const data = (res as any)?.data ?? res;
+    themeOptions.value = (Array.isArray(data) ? data : []).map((t: any) => ({
+      label: t?.label ?? t?.name ?? t,
+      value: t?.value ?? t?.name ?? t,
+    }));
+  } catch {
+    themeOptions.value = [];
+  }
+};
 
 const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
   list.map((x) => ({
@@ -768,13 +788,17 @@ const loadDetail = async () => {
       title: data?.title ?? '',
       category: data?.category ?? 'OFFICIAL_ICHIBAN',
       playMode: data?.playMode ?? 'LOTTERY_MODE',
-      subCategory: data?.subCategory ?? '',
+      gameMode: data?.gameMode ?? '',
+      designatedPrizeNumbers: data?.designatedPrizeNumbers
+        ? (typeof data.designatedPrizeNumbers === 'string'
+            ? data.designatedPrizeNumbers
+            : JSON.stringify(data.designatedPrizeNumbers))
+        : '',
       status: data?.status ?? 'DRAFT',
 
       pricePerDraw: Number(data?.pricePerDraw ?? 0),
       maxDraws: Number(data?.maxDraws ?? 0),
 
-      orderNum: data?.orderNum ?? undefined,
       hotCount: data?.hotCount ?? undefined,
       theme: data?.theme ?? '',
 
@@ -880,10 +904,12 @@ const onSubmit = handleSubmit(async (values) => {
         category: (values as any).category,
 
         playMode: cleanText((values as any).playMode),
-        subCategory:
-          (values as any).category === 'CUSTOM_GACHA'
-            ? cleanText((values as any).subCategory || (values as any).playMode)
-            : undefined,
+        gameMode: cleanText((values as any).gameMode) || undefined,
+        designatedPrizeNumbers: (() => {
+          const raw = cleanText((values as any).designatedPrizeNumbers);
+          if (!raw) return undefined;
+          try { return JSON.parse(raw); } catch { return raw; }
+        })(),
 
         status: cleanText((values as any).status),
 
@@ -904,10 +930,6 @@ const onSubmit = handleSubmit(async (values) => {
 
         maxDraws: Number((values as any).maxDraws ?? 0),
 
-        orderNum:
-          (values as any).orderNum == null
-            ? undefined
-            : Number((values as any).orderNum),
         remark: cleanText(values.remark),
 
         hotCount:
@@ -970,7 +992,7 @@ const onSubmit = handleSubmit(async (values) => {
 
 /** ========== mounted ========== */
 onMounted(async () => {
-  await loadStoreOptions();
+  await Promise.all([loadStoreOptions(), loadThemeOptions()]);
 
   if (isEdit.value) await loadDetail();
   else addPrize();

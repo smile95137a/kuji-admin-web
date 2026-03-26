@@ -78,14 +78,6 @@
               />
             </div>
 
-            <div class="w-50 w-md-100 p-6">
-              <FormInput
-                label="顯示排序（數字越小越前面）"
-                v-model="localPrize.orderNum"
-                type="number"
-              />
-            </div>
-
             <div class="w-50 w-md-100 p-6" v-if="playMode === 'SCRATCH_MODE'">
               <FormInput
                 label="籤號（刮刮樂模式用）"
@@ -147,14 +139,6 @@
           @select="(file) => $emit('selectImage', file)"
           @clear="$emit('clearImage')"
         />
-
-        <div class="m-t-12">
-          <FormInput
-            label="獎品圖片 URL（可直接貼）"
-            v-model="localPrize.imageUrl"
-            placeholder="https://example.com/prize.jpg"
-          />
-        </div>
 
         <div
           v-if="localPrize.imageUrl"

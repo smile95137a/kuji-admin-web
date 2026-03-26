@@ -11,7 +11,8 @@ import adminUserRoutes from './adminUserRoutes';
 import { useAuthStore } from '@/stores';
 import orderRoutes from './orderRoutes';
 import rechargePlanRoutes from './rechargePlanRoutes';
-import walletRoutes from './walletRoutes';
+// walletRoutes 已移除（錢包功能已整合入會員中心）
+// import walletRoutes from './walletRoutes';
 import frontendUserRoutes from './frontendUserRoutes';
 import prizeBoxRoutes from './prizeBoxRoutes';
 import menuRoutes from './menuRoutes';
@@ -44,7 +45,7 @@ const routes: Array<RouteRecordRaw> = [
       ...lotteryPrizeRoutes,
       ...orderRoutes,
       ...rechargePlanRoutes,
-      ...walletRoutes,
+      // walletRoutes 已移除
       ...frontendUserRoutes,
       ...prizeBoxRoutes,
       ...menuRoutes,
