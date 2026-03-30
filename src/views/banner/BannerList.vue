@@ -69,7 +69,7 @@
           </template>
 
           <template #cell-statusName="{ item }">
-            <span>{{ item.statusName || statusText(item.status) }}</span>
+            <span :class="statusBadgeClass(item.status)">{{ item.statusName || statusText(item.status) }}</span>
           </template>
 
           <template #cell-startTime="{ item }">
@@ -82,6 +82,21 @@
 
           <template #cell-updatedAt="{ item }">
             <span>{{ formatDateTime(item.updatedAt) }}</span>
+          </template>
+
+          <template #cell-actions="{ item }">
+            <div class="flex gap-x-4">
+              <MButton
+                size="sm"
+                :disabled="isFirstInList(item)"
+                @click="moveUp(item)"
+              >↑</MButton>
+              <MButton
+                size="sm"
+                :disabled="isLastInList(item)"
+                @click="moveDown(item)"
+              >↓</MButton>
+            </div>
           </template>
         </ReportTable>
 
@@ -132,6 +147,7 @@ import {
   publishBanner,
   unpublishBanner,
   deleteBanner,
+  updateBanner,
 } from '@/services/adminBannerService';
 
 /* ==============================
@@ -201,7 +217,13 @@ const formatDateTime = (v?: string) => {
 };
 
 const statusText = (status?: string) =>
-  status === 'PUBLISHED' ? '已上架' : status === 'UNPUBLISHED' ? '已下架' : '-';
+  status === 'PUBLISHED' ? '已上架' : status === 'UNPUBLISHED' ? '已下架' : status === 'SCHEDULED' ? '排程中' : '-';
+
+const statusBadgeClass = (status?: string) => {
+  if (status === 'PUBLISHED') return 'badge badge--green';
+  if (status === 'SCHEDULED') return 'badge badge--blue';
+  return 'badge badge--gray';
+};
 
 /* ==============================
  * Sorting
@@ -258,6 +280,7 @@ const columns = [
   { field: 'startTime', label: '開始時間', width: 160, sortable: true },
   { field: 'endTime', label: '結束時間', width: 160, sortable: true },
   { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
+  { field: 'actions', label: '排序', width: 110 },
 ];
 
 /* ==============================
@@ -293,6 +316,50 @@ const canDisable = computed(
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
+
+const isFirstInList = (item: any) => {
+  const sorted = [...list.value].sort((a: any, b: any) => (a.orderNum ?? 0) - (b.orderNum ?? 0));
+  return sorted[0]?.id === item.id;
+};
+
+const isLastInList = (item: any) => {
+  const sorted = [...list.value].sort((a: any, b: any) => (a.orderNum ?? 0) - (b.orderNum ?? 0));
+  return sorted[sorted.length - 1]?.id === item.id;
+};
+
+const moveUp = async (item: any) => {
+  const sorted = [...list.value].sort((a: any, b: any) => (a.orderNum ?? 0) - (b.orderNum ?? 0));
+  const idx = sorted.findIndex((x: any) => x.id === item.id);
+  if (idx <= 0) return;
+  const prev = sorted[idx - 1];
+  const newOrder = (prev.orderNum ?? idx - 1);
+  const prevOrder = (item.orderNum ?? idx);
+  await executeApi({
+    fn: async () => Promise.all([
+      updateBanner(item.id, { orderNum: newOrder }),
+      updateBanner(prev.id, { orderNum: prevOrder }),
+    ]),
+    onSuccess: async () => { await refresh(); },
+    showSuccessDialog: false,
+  });
+};
+
+const moveDown = async (item: any) => {
+  const sorted = [...list.value].sort((a: any, b: any) => (a.orderNum ?? 0) - (b.orderNum ?? 0));
+  const idx = sorted.findIndex((x: any) => x.id === item.id);
+  if (idx < 0 || idx >= sorted.length - 1) return;
+  const next = sorted[idx + 1];
+  const newOrder = (next.orderNum ?? idx + 1);
+  const nextOrder = (item.orderNum ?? idx);
+  await executeApi({
+    fn: async () => Promise.all([
+      updateBanner(item.id, { orderNum: newOrder }),
+      updateBanner(next.id, { orderNum: nextOrder }),
+    ]),
+    onSuccess: async () => { await refresh(); },
+    showSuccessDialog: false,
+  });
+};
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
@@ -378,6 +445,16 @@ const disableSelected = async () => {
 
 const deleteSelected = async () => {
   if (!canDelete.value) return;
+
+  const publishedRows = selectedRows.value.filter((r: any) => r.status === 'PUBLISHED');
+  if (publishedRows.length > 0) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: `選中的 ${publishedRows.length} 筆 Banner 目前為上架狀態，請先「取消發布」後再刪除。`,
+      iconType: 'warning',
+    });
+    return;
+  }
 
   const ok = await dialogStore.openConfirmDialog({
     title: '刪除確認',

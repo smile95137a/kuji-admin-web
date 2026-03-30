@@ -68,7 +68,12 @@
           </template>
 
           <template #cell-isActive="{ item }">
-            <span>{{ statusText(item.isActive) }}</span>
+            <button
+              type="button"
+              class="recharge__toggle"
+              :class="item.isActive ? 'recharge__toggle--on' : 'recharge__toggle--off'"
+              @click="toggleActive(item)"
+            >{{ item.isActive ? '啟用' : '停用' }}</button>
           </template>
 
           <template #cell-displayOrder="{ item }">
@@ -158,6 +163,7 @@ import { executeApi } from '@/utils/executeApiUtils';
 import {
   queryRechargePlans,
   deleteRechargePlan,
+  updateRechargePlan,
 } from '@/services/adminRechargePlanService';
 
 /* ==============================
@@ -338,6 +344,23 @@ const deleteSelected = async () => {
 /* ==============================
  * Navigation
  * ============================== */
+const toggleActive = async (item: any) => {
+  const newState = !item.isActive;
+  const ok = await dialogStore.openConfirmDialog({
+    title: `${newState ? '啟用' : '停用'}確認`,
+    message: `確定要將「${item.name || item.id}」${newState ? '啟用' : '停用'}？`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () => updateRechargePlan(item.id, { isActive: newState }),
+    onSuccess: async () => {
+      item.isActive = newState;
+    },
+    showSuccessDialog: false,
+  });
+};
+
 const navigateToAdd = () => router.push('/home/recharge-plan/add');
 const navigateToEdit = (item: any) =>
   router.push(`/home/recharge-plan/edit/${item.id}`);
@@ -351,4 +374,23 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.recharge__toggle {
+  border: none;
+  border-radius: 12px;
+  padding: 3px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.recharge__toggle--on {
+  background: #d1fae5;
+  color: #065f46;
+}
+.recharge__toggle--off {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.recharge__toggle:hover { opacity: 0.8; }
+</style>

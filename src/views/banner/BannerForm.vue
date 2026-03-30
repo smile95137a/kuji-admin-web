@@ -224,6 +224,7 @@ const schema = yup.object({
   orderNum: yup
     .number()
     .typeError('排序必須是數字')
+    .min(1, '排序最小為 1')
     .nullable()
     .transform((v, o) =>
       o === '' || o === null || o === undefined ? null : v,
@@ -233,7 +234,14 @@ const schema = yup.object({
     .oneOf(['PUBLISHED', 'UNPUBLISHED'])
     .required('請選擇狀態'),
   startTime: yup.string().nullable(),
-  endTime: yup.string().nullable(),
+  endTime: yup
+    .string()
+    .nullable()
+    .test('endAfterStart', '結束時間必須晚於開始時間', function (endVal) {
+      const start = this.parent.startTime;
+      if (!start || !endVal) return true;
+      return endVal > start;
+    }),
 });
 
 /* useForm */

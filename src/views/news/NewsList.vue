@@ -106,8 +106,13 @@
           <!-- 標題可點 -->
           <template #cell-title="{ item }">
             <span class="clickable" @click="navigateToEdit(item.id)">
-              {{ item.title || '-' }}
+              <span v-if="item.isImportant" title="重要消息">⭐ </span>{{ item.title || '-' }}
             </span>
+          </template>
+
+          <!-- 分類 -->
+          <template #cell-category="{ item }">
+            <span :class="categoryBadgeClass(item.category)">{{ categoryText(item.category) }}</span>
           </template>
 
           <!-- 封面 -->
@@ -123,7 +128,7 @@
 
           <!-- 狀態 -->
           <template #cell-status="{ item }">
-            <span>{{ item.statusName || statusText(item.status) }}</span>
+            <span :class="statusBadgeClass(item.status)">{{ item.statusName || statusText(item.status) }}</span>
           </template>
 
           <!-- 上架時間 -->
@@ -283,12 +288,31 @@ const resolveImageUrl = (url?: string) => {
 
 const statusText = (s?: string) =>
   s === 'PUBLISHED'
-    ? '已上架'
+    ? '已發布'
     : s === 'ARCHIVED'
-    ? '已下架'
+    ? '已封存'
     : s === 'DRAFT'
     ? '草稿'
+    : s === 'SCHEDULED'
+    ? '排程中'
     : '-';
+
+const statusBadgeClass = (s?: string) => {
+  if (s === 'PUBLISHED') return 'badge badge--green';
+  if (s === 'SCHEDULED') return 'badge badge--blue-outline';
+  if (s === 'ARCHIVED') return 'badge badge--orange';
+  return 'badge badge--gray';
+};
+
+const categoryText = (c?: string) =>
+  c === 'ANNOUNCEMENT' ? '公告' : c === 'EVENT' ? '活動' : c === 'SYSTEM' ? '系統' : c || '-';
+
+const categoryBadgeClass = (c?: string) => {
+  if (c === 'ANNOUNCEMENT') return 'badge badge--blue';
+  if (c === 'EVENT') return 'badge badge--purple';
+  if (c === 'SYSTEM') return 'badge badge--orange';
+  return 'badge badge--gray';
+};
 
 /* ==============================
  * Sorting
@@ -336,6 +360,7 @@ const {
  * ============================== */
 const columns = [
   { field: 'title', label: '標題', width: 260, sortable: true },
+  { field: 'category', label: '分類', width: 110, sortable: true },
   { field: 'imageUrl', label: '封面', width: 160 },
   { field: 'status', label: '狀態', width: 110, sortable: true },
   { field: 'scheduledAt', label: '上架時間', width: 160, sortable: true },
@@ -368,7 +393,7 @@ const canEnable = computed(
   () =>
     selectedRows.value.length > 0 &&
     selectedRows.value.every(
-      (r: any) => r.status === 'ARCHIVED' || r.status === 'DRAFT'
+      (r: any) => r.status === 'ARCHIVED' || r.status === 'DRAFT' || r.status === 'SCHEDULED'
     )
 );
 

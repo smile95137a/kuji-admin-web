@@ -91,9 +91,6 @@
         >
           刪除
         </MButton>
-
-        <MButton :disabled="!canDisable" @click="disableSelected">下架</MButton>
-        <MButton :disabled="!canEnable" @click="enableSelected">上架</MButton>
       </div>
 
       <template v-if="!hasData">
@@ -135,7 +132,47 @@
           </template>
 
           <template #cell-status="{ item }">
-            <span>{{ statusText(item.status) }}</span>
+            <span :class="statusBadgeClass(item.status)">{{ statusText(item.status) }}</span>
+          </template>
+
+          <template #cell-actions="{ item }">
+            <div class="flex gap-x-6 flex-wrap">
+              <!-- DRAFT → 完成配置 -->
+              <MButton
+                v-if="item.status === 'DRAFT'"
+                size="sm"
+                @click="changeStatus(item, 'CONFIGURED', `確定要將「${item.title}」標記為完成配置？`)"
+              >完成配置</MButton>
+
+              <!-- CONFIGURED → 開始抽獎 / 取消 -->
+              <template v-if="item.status === 'CONFIGURED'">
+                <MButton
+                  size="sm"
+                  @click="changeStatus(item, 'ACTIVE', `確定要開始「${item.title}」的抽獎？`)"
+                >開始抽獎</MButton>
+                <MButton
+                  size="sm"
+                  class="mbtn--gray"
+                  @click="changeStatus(item, 'CANCELLED', `確定要取消「${item.title}」？`)"
+                >取消</MButton>
+              </template>
+
+              <!-- ACTIVE → 結束抽獎 -->
+              <MButton
+                v-if="item.status === 'ACTIVE'"
+                size="sm"
+                class="mbtn--gray"
+                @click="changeStatus(item, 'ENDED', `確定要結束「${item.title}」的抽獎？`)"
+              >結束抽獎</MButton>
+
+              <!-- non-ACTIVE → 刪除 -->
+              <MButton
+                v-if="item.status !== 'ACTIVE'"
+                size="sm"
+                class="mbtn--red"
+                @click="changeStatus(item, 'CANCELLED', `確定要取消/刪除「${item.title}」？`)"
+              >刪除</MButton>
+            </div>
           </template>
 
           <template #cell-pricePerDraw="{ item }">
@@ -196,7 +233,7 @@ import { executeApi } from '@/utils/executeApiUtils';
 import { getStoreOptions } from '@/services/adminStoreService';
 import {
   getAllLotteriesWithPrizes,
-  updateLotteryWithPrizes,
+  changeLotteryWithPrizesStatus,
 } from '@/services/adminLotteryWithPrizesService';
 
 /* ==============================
@@ -239,8 +276,10 @@ const storeOptions = ref<SelectOption[]>([]);
 
 const statusOptions = ref<SelectOption[]>([
   { label: '草稿（DRAFT）', value: 'DRAFT' },
-  { label: '上架（ON_SHELF）', value: 'ON_SHELF' },
-  { label: '下架（OFF_SHELF）', value: 'OFF_SHELF' },
+  { label: '已配置（CONFIGURED）', value: 'CONFIGURED' },
+  { label: '抽獎中（ACTIVE）', value: 'ACTIVE' },
+  { label: '已結束（ENDED）', value: 'ENDED' },
+  { label: '已取消（CANCELLED）', value: 'CANCELLED' },
 ]);
 
 const categoryOptions = ref<SelectOption[]>([
@@ -291,16 +330,21 @@ const formatDateTime = (v?: string) => {
   return String(v).replace('T', ' ');
 };
 
-const statusText = (s?: string) =>
-  s === 'DRAFT'
-    ? '草稿'
-    : s === 'ON_SHELF'
-      ? '上架'
-      : s === 'OFF_SHELF'
-        ? '下架'
-        : s
-          ? String(s)
-          : '-';
+const statusText = (s?: string) => {
+  if (s === 'DRAFT') return '草稿';
+  if (s === 'CONFIGURED') return '已配置';
+  if (s === 'ACTIVE') return '抽獎中';
+  if (s === 'ENDED') return '已結束';
+  if (s === 'CANCELLED') return '已取消';
+  return s ? String(s) : '-';
+};
+
+const statusBadgeClass = (s?: string) => {
+  if (s === 'ACTIVE') return 'badge badge--green';
+  if (s === 'CONFIGURED') return 'badge badge--blue';
+  if (s === 'CANCELLED') return 'badge badge--red';
+  return 'badge badge--gray'; // DRAFT, ENDED
+};
 
 const categoryText = (c?: string) =>
   c === 'OFFICIAL_ICHIBAN'
@@ -380,8 +424,9 @@ const columns = [
   { field: 'gameMode', label: '遊戲模式', width: 120, sortable: true },
   { field: 'pricePerDraw', label: '每抽價格', width: 110, sortable: true },
   { field: 'maxDraws', label: '總抽數', width: 90, sortable: true },
-  { field: 'status', label: '狀態', width: 90, sortable: true },
+  { field: 'status', label: '狀態', width: 100, sortable: true },
   { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
+  { field: 'actions', label: '操作', width: 220 },
 ];
 
 /* ==============================
@@ -404,20 +449,6 @@ const selectedRows = computed(() =>
   list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
-// 上架：只有 OFF_SHELF 才能上架
-const canEnable = computed(
-  () =>
-    selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.status === 'OFF_SHELF'),
-);
-
-// 下架：只有 ON_SHELF 才能下架
-const canDisable = computed(
-  () =>
-    selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.status === 'ON_SHELF'),
-);
-
 const canDelete = computed(() => selectedRows.value.length > 0);
 
 const refresh = async () => {
@@ -426,93 +457,33 @@ const refresh = async () => {
   selectedIds.value = [];
 };
 
-/** ✅ 批次上架 */
-const enableSelected = async () => {
-  if (!canEnable.value) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '只有「下架（OFF_SHELF）」的商品才可以上架。',
-      iconType: 'warning',
-    });
-    return;
-  }
-
+/** 單列狀態變更 */
+const changeStatus = async (
+  item: any,
+  newStatus: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED',
+  confirmMsg: string,
+) => {
   const ok = await dialogStore.openConfirmDialog({
-    title: '上架確認',
-    message: '確定要上架選中的商品嗎？',
+    title: '狀態確認',
+    message: confirmMsg,
   });
   if (!ok) return;
 
   await executeApi({
-    fn: async () =>
-      Promise.allSettled(
-        selectedIds.value.map((id) =>
-          updateLotteryWithPrizes(id, { lottery: { status: 'ON_SHELF' } }),
-        ),
-      ),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
-      const failCount = results.length - okCount;
-
+    fn: async () => changeLotteryWithPrizesStatus(item.id, newStatus),
+    onSuccess: async () => {
       await dialogStore.openInfoDialog({
         title: '提示訊息',
-        message:
-          failCount > 0
-            ? `上架完成：成功 ${okCount}、失敗 ${failCount}`
-            : `上架完成：成功 ${okCount}`,
-        iconType: failCount > 0 ? 'warning' : 'success',
+        message: '狀態更新成功',
+        iconType: 'success',
       });
-
       await refresh();
     },
     showSuccessDialog: false,
   });
 };
 
-/** ✅ 批次下架 */
-const disableSelected = async () => {
-  if (!canDisable.value) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '只有「上架（ON_SHELF）」的商品才可以下架。',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  const ok = await dialogStore.openConfirmDialog({
-    title: '下架確認',
-    message: '確定要下架選中的商品嗎？',
-  });
-  if (!ok) return;
-
-  await executeApi({
-    fn: async () =>
-      Promise.allSettled(
-        selectedIds.value.map((id) =>
-          updateLotteryWithPrizes(id, { lottery: { status: 'OFF_SHELF' } }),
-        ),
-      ),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
-      const failCount = results.length - okCount;
-
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message:
-          failCount > 0
-            ? `下架完成：成功 ${okCount}、失敗 ${failCount}`
-            : `下架完成：成功 ${okCount}`,
-        iconType: failCount > 0 ? 'warning' : 'success',
-      });
-
-      await refresh();
-    },
-    showSuccessDialog: false,
-  });
-};
-
-/** ✅ 批次刪除（你後端還沒提供 delete API） */
+/** ✅ 批次刪除 */
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
@@ -522,11 +493,26 @@ const deleteSelected = async () => {
   });
   if (!ok) return;
 
-  await dialogStore.openInfoDialog({
-    title: '提示訊息',
-    message:
-      '目前後端尚未提供 deleteLotteryWithPrizes API，請補上後我再幫你串。',
-    iconType: 'warning',
+  await executeApi({
+    fn: async () =>
+      Promise.allSettled(
+        selectedIds.value.map((id) =>
+          changeLotteryWithPrizesStatus(id, 'CANCELLED'),
+        ),
+      ),
+    onSuccess: async (results: any[]) => {
+      const okCount = results.filter((x: any) => x.status === 'fulfilled').length;
+      const failCount = results.length - okCount;
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: failCount > 0
+          ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
+          : `刪除完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+      await refresh();
+    },
+    showSuccessDialog: false,
   });
 };
 
@@ -556,5 +542,12 @@ onMounted(async () => {
 .clickable {
   cursor: pointer;
   text-decoration: underline;
+}
+.badge--red {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
 }
 </style>

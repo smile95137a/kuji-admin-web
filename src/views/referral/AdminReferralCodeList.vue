@@ -97,9 +97,18 @@
           @sort="handleSort"
         >
           <template #cell-code="{ item }">
-            <span class="clickable" @click="navigateToEdit(item.id)">
-              {{ item.code || '-' }}
-            </span>
+            <div class="flex items-center gap-x-6">
+              <span class="clickable" @click="navigateToEdit(item.id)">
+                {{ item.code || '-' }}
+              </span>
+              <button
+                v-if="item.code"
+                type="button"
+                class="referral__copyBtn"
+                title="複製推薦碼"
+                @click.stop="copyCode(item.code)"
+              >📋</button>
+            </div>
           </template>
 
           <template #cell-enabled="{ item }">
@@ -137,6 +146,9 @@
       </template>
     </MCard>
   </div>
+
+  <!-- 複製推薦碼 Toast -->
+  <div v-if="copyToast" class="referral__toast">{{ copyToast }}</div>
 
   <!-- 使用記錄 Dialog -->
   <Dialog
@@ -505,6 +517,23 @@ const navigateToEdit = (id: string) =>
 const navigateToAdd = () => router.push('/home/referral-codes/add');
 
 /* ==============================
+ * Clipboard Copy
+ * ============================== */
+const copyToast = ref('');
+const copyToastTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+
+const copyCode = async (code: string) => {
+  try {
+    await navigator.clipboard.writeText(code);
+    copyToast.value = `已複製「${code}」到剪貼板`;
+  } catch {
+    copyToast.value = '複製失敗，請手動複製';
+  }
+  if (copyToastTimer.value) clearTimeout(copyToastTimer.value);
+  copyToastTimer.value = setTimeout(() => { copyToast.value = ''; }, 2000);
+};
+
+/* ==============================
  * Records Dialog
  * ============================== */
 const recordsOpen = ref(false);
@@ -534,4 +563,28 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.referral__copyBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.referral__copyBtn:hover { opacity: 1; }
+.referral__toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 9999;
+  pointer-events: none;
+}
+</style>

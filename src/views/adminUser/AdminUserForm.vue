@@ -4,8 +4,22 @@
     <form @submit.prevent="onSubmit">
       <p class="form__text form__text--title">{{ pageTitle }}</p>
 
+      <!-- Step indicator for add-owner -->
+      <div v-if="mode === 'add-owner' && !isDetail" class="adminUser__steps">
+        <div class="adminUser__step" :class="{ 'adminUser__step--active': currentStep === 1, 'adminUser__step--done': currentStep > 1 }">
+          <span class="adminUser__stepNum">1</span>
+          <span>帳號資訊</span>
+        </div>
+        <div class="adminUser__stepDivider">→</div>
+        <div class="adminUser__step" :class="{ 'adminUser__step--active': currentStep === 2 }">
+          <span class="adminUser__stepNum">2</span>
+          <span>店家資訊</span>
+        </div>
+      </div>
+
       <div class="flex flex-wrap">
-        <!-- ===================== 帳號資訊 ===================== -->
+        <!-- ===================== 帳號資訊 (Step 1 for add-owner; always for others) ===================== -->
+        <template v-if="currentStep === 1 || mode !== 'add-owner' || isDetail">
         <div class="w-100 p-6">
           <p class="form__text form__text--red">帳號資訊</p>
         </div>
@@ -53,24 +67,21 @@
           />
         </div>
 
-        <!-- ===================== add-editor: 店家下拉 ===================== -->
-        <div
-          class="w-50 w-md-100 p-6"
-          v-if="mode === 'add-editor' && !isDetail"
-        >
-          <FormSelect
-            label="店家"
-            v-model="storeId"
-            :options="storeOptions"
-            :error="errors.storeId"
-            :showAll="true"
-            allLabel="請選擇"
-            :allValue="''"
-          />
+        <!-- ===================== add-editor: 店家 checkbox 列表 ===================== -->
+        <div class="w-100 w-md-100 p-6" v-if="mode === 'add-editor' && !isDetail">
+          <p class="form__text">關聯店家（可多選，至少一間）<span class="form__text--red"> *</span></p>
+          <div class="adminUser__storeCheckboxList">
+            <label v-for="store in storeOptions" :key="store.value" class="adminUser__storeCheckbox">
+              <input type="checkbox" :value="store.value" v-model="storeIds" />
+              <span>{{ store.label }}</span>
+            </label>
+          </div>
+          <p class="error-text m-t-4" v-if="errors.storeIds">{{ errors.storeIds }}</p>
         </div>
+        </template>
 
-        <!-- ===================== add-owner: 店家資訊 ===================== -->
-        <template v-if="mode === 'add-owner' && !isDetail">
+        <!-- ===================== add-owner: 店家資訊 (Step 2) ===================== -->
+        <template v-if="mode === 'add-owner' && !isDetail && currentStep === 2">
           <div class="w-100 p-6">
             <p class="form__text form__text--red">店家資訊</p>
           </div>
@@ -241,9 +252,14 @@
             快速產生資料
           </MButton>
 
-          <MButton type="submit">
-            {{ mode === 'add-owner' ? '建立負責人' : '建立編輯' }}
-          </MButton>
+          <template v-if="mode === 'add-owner'">
+            <MButton v-if="currentStep === 1" type="button" @click="currentStep = 2">下一步</MButton>
+            <template v-if="currentStep === 2">
+              <MButton type="button" class="mbtn--gray" @click="currentStep = 1">上一步</MButton>
+              <MButton type="submit">建立負責人</MButton>
+            </template>
+          </template>
+          <MButton v-else type="submit">建立編輯</MButton>
         </template>
 
         <template v-else>
@@ -274,7 +290,6 @@ import * as yup from 'yup';
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
@@ -309,6 +324,7 @@ const mode = computed<'add-owner' | 'add-editor' | 'detail'>(() => {
   return 'detail';
 });
 const isDetail = computed(() => mode.value === 'detail');
+const currentStep = ref(1);
 const userId = computed(() => String(route.params.id || ''));
 
 const pageTitle = computed(() => {
@@ -327,16 +343,6 @@ const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
     ...(x?.description ? { description: x.description } : {}),
   }));
 
-const ensureStoreOptionExists = (storeIdValue: string) => {
-  if (!storeIdValue) return;
-  const exists = storeOptions.value.some((o) => o.value === storeIdValue);
-  if (!exists)
-    storeOptions.value.unshift({
-      label: `店家（${storeIdValue}）`,
-      value: storeIdValue,
-    });
-};
-
 const loadStoreOptions = async () => {
   await executeApi<any[]>({
     fn: async () => getStoreOptions({ activeOnly: true }),
@@ -344,7 +350,6 @@ const loadStoreOptions = async () => {
       storeOptions.value = mapEnumOptionsToSelect(
         Array.isArray(data) ? data : []
       );
-      ensureStoreOptionExists(storeId.value);
     },
   });
 };
@@ -358,7 +363,7 @@ const schema = computed(() => {
       phone: yup.string().nullable(),
       remark: yup.string().nullable(),
 
-      storeId: yup.string().nullable(),
+      storeIds: yup.array().nullable(),
 
       storeName: yup.string().nullable(),
       shortDescription: yup.string().nullable(),
@@ -377,7 +382,7 @@ const schema = computed(() => {
 
   if (mode.value === 'add-editor') {
     return yup.object({
-      storeId: yup.string().required('店家不可為空'),
+      storeIds: yup.array().of(yup.string()).min(1, '請至少選擇一間店家'),
       email: yup.string().required('Email 不可為空').email('Email 格式不正確'),
       displayName: yup.string().required('顯示名稱不可為空'),
       phone: yup.string().nullable(),
@@ -422,7 +427,7 @@ const schema = computed(() => {
     instagramUrl: yup.string().nullable(),
     lineId: yup.string().nullable(),
 
-    storeId: yup.string().nullable(),
+    storeIds: yup.array().nullable(),
   });
 });
 
@@ -435,7 +440,7 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
     phone: '',
     remark: '',
 
-    storeId: '',
+    storeIds: [] as string[],
 
     storeName: '',
     shortDescription: '',
@@ -458,7 +463,7 @@ const [displayName] = defineField('displayName');
 const [phone] = defineField('phone');
 const [remark] = defineField('remark');
 
-const [storeId] = defineField('storeId');
+const [storeIds] = defineField('storeIds');
 
 const [storeName] = defineField('storeName');
 const [shortDescription] = defineField('shortDescription');
@@ -520,7 +525,7 @@ const reloadDetail = async () => {
         displayName: d?.displayName ?? '',
         phone: d?.phone ?? '',
         remark: d?.remark ?? '',
-        storeId: '',
+        storeIds: [],
         storeName: '',
         shortDescription: '',
         longDescription: '',
@@ -566,7 +571,7 @@ const fillMockData = async () => {
       facebookUrl: '',
       instagramUrl: '',
       lineId: '',
-      storeId: '',
+      storeIds: [],
     });
   } else {
     const firstStoreId =
@@ -576,7 +581,7 @@ const fillMockData = async () => {
       displayName: `店家小編_${ts}`,
       phone: '0912345678',
       remark: '測試建立店家編輯',
-      storeId: firstStoreId,
+      storeIds: [firstStoreId],
 
       storeName: '',
       shortDescription: '',
@@ -643,7 +648,7 @@ const onSubmit = handleSubmit(async (values) => {
   await executeApi({
     fn: async () =>
       createStoreEditor({
-        storeId: values.storeId,
+        storeIds: values.storeIds,
         email: values.email,
         displayName: values.displayName,
         phone: values.phone || null,
@@ -750,4 +755,62 @@ const doDelete = async () => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.adminUser__steps {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+.adminUser__step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+}
+.adminUser__step--active {
+  color: #6366f1;
+  font-weight: 600;
+}
+.adminUser__step--done {
+  color: #10b981;
+}
+.adminUser__stepNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.adminUser__stepDivider {
+  color: #d1d5db;
+}
+.adminUser__storeCheckboxList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  min-height: 40px;
+}
+.adminUser__storeCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.adminUser__storeCheckbox input {
+  cursor: pointer;
+}
+</style>

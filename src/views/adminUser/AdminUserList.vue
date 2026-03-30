@@ -93,7 +93,7 @@
           </template>
 
           <template #cell-status="{ item }">
-            <span>{{ statusText(item) }}</span>
+            <span :class="statusBadgeClass(item)">{{ statusText(item) }}</span>
           </template>
 
           <template #cell-roles="{ item }">
@@ -170,7 +170,7 @@ import FormSelect from '@/components/common/FormSelect.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useDialogStore } from '@/stores';
+import { useDialogStore, useAuthStore } from '@/stores';
 
 import {
   getAllAdminUsers,
@@ -190,6 +190,8 @@ interface SelectOption {
 
 const router = useRouter();
 const dialogStore = useDialogStore();
+const authStore = useAuthStore();
+const currentUserId = computed(() => authStore.user?.id ?? authStore.user?.userId ?? '');
 
 /* list hook */
 const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
@@ -227,6 +229,7 @@ const schema = yup.object({
 const statusOptions = ref<SelectOption[]>([
   { label: '啟用', value: 'ACTIVE' },
   { label: '停用', value: 'INACTIVE' },
+  { label: '待審核', value: 'PENDING' },
 ]);
 
 const { errors, handleSubmit, setValues, defineField } = useForm({
@@ -251,14 +254,34 @@ const resetFilters = async () => {
 const statusText = (u: any) => {
   const s = u?.status;
   if (!s) return '-';
-  return s === 'ACTIVE' ? '啟用' : s === 'INACTIVE' ? '停用' : String(s);
+  if (s === 'ACTIVE') return '啟用';
+  if (s === 'INACTIVE') return '停用';
+  if (s === 'PENDING') return '待審核';
+  return String(s);
+};
+
+const statusBadgeClass = (u: any) => {
+  const s = u?.status;
+  if (s === 'ACTIVE') return 'badge badge--green';
+  if (s === 'INACTIVE') return 'badge badge--gray';
+  if (s === 'PENDING') return 'badge badge--orange';
+  return 'badge badge--gray';
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  ROLE_ADMIN: '系統管理員',
+  ROLE_STORE_OWNER: '店家負責人',
+  ROLE_STORE_EDITOR: '店家編輯',
 };
 
 const roleText = (u: any) => {
   const roles = u?.roles;
   if (!Array.isArray(roles) || roles.length === 0) return '-';
   return roles
-    .map((r: any) => r?.name || r?.code)
+    .map((r: any) => {
+      const code = typeof r === 'string' ? r : (r?.code ?? r?.name ?? '');
+      return ROLE_LABEL[code] || code;
+    })
     .filter(Boolean)
     .join(', ');
 };
@@ -382,7 +405,10 @@ const canActivate = computed(
 const canDeactivate = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((u: any) => u?.status === 'ACTIVE')
+    selectedRows.value.every(
+      (u: any) =>
+        u?.status === 'ACTIVE' && String(u?.id) !== String(currentUserId.value)
+    )
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
@@ -427,6 +453,18 @@ const doActivateSelected = async () => {
 };
 
 const doDeactivateSelected = async () => {
+  const selfIncluded = selectedRows.value.some(
+    (u: any) => String(u?.id) === String(currentUserId.value)
+  );
+  if (selfIncluded) {
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '不可停用自己的帳號。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   if (!canDeactivate.value) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',

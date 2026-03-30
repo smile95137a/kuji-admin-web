@@ -69,18 +69,27 @@ export const completeOrder = async (orderId: string): Promise<ApiResponse<any>> 
 };
 
 /**
- * 取消訂單（PUT /admin/orders/{orderId}/cancel）
- * body: OrderCancelReq（例如 { reason: 'xxx' }）
+ * 更新訂單狀態（PUT /admin/orders/{orderId}/status）
+ * status: "PREPARING" | "SHIPPED" | "COMPLETED"
+ * 422 + errorCode: "INVALID_STATUS_TRANSITION" → 非法狀態轉換
  */
-export const cancelOrder = async (
+export const updateOrderStatus = async (
   orderId: string,
-  req: RequestData,
+  status: 'PREPARING' | 'SHIPPED' | 'COMPLETED',
 ): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.put(`${basePath}/${orderId}/cancel`, req);
-    return res.data;
-  } catch (e) {
-    console.error('AdminOrder - cancelOrder error:', e);
-    throw e;
-  }
+  const res = await api.put(`${basePath}/${orderId}/status`, { status });
+  return res.data;
+};
+
+/**
+ * 取消訂單（POST /admin/orders/{orderId}/cancel）
+ * body: { reason: string }（必填，最多 200 字）
+ * 422 + errorCode: "INVALID_STATUS_TRANSITION" → 狀態不允許取消
+ */
+export const cancelOrderWithReason = async (
+  orderId: string,
+  reason: string,
+): Promise<ApiResponse<any>> => {
+  const res = await api.post(`${basePath}/${orderId}/cancel`, { reason });
+  return res.data;
 };

@@ -53,7 +53,7 @@
         >
           <!-- 訂單編號 -->
           <template #cell-orderNo="{ item }">
-            <span class="clickable" @click="openDetail(item)">
+            <span class="clickable" @click="navigateToDetail(item)">
               {{ item.orderNo || item.id || '-' }}
             </span>
           </template>
@@ -95,9 +95,9 @@
             }}</span>
           </template>
 
-          <!-- 件數 -->
-          <template #cell-totalItems="{ item }">
-            <span>{{ item.totalItems ?? '-' }}</span>
+          <!-- 獎品數量 -->
+          <template #cell-prizeCount="{ item }">
+            <span>{{ item.prizeCount ?? item.totalItems ?? '-' }}</span>
           </template>
 
           <!-- 金額 -->
@@ -113,7 +113,7 @@
           <!-- 操作 -->
           <template #cell-actions="{ item }">
             <div class="flex gap-x-8 flex-wrap">
-              <MButton size="sm" @click="openDetail(item)">明細</MButton>
+              <MButton size="sm" @click="navigateToDetail(item)">明細</MButton>
 
               <MButton
                 size="sm"
@@ -170,142 +170,6 @@
       </template>
     </MCard>
   </div>
-
-  <!-- 明細 Dialog -->
-  <Dialog
-    :isOpen="detailOpen"
-    customClass="dialog--orderDetail"
-    @close="closeDetail"
-  >
-    <div class="orderDetailDialog">
-      <div class="orderDetailDialog__header">
-        <p class="orderDetailDialog__title">訂單明細</p>
-        <MButton size="sm" variant="secondary" @click="closeDetail">
-          關閉
-        </MButton>
-      </div>
-
-      <template v-if="detailLoading">
-        <p class="orderDetailDialog__loading">載入中...</p>
-      </template>
-
-      <template v-else>
-        <div class="orderDetailDialog__grid">
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">訂單編號</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.orderNo || detail?.id || '-' }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">狀態</span>
-            <span class="orderDetailDialog__v">
-              {{
-                detail?.shippingStatusName || statusText(detail?.shippingStatus)
-              }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">建立時間</span>
-            <span class="orderDetailDialog__v">
-              {{ formatDateTime(detail?.createdAt) }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">玩家</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.userNickname || '-' }}
-              <template v-if="detail?.userEmail">
-                / {{ detail?.userEmail }}</template
-              >
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">店家</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.storeName || detail?.storeId || '-' }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">配送方式</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.shippingMethodName || detail?.shippingMethod || '-' }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">收件人</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.recipientName || '-' }}
-              <template v-if="detail?.recipientPhone">
-                / {{ detail?.recipientPhone }}</template
-              >
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">物流單號</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.trackingNo || '-' }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">件數</span>
-            <span class="orderDetailDialog__v">
-              {{ detail?.totalItems ?? '-' }}
-            </span>
-          </div>
-
-          <div class="orderDetailDialog__kv">
-            <span class="orderDetailDialog__k">總金額</span>
-            <span class="orderDetailDialog__v">
-              {{ formatMoney(detail?.totalAmount) }}
-            </span>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-x-8 flex-wrap m-t-12">
-          <MButton
-            variant="secondary"
-            :disabled="!canPrepareRow(detail)"
-            @click="prepareOne(detail)"
-          >
-            準備出貨
-          </MButton>
-
-          <MButton
-            variant="secondary"
-            :disabled="!canShipRow(detail)"
-            @click="openShipDialog(detail)"
-          >
-            出貨
-          </MButton>
-
-          <MButton
-            variant="secondary"
-            :disabled="!canCompleteRow(detail)"
-            @click="completeOne(detail)"
-          >
-            完成
-          </MButton>
-
-          <MButton
-            variant="danger"
-            :disabled="!canCancelRow(detail)"
-            @click="openCancelDialog('single', detail)"
-          >
-            取消
-          </MButton>
-        </div>
-      </template>
-    </div>
-  </Dialog>
 
   <!-- 出貨 Dialog -->
   <Dialog
@@ -372,6 +236,7 @@
  * Imports
  * ============================== */
 import { ref, computed, onMounted, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import { Form, FormContext } from 'vee-validate';
 
 import { usePagination } from '@/hook/usePagination';
@@ -389,16 +254,15 @@ import FormInput from '@/components/common/FormInput.vue';
 
 import AdminOrderSearchForm from '@/components/order/AdminOrderSearchForm.vue';
 
-import { useDialogStore } from '@/stores';
+import { useDialogStore, useAuthStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import {
   queryOrders,
-  getOrderDetail,
   prepareShipping,
   shipOrder,
   completeOrder,
-  cancelOrder,
+  cancelOrderWithReason,
 } from '@/services/adminOrderService';
 
 /* ==============================
@@ -412,7 +276,13 @@ interface SelectOption {
 /* ==============================
  * Store
  * ============================== */
+const router = useRouter();
 const dialogStore = useDialogStore();
+const authStore = useAuthStore();
+
+const isAdmin = computed(() =>
+  (authStore.user?.roles ?? []).includes('ROLE_ADMIN'),
+);
 
 /* ==============================
  * Form & InitValues (對應 OrderCondition)
@@ -529,23 +399,23 @@ const {
 /* ==============================
  * Table Columns (依你的 res)
  * ============================== */
-const columns = [
-  { field: 'orderNo', label: '訂單編號', width: 180, sortable: true },
-  { field: 'user', label: '玩家', width: 240, sortable: true },
-  { field: 'store', label: '店家', width: 180, sortable: true },
-  { field: 'recipient', label: '收件人', width: 200, sortable: true },
-  {
-    field: 'shippingMethodName',
-    label: '配送方式',
-    width: 150,
-    sortable: true,
-  },
-  { field: 'shippingStatusName', label: '狀態', width: 130, sortable: true },
-  { field: 'totalItems', label: '件數', width: 80, sortable: true },
-  { field: 'totalAmount', label: '金額', width: 110, sortable: true },
-  { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
-  { field: 'actions', label: '操作', width: 420 },
-];
+const columns = computed(() => {
+  const base = [
+    { field: 'orderNo', label: '訂單編號', width: 180, sortable: true },
+    { field: 'user', label: '玩家', width: 240, sortable: true },
+    ...(isAdmin.value
+      ? [{ field: 'store', label: '店家', width: 180, sortable: true }]
+      : []),
+    { field: 'recipient', label: '收件人', width: 200, sortable: true },
+    { field: 'shippingMethodName', label: '配送方式', width: 150, sortable: true },
+    { field: 'shippingStatusName', label: '狀態', width: 130, sortable: true },
+    { field: 'prizeCount', label: '獎品數量', width: 100, sortable: true },
+    { field: 'totalAmount', label: '金額', width: 110, sortable: true },
+    { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
+    { field: 'actions', label: '操作', width: 420 },
+  ];
+  return base;
+});
 
 /* ==============================
  * Submit (Query)
@@ -626,39 +496,12 @@ const refresh = async () => {
 };
 
 /* ==============================
- * Detail Dialog
+ * Detail Navigation
  * ============================== */
-const detailOpen = ref(false);
-const detailLoading = ref(false);
-const detail = ref<any>(null);
-
-const openDetail = async (item: any) => {
+const navigateToDetail = (item: any) => {
   const orderId = getOrderId(item);
   if (!orderId) return;
-
-  try {
-    detailOpen.value = true;
-    detailLoading.value = true;
-    detail.value = null;
-
-    const res = await getOrderDetail(orderId);
-    detail.value = (res as any)?.data ?? res;
-  } catch (e) {
-    console.error('AdminOrder - get detail error:', e);
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '取得訂單明細失敗',
-      iconType: 'warning',
-    });
-    detailOpen.value = false;
-  } finally {
-    detailLoading.value = false;
-  }
-};
-
-const closeDetail = () => {
-  detailOpen.value = false;
-  detail.value = null;
+  router.push({ name: 'AdminOrderDetail', params: { orderId } });
 };
 
 /* ==============================
@@ -910,11 +753,11 @@ const submitCancel = async () => {
   await executeApi({
     fn: async () => {
       if (cancelMode.value === 'single') {
-        return cancelOrder(cancelOrderId.value, { reason });
+        return cancelOrderWithReason(cancelOrderId.value, reason);
       }
       return Promise.allSettled(
         selectedRows.value.map((r: any) =>
-          cancelOrder(getOrderId(r), { reason }),
+          cancelOrderWithReason(getOrderId(r), reason),
         ),
       );
     },
@@ -959,58 +802,6 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.orderDetailDialog {
-  padding: 12px;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  &__title {
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  &__loading {
-    padding: 24px 0;
-    text-align: center;
-  }
-
-  &__grid {
-    margin-top: 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 16px;
-
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  &__kv {
-    display: grid;
-    grid-template-columns: 92px 1fr;
-    gap: 10px;
-
-    &--full {
-      grid-column: 1 / -1;
-    }
-  }
-
-  &__k {
-    color: #6b7280;
-    font-size: 13px;
-  }
-
-  &__v {
-    font-size: 13px;
-    word-break: break-word;
-  }
-}
-
 .orderActionDialog {
   padding: 16px;
 

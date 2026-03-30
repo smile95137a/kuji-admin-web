@@ -3,6 +3,14 @@
   <MCard>
     <FormTitle title="角色權限設定" />
 
+    <div v-if="isAdminRole" class="adminRole__notice">
+      <span>⚠️ 此角色為系統管理員，擁有全域權限，不可修改。</span>
+    </div>
+
+    <div v-if="isStoreEditorRole" class="storeEditor__notice">
+      <span>ℹ️ 店家編輯（STORE_EDITOR）的權限範圍由後端依店家歸屬限制，前端設定僅供參考。</span>
+    </div>
+
     <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
       <MButton @click="save">儲存權限</MButton>
       <MButton variant="secondary" @click="goBack">返回</MButton>
@@ -26,15 +34,29 @@
         </template>
 
         <template #cell-view="{ item }">
-          <input type="checkbox" v-model="permMap[item.id].canView" />
+          <input
+            type="checkbox"
+            v-model="permMap[item.id].canView"
+            :disabled="isAdminRole"
+          />
         </template>
 
         <template #cell-edit="{ item }">
-          <input type="checkbox" v-model="permMap[item.id].canEdit" />
+          <input
+            type="checkbox"
+            v-model="permMap[item.id].canEdit"
+            :disabled="isAdminRole"
+            @change="onEditChange(item.id)"
+          />
         </template>
 
         <template #cell-delete="{ item }">
-          <input type="checkbox" v-model="permMap[item.id].canDelete" />
+          <input
+            type="checkbox"
+            v-model="permMap[item.id].canDelete"
+            :disabled="isAdminRole"
+            @change="onDeleteChange(item.id)"
+          />
         </template>
       </ReportTable>
     </template>
@@ -42,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import MCard from '@/components/common/MCard.vue';
@@ -68,6 +90,16 @@ const roleId = computed(() => String(route.params.id || ''));
 
 const menuTree = ref<any[]>([]);
 const roleDetail = ref<any>(null);
+const isAdminRole = computed(() =>
+  roleDetail.value?.code === 'ADMIN' ||
+  roleDetail.value?.name === 'ADMIN' ||
+  String(roleDetail.value?.code || '').toUpperCase() === 'ROLE_ADMIN'
+);
+
+const isStoreEditorRole = computed(() =>
+  roleDetail.value?.code === 'STORE_EDITOR' ||
+  String(roleDetail.value?.code || '').toUpperCase() === 'ROLE_STORE_EDITOR'
+);
 
 /**
  * permMap[menuId] = { canView, canEdit, canDelete }
@@ -157,6 +189,18 @@ const loadData = async () => {
   });
 };
 
+const onEditChange = (menuId: string) => {
+  if (permMap.value[menuId]?.canEdit) {
+    permMap.value[menuId].canView = true;
+  }
+};
+
+const onDeleteChange = (menuId: string) => {
+  if (permMap.value[menuId]?.canDelete) {
+    permMap.value[menuId].canView = true;
+  }
+};
+
 const goBack = () => router.push('/home/roles');
 
 const save = async () => {
@@ -195,4 +239,22 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.adminRole__notice {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: #92400e;
+  font-size: 13px;
+.storeEditor__notice {
+  background: #eff6ff;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: #1e40af;
+  font-size: 13px;
+}
+</style>

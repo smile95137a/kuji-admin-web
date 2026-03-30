@@ -7,12 +7,12 @@ import NotFound from '@/views/NotFound.vue';
 import bannerRoutes from './bannerRoutes';
 import newsRoutes from './newsRoutes';
 import adminUserRoutes from './adminUserRoutes';
+import storeRoutes from './storeRoutes';
 
 import { useAuthStore } from '@/stores';
 import orderRoutes from './orderRoutes';
 import rechargePlanRoutes from './rechargePlanRoutes';
-// walletRoutes 已移除（錢包功能已整合入會員中心）
-// import walletRoutes from './walletRoutes';
+import walletRoutes from './walletRoutes';
 import frontendUserRoutes from './frontendUserRoutes';
 import prizeBoxRoutes from './prizeBoxRoutes';
 import menuRoutes from './menuRoutes';
@@ -42,10 +42,11 @@ const routes: Array<RouteRecordRaw> = [
       ...bannerRoutes,
       ...newsRoutes,
       ...adminUserRoutes,
+      ...storeRoutes,
       ...lotteryPrizeRoutes,
       ...orderRoutes,
       ...rechargePlanRoutes,
-      // walletRoutes 已移除
+      ...walletRoutes,
       ...frontendUserRoutes,
       ...prizeBoxRoutes,
       ...menuRoutes,

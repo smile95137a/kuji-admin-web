@@ -319,6 +319,7 @@ watch(
             v-model="discountedPrice"
             :error="errors.discountedPrice"
             type="number"
+            placeholder="系統自動計算"
           />
         </div>
 

@@ -65,3 +65,17 @@ export const getAllLotteriesWithPrizes = async (
     throw e;
   }
 };
+
+/** 變更抽獎商品狀態（PUT /admin/lottery/{id}/status） */
+export const changeLotteryWithPrizesStatus = async (
+  lotteryId: string,
+  status: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED',
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.put(`/admin/lottery/${lotteryId}/status`, { status });
+    return res.data;
+  } catch (e) {
+    console.error('AdminLotteryWithPrizes - changeLotteryWithPrizesStatus error:', e);
+    throw e;
+  }
+};

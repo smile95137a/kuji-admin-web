@@ -19,11 +19,11 @@
     </div>
 
     <div class="w-25 w-md-50 w-sm-100 p-6">
-      <FormInput
+      <FormSelect
         label="交易類型"
         v-model="type"
+        :options="txTypeOptionsWithAll"
         :error="typeError"
-        placeholder="例如：RECHARGE / ADJUST / CONSUME"
       />
     </div>
 
@@ -64,11 +64,22 @@ interface SelectOption {
   value: any;
 }
 
-const props = defineProps<{ coinTypeOptions: SelectOption[] }>();
+const props = defineProps<{ coinTypeOptions: SelectOption[]; txTypeOptions?: SelectOption[] }>();
 
 const coinTypeOptionsWithAll = computed<SelectOption[]>(() => [
   { label: '全部', value: '' },
   ...props.coinTypeOptions,
+]);
+
+const txTypeOptionsWithAll = computed<SelectOption[]>(() => [
+  { label: '全部', value: '' },
+  ...(props.txTypeOptions ?? [
+    { label: '儲值', value: 'RECHARGE' },
+    { label: '抽獎消費', value: 'DRAW' },
+    { label: '獎品回收', value: 'RECYCLE' },
+    { label: '退款', value: 'REFUND' },
+    { label: '系統調整', value: 'ADMIN_ADJUST' },
+  ]),
 ]);
 
 const { value: userId, errorMessage: userIdError } = useField<string>('userId');

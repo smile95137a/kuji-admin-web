@@ -9,10 +9,10 @@
         <!-- 推薦碼 -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="推薦碼"
+            label="推薦碼（留空則系統自動生成）"
             v-model="code"
             :error="errors.code"
-            placeholder="請輸入推薦碼（例如 ABC123）"
+            placeholder="留空則系統自動生成（6–12 位大寫英數字）"
           />
         </div>
 
@@ -98,7 +98,13 @@ const enabledOptions = [
 
 /** schema（依你的 ReferralCodeCreateReq / UpdateReq 調整） */
 const schema = yup.object({
-  code: yup.string().required('請輸入推薦碼'),
+  code: yup
+    .string()
+    .nullable()
+    .test('referral-format', '格式需為 6–12 位大寫英數字（A-Z、0-9）', (v) => {
+      if (!v) return true; // 空白 = 系統自動產生，允許
+      return /^[A-Z0-9]{6,12}$/.test(v);
+    }),
   storeId: yup.string().nullable(),
   enabled: yup.boolean().required('請選擇狀態'),
   remark: yup.string().nullable(),

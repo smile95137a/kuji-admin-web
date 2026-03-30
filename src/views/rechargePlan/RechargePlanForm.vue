@@ -169,6 +169,15 @@
           <MButton type="submit">
             {{ mode === 'add' ? '新增' : '儲存' }}
           </MButton>
+
+          <MButton
+            v-if="mode === 'edit'"
+            type="button"
+            class="mbtn--red"
+            @click="doDelete"
+          >
+            刪除
+          </MButton>
         </template>
 
         <template v-else>
@@ -177,7 +186,7 @@
           </MButton>
         </template>
 
-        <MButton type="button" class="mbtn--red" @click="router.back()">
+        <MButton type="button" class="mbtn--gray" @click="router.back()">
           返回
         </MButton>
       </div>
@@ -203,6 +212,7 @@ import {
   createRechargePlan,
   updateRechargePlan,
   getRechargePlanById,
+  deleteRechargePlan,
 } from '@/services/adminRechargePlanService';
 
 /* Setup */
@@ -463,6 +473,31 @@ const onSubmit = handleSubmit(async (values) => {
 const navigateToEdit = () => {
   if (!id.value) return;
   router.push(`/home/recharge-plan/edit/${id.value}`);
+};
+
+/* delete */
+const doDelete = async () => {
+  if (!id.value) return;
+
+  const planName = String((detail.value as any)?.name || id.value);
+  const ok = await dialogStore.openConfirmDialog({
+    title: '刪除確認',
+    message: `確定要刪除儲值方案「${planName}」？（刪除後無法復原）`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () => deleteRechargePlan(id.value),
+    onSuccess: async () => {
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: '刪除成功',
+        iconType: 'success',
+      });
+      router.push('/home/recharge-plan');
+    },
+    showSuccessDialog: false,
+  });
 };
 </script>
 
