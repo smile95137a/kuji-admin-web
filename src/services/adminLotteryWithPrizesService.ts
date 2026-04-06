@@ -66,6 +66,20 @@ export const getAllLotteriesWithPrizes = async (
   }
 };
 
+/** 指定大獎號碼（POST /admin/lottery/{id}/designate-prize） */
+export const designatePrize = async (
+  lotteryId: string,
+  body: { designatedPrizeNumber: number },
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`/admin/lottery/${lotteryId}/designate-prize`, body);
+    return res.data;
+  } catch (e) {
+    console.error('AdminLotteryWithPrizes - designatePrize error:', e);
+    throw e;
+  }
+};
+
 /** 變更抽獎商品狀態（PUT /admin/lottery/{id}/status） */
 export const changeLotteryWithPrizesStatus = async (
   lotteryId: string,

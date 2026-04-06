@@ -7,8 +7,7 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import * as solidIcons from '@fortawesome/free-solid-svg-icons';
 import '@fortawesome/fontawesome-free/css/all.css';
-import { gsap } from 'gsap';
-import { Draggable } from 'gsap/Draggable';
+import { gsap, Draggable } from 'gsap/all';
 
 gsap.registerPlugin(Draggable);
 

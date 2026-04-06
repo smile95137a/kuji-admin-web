@@ -70,6 +70,18 @@
           />
         </div>
 
+        <!-- T020 — designationStatus filter -->
+        <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="指定狀態"
+            v-model="designationStatus"
+            :options="[{ label: '待指定（PENDING）', value: 'PENDING' }, { label: '已指定（DESIGNATED）', value: 'DESIGNATED' }]"
+            :showAll="true"
+            allLabel="全部"
+            :allValue="''"
+          />
+        </div>
+
       </div>
 
       <div class="flex justify-center m-y-8">
@@ -135,6 +147,15 @@
             <span :class="statusBadgeClass(item.status)">{{ statusText(item.status) }}</span>
           </template>
 
+          <!-- T019 — designationStatus badge -->
+          <template #cell-designationStatus="{ item }">
+            <span
+              v-if="item.gameMode === 'SCRATCH_STORE'"
+              :class="designationStatusBadgeClass(item.designationStatus)"
+            >{{ designationStatusText(item.designationStatus) }}</span>
+            <span v-else>-</span>
+          </template>
+
           <template #cell-actions="{ item }">
             <div class="flex gap-x-6 flex-wrap">
               <!-- DRAFT → 完成配置 -->
@@ -146,8 +167,11 @@
 
               <!-- CONFIGURED → 開始抽獎 / 取消 -->
               <template v-if="item.status === 'CONFIGURED'">
+                <!-- T017 — disable 開始抽獎 if SCRATCH_STORE + PENDING -->
                 <MButton
                   size="sm"
+                  :disabled="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'"
+                  :title="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING' ? '請先完成大獎號碼指定才能開始抽獎' : ''"
                   @click="changeStatus(item, 'ACTIVE', `確定要開始「${item.title}」的抽獎？`)"
                 >開始抽獎</MButton>
                 <MButton
@@ -156,6 +180,14 @@
                   @click="changeStatus(item, 'CANCELLED', `確定要取消「${item.title}」？`)"
                 >取消</MButton>
               </template>
+
+              <!-- T018 — 指定大獎號碼 button for SCRATCH_STORE + PENDING -->
+              <MButton
+                v-if="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'"
+                size="sm"
+                class="mbtn--gray"
+                @click="openDesignateModal(item)"
+              >指定大獎號碼</MButton>
 
               <!-- ACTIVE → 結束抽獎 -->
               <MButton
@@ -204,6 +236,17 @@
       </template>
     </MCard>
   </div>
+
+  <!-- T016/T018 — DesignatePrizeModal -->
+  <DesignatePrizeModal
+    v-if="designateTarget"
+    :show="showDesignateModal"
+    :lotteryId="designateTarget.id"
+    :lotteryName="designateTarget.title"
+    :maxDraws="designateTarget.maxDraws"
+    @close="showDesignateModal = false"
+    @success="onDesignateSuccess"
+  />
 </template>
 
 <script setup lang="ts">
@@ -234,7 +277,10 @@ import { getStoreOptions } from '@/services/adminStoreService';
 import {
   getAllLotteriesWithPrizes,
   changeLotteryWithPrizesStatus,
+  designatePrize,
 } from '@/services/adminLotteryWithPrizesService';
+
+import DesignatePrizeModal from '@/components/lottery-with-prizes/DesignatePrizeModal.vue';
 
 /* ==============================
  * Router / Store
@@ -254,6 +300,7 @@ const initValues = ref<any>({
   title: '',
   priceMin: '',
   priceMax: '',
+  designationStatus: '',
 });
 
 /* ==============================
@@ -321,6 +368,7 @@ const [category] = defineField('category');
 const [title] = defineField('title');
 const [priceMin] = defineField('priceMin');
 const [priceMax] = defineField('priceMax');
+const [designationStatus] = defineField('designationStatus');
 
 /* ==============================
  * Utils
@@ -371,6 +419,39 @@ const gameModeText = (item: any) => {
         : m
           ? String(m)
           : '-';
+};
+
+/* T019 — designation status helpers */
+const designationStatusText = (s?: string) => {
+  if (s === 'PENDING') return '待指定';
+  if (s === 'DESIGNATED') return '已指定';
+  return '-';
+};
+
+const designationStatusBadgeClass = (s?: string) => {
+  if (s === 'DESIGNATED') return 'badge badge--green';
+  if (s === 'PENDING') return 'badge badge--orange';
+  return 'badge badge--gray';
+};
+
+/* T016 — DesignatePrizeModal state */
+const showDesignateModal = ref(false);
+const designateTarget = ref<{ id: string; title: string; maxDraws: number } | null>(null);
+
+const openDesignateModal = (item: any) => {
+  designateTarget.value = { id: item.id, title: item.title, maxDraws: item.maxDraws ?? 1 };
+  showDesignateModal.value = true;
+};
+
+/* T018 — after successful designation */
+const onDesignateSuccess = async () => {
+  showDesignateModal.value = false;
+  await dialogStore.openInfoDialog({
+    title: '提示訊息',
+    message: '指定大獎號碼成功',
+    iconType: 'success',
+  });
+  await refresh();
 };
 
 /* ==============================
@@ -425,8 +506,9 @@ const columns = [
   { field: 'pricePerDraw', label: '每抽價格', width: 110, sortable: true },
   { field: 'maxDraws', label: '總抽數', width: 90, sortable: true },
   { field: 'status', label: '狀態', width: 100, sortable: true },
+  { field: 'designationStatus', label: '指定狀態', width: 110, sortable: true },
   { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
-  { field: 'actions', label: '操作', width: 220 },
+  { field: 'actions', label: '操作', width: 280 },
 ];
 
 /* ==============================
@@ -546,6 +628,13 @@ onMounted(async () => {
 .badge--red {
   background: #fee2e2;
   color: #991b1b;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.badge--orange {
+  background: #fff7e6;
+  color: #d46b08;
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 12px;
