@@ -16,7 +16,7 @@
           <AdminLotteryWithPrizesBasicFields
             :storeOptions="storeOptions"
             :categoryOptions="categoryOptions"
-            :playModeOptions="playModeOptions"
+            :subCategoryOptions="subCategoryOptions"
             :gameModeOptions="gameModeOptions"
             :themeOptions="themeOptions"
             :statusOptions="statusOptions"
@@ -305,7 +305,7 @@ import { queryThemes } from '@/services/adminCategoryService';
 
 import {
   categoryOptions,
-  playModeOptions,
+  subCategoryOptions,
   gameModeOptions,
   statusOptions,
   levelOptions,
@@ -417,6 +417,7 @@ const { defineField, errors, setValues, handleSubmit } = useForm({
 
 const [storeId] = defineField('storeId');
 const [playMode] = defineField('playMode');
+const [subCategory] = defineField('subCategory');
 
 const [imageUrl] = defineField('imageUrl');
 const [galleryImagesText] = defineField('galleryImagesText');
@@ -840,8 +841,8 @@ const normalizePrizePayload = (p: PrizeFormRow) => {
         ? Number(p.pointValue)
         : undefined,
 
-    isLastPrize: p.isLastPrize ?? false,
-    isGrandPrize: p.isGrandPrize ?? false,
+    isLastPrize: p.isLastPrize === true || (p.isLastPrize as any) === 'true',
+    isGrandPrize: p.isGrandPrize === true || (p.isGrandPrize as any) === 'true',
     orderNum: p.orderNum == null ? undefined : Number(p.orderNum),
   };
 };
@@ -859,6 +860,7 @@ const loadDetail = async () => {
 
       title: data?.title ?? '',
       category: data?.category ?? 'OFFICIAL_ICHIBAN',
+      subCategory: data?.subCategory ?? '',
       playMode: data?.playMode ?? 'LOTTERY_MODE',
       gameMode: data?.gameMode ?? '',
       designatedPrizeNumbers: data?.designatedPrizeNumbers
@@ -991,8 +993,8 @@ const onSubmit = handleSubmit(async (values) => {
 
         title: (values as any).title,
         category: (values as any).category,
+        subCategory: cleanText((values as any).subCategory) || undefined,
 
-        playMode: cleanText((values as any).playMode),
         gameMode: cleanText((values as any).gameMode) || undefined,
         designatedPrizeNumbers: (() => {
           const raw = cleanText((values as any).designatedPrizeNumbers);
@@ -1053,6 +1055,19 @@ const onSubmit = handleSubmit(async (values) => {
         message: '獎品清單不可為空',
       });
       return;
+    }
+
+    /* SCRATCH_MODE: must have ≥1 grand prize */
+    if ((values as any).subCategory === 'SCRATCH_MODE') {
+      const hasGrand = payload.prizes.some((p) => p.isGrandPrize === true);
+      if (!hasGrand) {
+        dialogStore.openInfoDialog({
+          title: '刮刮樂獎品設定不完整',
+          message: '刮刮樂模式需至少設定 1 個「大獎」（isGrandPrize = 是）。',
+          iconType: 'warning',
+        });
+        return;
+      }
     }
 
     if (!isEdit.value) {

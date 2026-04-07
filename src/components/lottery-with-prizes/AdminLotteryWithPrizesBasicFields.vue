@@ -10,7 +10,7 @@ import FormSelect from '@/components/common/FormSelect.vue';
 const props = defineProps<{
   storeOptions: SelectOption[];
   categoryOptions: SelectOption[];
-  playModeOptions: SelectOption[];
+  subCategoryOptions: SelectOption[];
   gameModeOptions: SelectOption[];
   themeOptions: SelectOption[];
   statusOptions: SelectOption[];
@@ -24,6 +24,7 @@ const [storeId] = defineField('storeId');
 
 const [title] = defineField('title');
 const [category] = defineField('category');
+const [subCategory] = defineField('subCategory');
 const [playMode] = defineField('playMode');
 const [gameMode] = defineField('gameMode');
 const [designatedPrizeNumbers] = defineField('designatedPrizeNumbers');
@@ -87,16 +88,33 @@ const addRemark = (r: string) => {
 
 const isCustomGacha = computed(() => category.value === 'CUSTOM_GACHA');
 
-/** ✅ 刮刮樂才需要設定總抽數 */
+/** 刮刮樂模式：以 subCategory 為依據，不再依賴 playMode 的選取 */
 const isScratchMode = computed(
-  () => String(playMode.value || '') === 'SCRATCH_MODE',
+  () => String(subCategory.value || '') === 'SCRATCH_MODE',
+);
+
+/** 同步 playMode （方便 PrizeFormCard 等使用 playMode 的地方） */
+watch(
+  isScratchMode,
+  (yes) => {
+    playMode.value = yes ? 'SCRATCH_MODE' : 'LOTTERY_MODE';
+  },
+  { immediate: true },
+);
+
+/** 分類不是 CUSTOM_GACHA 時，清除 subCategory */
+watch(
+  isCustomGacha,
+  (yes) => {
+    if (!yes) subCategory.value = '';
+  },
 );
 
 const isScratchStore = computed(
   () => isScratchMode.value && String(gameMode.value || '') === 'SCRATCH_STORE',
 );
 
-/** ✅ 如果不是刮刮樂，就把 maxDraws 和 gameMode 清掉，避免送錯 */
+/** ✅ 刮刮樂才需要設定總抽數 */
 watch(
   isScratchMode,
   (yes) => {
@@ -170,12 +188,15 @@ watch(
           />
         </div>
 
-        <div class="w-50 w-md-100 p-6">
+        <div class="w-50 w-md-100 p-6" v-if="isCustomGacha">
           <FormSelect
-            label="遊玩模式"
-            v-model="playMode"
-            :options="props.playModeOptions"
-            :error="errors.playMode"
+            label="自製賞子分類"
+            v-model="subCategory"
+            :options="props.subCategoryOptions"
+            :error="errors.subCategory"
+            :showAll="true"
+            allLabel="請選擇"
+            :allValue="''"
           />
         </div>
 
