@@ -82,14 +82,14 @@ export const updateOrderStatus = async (
 };
 
 /**
- * 取消訂單（POST /admin/orders/{orderId}/cancel）
- * body: { reason: string }（必填，最多 200 字）
+ * 取消訂單（DELETE /admin/orders/{orderId}）
+ * body: { cancelReason: string }（必填，最多 200 字）
  * 422 + errorCode: "INVALID_STATUS_TRANSITION" → 狀態不允許取消
  */
 export const cancelOrderWithReason = async (
   orderId: string,
   reason: string,
 ): Promise<ApiResponse<any>> => {
-  const res = await api.post(`${basePath}/${orderId}/cancel`, { reason });
+  const res = await api.delete(`${basePath}/${orderId}`, { data: { cancelReason: reason } });
   return res.data;
 };
