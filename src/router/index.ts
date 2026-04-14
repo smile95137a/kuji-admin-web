@@ -22,6 +22,7 @@ import lotteryPrizeRoutes from './lotteryPrizeRoutes';
 import marqueeRoutes from './marqueeRoutes';
 import systemLogRoutes from './systemLogRoutes';
 import lotteryWithPrizesRoutes from './lotteryWithPrizesRoutes';
+import systemConfigRoutes from './systemConfigRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -55,6 +56,7 @@ const routes: Array<RouteRecordRaw> = [
       ...marqueeRoutes,
       ...systemLogRoutes,
       ...lotteryWithPrizesRoutes,
+      ...systemConfigRoutes,
     ],
   },
   {
