@@ -98,7 +98,7 @@ import {
   useLoadingStore,
 } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
-import { getMenuTree } from '@/services/adminMenuService';
+import { getAccessibleMenuTree } from '@/services/adminMenuService';
 
 const router = useRouter();
 const route = useRoute();
@@ -149,7 +149,7 @@ onMounted(async () => {
   updateActiveMenu();
 
   await executeApi({
-    fn: async () => getMenuTree(),
+    fn: async () => getAccessibleMenuTree(),
     onSuccess: async (data) => {
       menuItems.value = transformMenu(data);
 

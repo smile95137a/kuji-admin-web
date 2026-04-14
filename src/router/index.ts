@@ -37,7 +37,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/home',
     component: Home,
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiresAuth: true },
     children: [
       ...bannerRoutes,
       ...newsRoutes,
