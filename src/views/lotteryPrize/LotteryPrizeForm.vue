@@ -11,9 +11,26 @@
       </div>
 
       <div class="flex flex-wrap">
-        <!-- 等級 -->
+        <!-- 大獎勾選（刮刮樂專用） T009 -->
+        <div v-if="isScratch" class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="此為大獎（isGrandPrize）"
+            v-model="isGrandPrize"
+            :options="boolOptions"
+          />
+        </div>
+
+        <!-- 等級 T010 -->
         <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            v-if="isScratch && isGrandPrize"
+            label="等級"
+            v-model="level"
+            :options="levelOptions"
+            placeholder="A / B / ... / GRAND"
+          />
           <FormInput
+            v-else
             label="獎項等級（level）"
             v-model="level"
             :error="errors.level"
@@ -53,7 +70,7 @@
           </div>
         </div>
 
-        <!-- 數量 -->
+        <!-- 數量 T011 -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
             label="總數量（totalQuantity）"
@@ -62,7 +79,9 @@
             type="number"
             placeholder="例如：10"
             required
+            :disabled="isGrandPrize === true"
           />
+          <p v-if="isGrandPrize === true" class="form__text m-t-4" style="color:#888;font-size:12px;">大獎數量固定為 1</p>
         </div>
 
         <!-- 權重 -->
@@ -100,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -108,6 +127,7 @@ import * as yup from 'yup';
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore } from '@/stores';
@@ -118,6 +138,10 @@ import {
   getPrizeById,
 } from '@/services/adminLotteryPrizeService';
 
+import { getLotteryWithPrizes } from '@/services/adminLotteryWithPrizesService';
+
+import { levelOptions, boolOptions } from '@/constants/lotteryOptions';
+
 const route = useRoute();
 const router = useRouter();
 const dialogStore = useDialogStore();
@@ -127,6 +151,15 @@ const prizeId = computed(() => String(route.params.prizeId || ''));
 
 const isEdit = computed(() => Boolean(prizeId.value));
 const isDev = import.meta.env.DEV;
+
+/* T007 — gameMode state */
+const gameMode = ref('');
+const isScratch = computed(
+  () => gameMode.value === 'SCRATCH_STORE' || gameMode.value === 'SCRATCH_PLAYER',
+);
+
+/* T009 — isGrandPrize local ref (not a form field, but passed in payload) */
+const isGrandPrize = ref<boolean>(false);
 
 /* schema（先用通用欄位） */
 const schema = yup.object({
@@ -164,6 +197,13 @@ const [totalQuantity] = defineField('totalQuantity');
 const [weight] = defineField('weight');
 
 const imagePreview = ref('');
+
+/* T011 — lock totalQuantity=1 when isGrandPrize=true */
+watch(isGrandPrize, (val) => {
+  if (val === true) {
+    totalQuantity.value = 1;
+  }
+});
 
 const syncPreviewFromUrl = () => {
   imagePreview.value = imageUrl.value || '';
@@ -204,10 +244,25 @@ const loadDetail = async () => {
         weight: d?.weight ?? null,
       });
 
+      /* T009 — load isGrandPrize from existing prize */
+      isGrandPrize.value = d?.isGrandPrize ?? false;
+
       imagePreview.value = d?.imageUrl ?? '';
     },
     showSuccessDialog: false,
   });
+};
+
+/* T007 — fetch gameMode from parent lottery */
+const loadGameMode = async () => {
+  if (!lotteryId.value) return;
+  try {
+    const res = await getLotteryWithPrizes(lotteryId.value);
+    const data = (res as any)?.data ?? res;
+    gameMode.value = data?.gameMode ?? '';
+  } catch {
+    gameMode.value = '';
+  }
 };
 
 const onSubmit = handleSubmit(async (values) => {
@@ -217,6 +272,7 @@ const onSubmit = handleSubmit(async (values) => {
   });
   if (!ok) return;
 
+  /* T012 — include isGrandPrize in payload */
   const payload = {
     lotteryId: lotteryId.value,
     level: values.level?.trim(),
@@ -224,6 +280,7 @@ const onSubmit = handleSubmit(async (values) => {
     imageUrl: values.imageUrl?.trim(),
     totalQuantity: Number(values.totalQuantity),
     weight: values.weight ?? null,
+    isGrandPrize: isGrandPrize.value,
   };
 
   await executeApi({
@@ -245,6 +302,7 @@ const onSubmit = handleSubmit(async (values) => {
 });
 
 onMounted(async () => {
+  await loadGameMode();
   await loadDetail();
 });
 </script>

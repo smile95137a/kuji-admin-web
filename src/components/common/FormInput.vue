@@ -148,8 +148,8 @@ const props = withDefaults(
     size?: Size;
     clearable?: boolean;
     togglePassword?: boolean;
-    maxlength?: string;
-    minlength?: string;
+    maxlength?: string | number;
+    minlength?: string | number;
     autocomplete?: string;
     autofocus?: boolean;
 

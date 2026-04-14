@@ -1,6 +1,15 @@
 <!-- src/views/lotteryPrize/LotteryPrizeList.vue -->
 <template>
   <MCard>
+    <!-- T013 — Scratch info banner -->
+    <div
+      v-if="isScratch"
+      class="m-b-12"
+      style="padding:12px 16px;background:#e6f7ff;border-left:4px solid #1890ff;border-radius:4px;font-size:13px;color:#005a99;"
+    >
+      刮刮樂模式：大獎數量固定為 1（totalQuantity = 1），其餘 N-1 個籤位將自動設為銘謝惠顧，無需另行設定。
+    </div>
+
     <FormTitle title="獎項管理" />
 
     <div class="flex justify-between items-center flex-wrap gap-x-12 m-t-12">
@@ -9,7 +18,20 @@
       </div>
 
       <div class="flex justify-end gap-x-12 flex-wrap">
-        <MButton @click="navigateToAdd">新增獎項</MButton>
+        <!-- T014 — disabled when hasGrandPrize -->
+        <MButton
+          @click="navigateToAdd"
+          :disabled="isScratch && hasGrandPrize"
+          :title="isScratch && hasGrandPrize ? '刮刮樂商品只允許一個大獎，請先刪除現有大獎再重新設定' : ''"
+        >新增獎項</MButton>
+
+        <!-- T015 — 完成配置 button for scratch DRAFT -->
+        <MButton
+          v-if="isScratch && lotteryStatus === 'DRAFT'"
+          :disabled="!hasGrandPrize"
+          :title="!hasGrandPrize ? '請先設定大獎才能完成配置' : ''"
+          @click="doConfigured"
+        >完成配置</MButton>
 
         <MButton
           class="mbtn--red"
@@ -144,16 +166,33 @@ import {
   deletePrize,
 } from '@/services/adminLotteryPrizeService';
 
+import {
+  getLotteryWithPrizes,
+  changeLotteryWithPrizesStatus,
+} from '@/services/adminLotteryWithPrizesService';
+
 const route = useRoute();
 const router = useRouter();
 const dialogStore = useDialogStore();
 
 const lotteryId = computed(() => String(route.params.lotteryId || ''));
 
+/* T008 — gameMode state */
+const gameMode = ref('');
+const lotteryStatus = ref('');
+const isScratch = computed(
+  () => gameMode.value === 'SCRATCH_STORE' || gameMode.value === 'SCRATCH_PLAYER',
+);
+
 /* local list hook */
 const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
   useLocalList: true,
 });
+
+/* T014 — hasGrandPrize computed */
+const hasGrandPrize = computed(() =>
+  list.value.some((p: any) => p.isGrandPrize === true),
+);
 
 /* sorting */
 const sortKey = ref('');
@@ -191,7 +230,7 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
-/* columns（你後端 LotteryPrizeRes 欄位若不同可再改） */
+/* columns */
 const columns = [
   { field: 'level', label: '等級', width: 80, sortable: true },
   { field: 'name', label: '獎項名稱', width: 240, sortable: true },
@@ -227,25 +266,50 @@ const numberOrDash = (v: any) => {
   return v ? String(v) : '-';
 };
 
+/* T008 — fetch gameMode from parent lottery */
+const loadGameMode = async () => {
+  if (!lotteryId.value) return;
+  try {
+    const res = await getLotteryWithPrizes(lotteryId.value);
+    const data = (res as any)?.data ?? res;
+    gameMode.value = data?.gameMode ?? '';
+    lotteryStatus.value = data?.status ?? '';
+  } catch {
+    gameMode.value = '';
+    lotteryStatus.value = '';
+  }
+};
+
 /* load */
 const load = async () => {
   if (!lotteryId.value) return;
 
   await query(async () => {
     const res = await getPrizesByLotteryId(lotteryId.value);
-    // 依你 executeApi/ApiResponse 格式可能是 res.data
     return res;
   });
-
-  // 如果你 query() 沒自動塞 list，你可以手動：
-  // const data = (res as any)?.data ?? res;
-  // list.value = Array.isArray(data) ? data : [];
 };
 
 const refresh = async () => {
   selectedIds.value = [];
   await load();
   goToPage(1);
+};
+
+/* T015 — 完成配置 button action */
+const doConfigured = async () => {
+  await executeApi({
+    fn: () => changeLotteryWithPrizesStatus(lotteryId.value, 'CONFIGURED'),
+    onSuccess: async () => {
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: '商品已完成配置',
+        iconType: 'success',
+      });
+      router.push('/home/lottery-with-prizes');
+    },
+    showSuccessDialog: false,
+  });
 };
 
 /* actions */
@@ -293,6 +357,7 @@ const goBack = () => router.push('/home/lottery');
 
 onMounted(async () => {
   await nextTick();
+  await loadGameMode();
   await load();
 });
 </script>

@@ -248,6 +248,8 @@ onMounted(async () => {
   margin-bottom: 12px;
   color: #92400e;
   font-size: 13px;
+}
+
 .storeEditor__notice {
   background: #eff6ff;
   border: 1px solid #3b82f6;

@@ -16,7 +16,7 @@
           <AdminLotteryWithPrizesBasicFields
             :storeOptions="storeOptions"
             :categoryOptions="categoryOptions"
-            :playModeOptions="playModeOptions"
+            :subCategoryOptions="subCategoryOptions"
             :gameModeOptions="gameModeOptions"
             :themeOptions="themeOptions"
             :statusOptions="statusOptions"
@@ -29,7 +29,7 @@
             <div class="w-100 p-6">
               <p class="form__text form__text--red">商品詳細內容（content）</p>
               <Ckeditor
-                :editor="ClassicEditor"
+                :editor="ckeditorEditor"
                 v-model="content"
                 :config="editorConfig"
               />
@@ -187,6 +187,57 @@
         />
       </div>
     </MCard>
+
+    <!-- T021/T022 — Designation info bars (scratch only, edit mode) -->
+    <template v-if="isEdit">
+      <!-- SCRATCH_STORE + PENDING -->
+      <MCard
+        v-if="gameMode === 'SCRATCH_STORE' && lotteryDesignationStatus === 'PENDING'"
+        style="border-left:4px solid #d46b08;background:#fff7e6;"
+        class="m-t-12"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-x-12" style="padding:12px 16px;">
+          <span style="color:#d46b08;font-size:13px;">
+            ⚠️ 此刮刮樂商品（店家指定模式）尚未完成大獎號碼指定。開始抽獎前需先指定大獎號碼。
+          </span>
+          <MButton size="sm" @click="showDesignateModal = true">前往指定大獎號碼</MButton>
+        </div>
+      </MCard>
+
+      <!-- SCRATCH_STORE + DESIGNATED -->
+      <MCard
+        v-if="gameMode === 'SCRATCH_STORE' && lotteryDesignationStatus === 'DESIGNATED'"
+        style="border-left:4px solid #52c41a;background:#f6ffed;"
+        class="m-t-12"
+      >
+        <div style="padding:12px 16px;color:#389e0d;font-size:13px;">
+          ✅ 大獎號碼已完成指定，可開始抽獎。
+        </div>
+      </MCard>
+
+      <!-- SCRATCH_PLAYER -->
+      <MCard
+        v-if="gameMode === 'SCRATCH_PLAYER'"
+        style="border-left:4px solid #1890ff;background:#e6f7ff;"
+        class="m-t-12"
+      >
+        <div style="padding:12px 16px;color:#005a99;font-size:13px;">
+          ℹ️ 此刮刮樂商品（玩家指定模式）：玩家購票後自行指定大獎號碼，無需店家操作。
+        </div>
+      </MCard>
+    </template>
+
+    <!-- T022 — DesignatePrizeModal -->
+    <DesignatePrizeModal
+      v-if="isEdit"
+      :show="showDesignateModal"
+      :lotteryId="id ?? ''"
+      :lotteryName="String(title ?? '')"
+      :maxDraws="Number(maxDraws ?? 1)"
+      @close="showDesignateModal = false"
+      @success="onDesignateSuccess"
+    />
+
     <MCard>
       <div class="lotteryWithPrizesForm__actions">
         <MButton variant="secondary" @click="goBack">返回</MButton>
@@ -215,6 +266,7 @@ import AdminLotteryWithPrizesBasicFields from '@/components/lottery-with-prizes/
 import PrizeFormCard, {
   type PrizeFormRow,
 } from '@/components/lottery-with-prizes/PrizeFormCard.vue';
+import DesignatePrizeModal from '@/components/lottery-with-prizes/DesignatePrizeModal.vue';
 
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -253,7 +305,7 @@ import { queryThemes } from '@/services/adminCategoryService';
 
 import {
   categoryOptions,
-  playModeOptions,
+  subCategoryOptions,
   gameModeOptions,
   statusOptions,
   levelOptions,
@@ -264,6 +316,10 @@ import {
   lotteryWithPrizesInitialValues,
   lotteryWithPrizesSchema,
 } from '@/validators/lotteryWithPrizesSchema';
+
+const ckeditorEditor = ClassicEditor as unknown as {
+  create(...args: any[]): Promise<any>;
+};
 
 const router = useRouter();
 const route = useRoute();
@@ -361,11 +417,28 @@ const { defineField, errors, setValues, handleSubmit } = useForm({
 
 const [storeId] = defineField('storeId');
 const [playMode] = defineField('playMode');
+const [subCategory] = defineField('subCategory');
 
 const [imageUrl] = defineField('imageUrl');
 const [galleryImagesText] = defineField('galleryImagesText');
 
 const [content] = defineField('content');
+
+/* T022 — named refs needed for DesignatePrizeModal props */
+const [title] = defineField('title');
+const [maxDraws] = defineField('maxDraws');
+const [gameMode] = defineField('gameMode');
+
+/* T021 — designation status local state */
+const lotteryDesignationStatus = ref<string | null>(null);
+
+/* T022 — modal state */
+const showDesignateModal = ref(false);
+
+const onDesignateSuccess = async () => {
+  showDesignateModal.value = false;
+  await loadDetail();
+};
 
 /** ========== prizes (local state) ========== */
 const prizes = reactive<PrizeFormRow[]>([]);
@@ -768,8 +841,8 @@ const normalizePrizePayload = (p: PrizeFormRow) => {
         ? Number(p.pointValue)
         : undefined,
 
-    isLastPrize: p.isLastPrize ?? false,
-    isGrandPrize: p.isGrandPrize ?? false,
+    isLastPrize: p.isLastPrize === true || (p.isLastPrize as any) === 'true',
+    isGrandPrize: p.isGrandPrize === true || (p.isGrandPrize as any) === 'true',
     orderNum: p.orderNum == null ? undefined : Number(p.orderNum),
   };
 };
@@ -787,6 +860,7 @@ const loadDetail = async () => {
 
       title: data?.title ?? '',
       category: data?.category ?? 'OFFICIAL_ICHIBAN',
+      subCategory: data?.subCategory ?? '',
       playMode: data?.playMode ?? 'LOTTERY_MODE',
       gameMode: data?.gameMode ?? '',
       designatedPrizeNumbers: data?.designatedPrizeNumbers
@@ -831,6 +905,9 @@ const loadDetail = async () => {
     });
 
     ensureStoreOptionExists(data?.storeId ?? '');
+
+    /* T021 — load designationStatus */
+    lotteryDesignationStatus.value = data?.designationStatus ?? null;
 
     //  主圖預覽
     mainImagePreview.value = data?.imageUrl ?? '';
@@ -892,6 +969,20 @@ const onSubmit = handleSubmit(async (values) => {
     return;
   }
 
+  /* T021b — block save if SCRATCH_STORE + ACTIVE + designation PENDING */
+  if (
+    (values as any).status === 'ACTIVE' &&
+    (values as any).gameMode === 'SCRATCH_STORE' &&
+    lotteryDesignationStatus.value === 'PENDING'
+  ) {
+    await dialogStore.openInfoDialog({
+      title: '無法儲存',
+      message: '此刮刮樂商品（店家指定模式）尚未完成大獎號碼指定，無法設為抽獎中，請先完成指定流程。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   try {
     // 防止使用者只改文字欄：再同步一次
     syncGalleryArrayFromText();
@@ -902,8 +993,8 @@ const onSubmit = handleSubmit(async (values) => {
 
         title: (values as any).title,
         category: (values as any).category,
+        subCategory: cleanText((values as any).subCategory) || undefined,
 
-        playMode: cleanText((values as any).playMode),
         gameMode: cleanText((values as any).gameMode) || undefined,
         designatedPrizeNumbers: (() => {
           const raw = cleanText((values as any).designatedPrizeNumbers);
@@ -964,6 +1055,19 @@ const onSubmit = handleSubmit(async (values) => {
         message: '獎品清單不可為空',
       });
       return;
+    }
+
+    /* SCRATCH_MODE: must have ≥1 grand prize */
+    if ((values as any).subCategory === 'SCRATCH_MODE') {
+      const hasGrand = payload.prizes.some((p) => p.isGrandPrize === true);
+      if (!hasGrand) {
+        dialogStore.openInfoDialog({
+          title: '刮刮樂獎品設定不完整',
+          message: '刮刮樂模式需至少設定 1 個「大獎」（isGrandPrize = 是）。',
+          iconType: 'warning',
+        });
+        return;
+      }
     }
 
     if (!isEdit.value) {

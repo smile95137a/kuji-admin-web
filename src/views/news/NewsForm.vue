@@ -383,7 +383,7 @@ onMounted(async () => {
       imagePreview.value = d.imageUrl ?? '';
 
       if (editor.value && d.content) {
-        editor.value.commands.setContent(d.content, false);
+        editor.value.commands.setContent(d.content, { emitUpdate: false });
       }
     },
   });
@@ -394,7 +394,7 @@ watch(
   () => editor.value,
   (e) => {
     if (e && content.value) {
-      e.commands.setContent(content.value, false);
+      e.commands.setContent(content.value, { emitUpdate: false });
     }
   },
   { once: true },

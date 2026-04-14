@@ -7,6 +7,7 @@ export const lotteryWithPrizesSchema = yup.object({
   title: yup.string().required('商品名稱不可為空'),
   category: yup.string().required('分類不可為空'),
 
+  subCategory: yup.string().notRequired(),
   playMode: yup.string().notRequired(),
   gameMode: yup.string().notRequired(),
   designatedPrizeNumbers: yup.string().notRequired(),
@@ -75,6 +76,7 @@ export const lotteryWithPrizesInitialValues = {
 
   title: '',
   category: 'OFFICIAL_ICHIBAN',
+  subCategory: '',
   playMode: 'LOTTERY_MODE',
   gameMode: '',
   designatedPrizeNumbers: '',
