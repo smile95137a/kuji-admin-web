@@ -100,28 +100,23 @@ export const updateStore = async (
   }
 };
 
-/** 啟用店家（POST /admin/stores/{storeId}/activate）（ADMIN ONLY） */
-export const activateStore = async (
-  storeId: string
+/**
+ * 更新店家狀態（PUT /admin/stores/{storeId}/status）（ADMIN ONLY）
+ * status: 'ACTIVE' | 'INACTIVE'
+ * reason: 停用原因（選填）
+ */
+export const updateStoreStatus = async (
+  storeId: string,
+  status: 'ACTIVE' | 'INACTIVE',
+  reason?: string
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.post(`${basePath}/${storeId}/activate`);
+    const body: Record<string, any> = { status };
+    if (reason) body.reason = reason;
+    const res = await api.put(`${basePath}/${storeId}/status`, body);
     return res.data;
   } catch (e) {
-    console.error('AdminStore - activateStore error:', e);
-    throw e;
-  }
-};
-
-/** 停用店家（POST /admin/stores/{storeId}/deactivate）（ADMIN ONLY） */
-export const deactivateStore = async (
-  storeId: string
-): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.post(`${basePath}/${storeId}/deactivate`);
-    return res.data;
-  } catch (e) {
-    console.error('AdminStore - deactivateStore error:', e);
+    console.error('AdminStore - updateStoreStatus error:', e);
     throw e;
   }
 };

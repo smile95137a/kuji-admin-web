@@ -201,8 +201,7 @@ import StoreEnableModal from './StoreEnableModal.vue';
 import { useDialogStore, useAuthStore } from '@/stores';
 import {
   getStoreById,
-  activateStore,
-  deactivateStore,
+  updateStoreStatus,
 } from '@/services/adminStoreService';
 
 /* ==============================
@@ -309,7 +308,7 @@ const openEnable = () => { enableModalOpen.value = true; };
 const submitDisable = async () => {
   actionLoading.value = true;
   try {
-    await deactivateStore(String(route.params.id));
+    await updateStoreStatus(String(route.params.id), 'INACTIVE');
     detail.value.status = 'DISABLED';
     await dialogStore.openInfoDialog({
       title: '提示訊息',
@@ -331,7 +330,7 @@ const submitDisable = async () => {
 const submitEnable = async () => {
   actionLoading.value = true;
   try {
-    await activateStore(String(route.params.id));
+    await updateStoreStatus(String(route.params.id), 'ACTIVE');
     detail.value.status = 'ENABLED';
     await dialogStore.openInfoDialog({
       title: '提示訊息',
