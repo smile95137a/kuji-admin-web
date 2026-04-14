@@ -4,15 +4,19 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
 export const useAuthStore = defineStore('auth', () => {
-  // ▼ state（從 localStorage 初始化）
+  // ▼ state
+  // accessToken 只存 Pinia memory（不寫 localStorage），防止 XSS 竊取
+  const token = ref<string | null>(null);
+  // 其餘持久化資料
   const user = ref<any>(loadState<any>('user') || null);
-  const token = ref<any>(loadState<any>('token') || null);
-  const refreshToken = ref<any>(loadState<any>('refreshToken') || null);
-  const tokenType = ref<any>(loadState<any>('tokenType') || 'Bearer');
-  const expiresIn = ref<any>(loadState<any>('expiresIn') || 0);
-  const forceChangePassword = ref<any>(
-    loadState<any>('forceChangePassword') || false
+  const refreshToken = ref<string | null>(loadState<string>('refreshToken') || null);
+  const tokenType = ref<string>(loadState<string>('tokenType') || 'Bearer');
+  const expiresIn = ref<number>(loadState<number>('expiresIn') || 0);
+  const forceChangePassword = ref<boolean>(
+    loadState<boolean>('forceChangePassword') || false
   );
+  // menus 持久化（供頁面重整後 sidebar fallback 用）
+  const menus = ref<any[]>(loadState<any[]>('menus') || []);
 
   // ▼ getters
   const isLogin = computed(() => !!token.value);
@@ -29,10 +33,14 @@ export const useAuthStore = defineStore('auth', () => {
     else removeState('user');
   };
 
-  const setToken = (accessToken: any) => {
+  // accessToken 只存記憶體（Pinia state），不寫 localStorage
+  const setToken = (accessToken: string | null) => {
     token.value = accessToken;
-    if (accessToken) saveState('token', accessToken);
-    else removeState('token');
+  };
+
+  const setMenus = (menuList: any[]) => {
+    menus.value = menuList ?? [];
+    saveState('menus', menus.value);
   };
 
   const setRefreshToken = (rt: any) => {
@@ -66,22 +74,25 @@ export const useAuthStore = defineStore('auth', () => {
     setExpiresIn(data?.expiresIn ?? 0);
     setForceChangePassword(data?.isFirstLogin ?? data?.forceChangePassword ?? false);
     setUser(data?.adminUser ?? data?.user ?? null);
+    setMenus(data?.menus ?? []);
   };
 
   const clearAuthData = () => {
-    user.value = null;
     token.value = null;
+    user.value = null;
     refreshToken.value = null;
     tokenType.value = 'Bearer';
     expiresIn.value = 0;
     forceChangePassword.value = false;
+    menus.value = [];
 
     removeState('user');
-    removeState('token');
+    // token 不在 localStorage，不需 removeState
     removeState('refreshToken');
     removeState('tokenType');
     removeState('expiresIn');
     removeState('forceChangePassword');
+    removeState('menus');
   };
 
   return {
@@ -92,6 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
     tokenType,
     expiresIn,
     forceChangePassword,
+    menus,
 
     // getters
     isLogin,
@@ -104,6 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
     setTokenType,
     setExpiresIn,
     setForceChangePassword,
+    setMenus,
     setAuthFromLogin,
     clearAuthData,
   };

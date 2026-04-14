@@ -3,6 +3,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Login from '@/views/Login.vue';
 import Home from '@/views/Home.vue';
 import NotFound from '@/views/NotFound.vue';
+import ChangePassword from '@/views/ChangePassword.vue';
 
 import bannerRoutes from './bannerRoutes';
 import newsRoutes from './newsRoutes';
@@ -31,6 +32,11 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/login',
     component: Login,
+    meta: { layout: 'default' },
+  },
+  {
+    path: '/change-password',
+    component: ChangePassword,
     meta: { layout: 'default' },
   },
 
@@ -81,6 +87,11 @@ router.beforeEach((to) => {
 
   if (requiresAuth && !authStore.isLogin) {
     return '/login';
+  }
+
+  // 首次登入強制修改密碼
+  if (authStore.forceChangePassword && to.path !== '/change-password') {
+    return '/change-password';
   }
 
   if (to.path === '/login' && authStore.isLogin) {
