@@ -270,88 +270,7 @@
         </div>
       </div>
 
-      <!-- 手動調整點數 -->
-      <div class="m-t-16">
-        <p class="form__text form__text--red">手動調整點數</p>
-        <div class="flex flex-wrap m-t-8">
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="幣別"
-              v-model="adjustCoinType"
-              :options="coinTypeOptions"
-            />
-          </div>
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="調整金額（正數=加値；負數=扣除）"
-              type="number"
-              v-model="adjustAmount"
-              placeholder="例如：100 或 -50"
-            />
-          </div>
-          <div class="w-100 p-6">
-            <FormInput
-              label="原因（選填）"
-              v-model="adjustReason"
-              placeholder="例如：客服補償 / 华動加碼"
-            />
-          </div>
-        </div>
-        <div class="flex justify-center m-t-8">
-          <MButton type="button" @click="submitAdjust">送出調整</MButton>
-        </div>
-      </div>
-    </MCard>
-  </div>
-
-  <!-- ===== 交易紀錄 ===== -->
-  <div class="m-t-12">
-    <MCard>
-      <p class="form__text form__text--title">交易紀錄</p>
-
-      <div class="flex flex-wrap m-t-8">
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="幣別"
-            v-model="txCoinType"
-            :options="[{ label: '全部', value: '' }, ...coinTypeOptions]"
-          />
-        </div>
-        <div class="w-50 w-md-100 p-6">
-          <p class="form__text">交易日期</p>
-          <div class="flex gap-x-12 m-t-4 items-center">
-            <FormInput type="date" :showLabel="false" v-model="txDateStart" style="flex:1" />
-            <span>~</span>
-            <FormInput type="date" :showLabel="false" v-model="txDateEnd" style="flex:1" />
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-center m-t-8 gap-x-12">
-        <MButton type="button" @click="loadTransactions">查詢</MButton>
-        <MButton type="button" variant="secondary" @click="resetTx">清除</MButton>
-      </div>
-
-      <template v-if="txList.length > 0">
-        <ReportTable
-          class="m-t-12"
-          :columns="txColumns"
-          :items="txList"
-          row-key="id"
-          :useWidthClass="true"
-        >
-          <template #cell-amount="{ item }">
-            <span :style="{ color: Number(item.amount) >= 0 ? 'green' : 'red' }">
-              {{ Number(item.amount) >= 0 ? '+' : '' }}{{ item.amount }}
-            </span>
-          </template>
-          <template #cell-createdAt="{ item }">
-            <span>{{ formatDateTime(item.createdAt) }}</span>
-          </template>
-        </ReportTable>
-      </template>
-      <template v-else-if="txSearched">
-        <p class="form__text m-t-8" style="opacity:0.6">無交易紀錄</p>
-      </template>
+      <!-- 手動調整點數已移除（T-MEM-01）：餘額唯讀顯示即可 -->
     </MCard>
   </div>
 
@@ -422,8 +341,6 @@ import {
 
 import {
   getUserWallet,
-  adjustWalletCoins,
-  queryWalletTransactions,
 } from '@/services/adminWalletService';
 
 import {
@@ -800,13 +717,8 @@ onMounted(async () => {
 });
 
 /* ==============================
- * 點數 / 錢包
+ * 點數 / 錢包（唯讀餘額）
  * ============================== */
-const coinTypeOptions = [
-  { label: '點數', value: 'COIN' },
-  { label: '贈送點數', value: 'BONUS' },
-];
-
 const wallet = ref<any>(null);
 const walletLoading = ref(false);
 
@@ -821,92 +733,6 @@ const loadWallet = async () => {
   } finally {
     walletLoading.value = false;
   }
-};
-
-const adjustCoinType = ref('COIN');
-const adjustAmount = ref<string>('');
-const adjustReason = ref('');
-
-const submitAdjust = async () => {
-  const amount = Number(adjustAmount.value);
-  if (!Number.isFinite(amount) || amount === 0) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '金額必須是數字，且不可為 0（正數=加値；負數=扣除）',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  const ok = await dialogStore.openConfirmDialog({
-    title: '調整確認',
-    message: `確定要調整點數？\n幣別：${adjustCoinType.value}\n金額：${amount}`,
-  });
-  if (!ok) return;
-
-  await executeApi({
-    fn: async () =>
-      adjustWalletCoins({
-        userId: id.value,
-        coinType: adjustCoinType.value,
-        amount,
-        reason: adjustReason.value.trim() || undefined,
-      }),
-    onSuccess: async () => {
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message: '調整成功',
-        iconType: 'success',
-      });
-      adjustAmount.value = '';
-      adjustReason.value = '';
-      await loadWallet();
-    },
-    showSuccessDialog: false,
-  });
-};
-
-/* ==============================
- * 交易紀錄
- * ============================== */
-const txCoinType = ref('');
-const txDateStart = ref('');
-const txDateEnd = ref('');
-const txList = ref<any[]>([]);
-const txSearched = ref(false);
-
-const txColumns = [
-  { field: 'coinType', label: '幣別', width: 100 },
-  { field: 'type', label: '交易類型', width: 120 },
-  { field: 'amount', label: '金額', width: 100 },
-  { field: 'remark', label: '備註', width: 200 },
-  { field: 'createdAt', label: '交易時間', width: 170 },
-];
-
-const loadTransactions = async () => {
-  txSearched.value = true;
-  try {
-    const res = await queryWalletTransactions({
-      condition: {
-        userId: id.value,
-        ...(txCoinType.value ? { coinType: txCoinType.value } : {}),
-        ...(txDateStart.value ? { createdAtStart: txDateStart.value } : {}),
-        ...(txDateEnd.value ? { createdAtEnd: txDateEnd.value } : {}),
-      },
-    });
-    const data = (res as any)?.data ?? res;
-    txList.value = Array.isArray(data) ? data : [];
-  } catch {
-    txList.value = [];
-  }
-};
-
-const resetTx = () => {
-  txCoinType.value = '';
-  txDateStart.value = '';
-  txDateEnd.value = '';
-  txList.value = [];
-  txSearched.value = false;
 };
 
 /* ==============================
