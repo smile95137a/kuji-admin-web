@@ -1,7 +1,8 @@
 // services/frontend/FrontAPI.ts
 import axios, { AxiosError, AxiosInstance, AxiosHeaders } from 'axios';
 import { removeAllState, saveState } from '@/utils/Localstorage';
-import { getAuthToken, getRefreshToken, getTokenType } from './AuthService';
+import { getRefreshToken, getTokenType } from './AuthService';
+import { useAuthStore } from '@/stores';
 
 export const api: AxiosInstance = axios.create({
   baseURL: `${import.meta.env.VITE_BASE_API_URL}/api`,
@@ -22,7 +23,9 @@ const resolveQueue = (token: string | null) => {
 
 api.interceptors.request.use(
   (config) => {
-    const token = getAuthToken();
+    // 從 Pinia store 讀取 accessToken（記憶體），而非 localStorage
+    const authStore = useAuthStore();
+    const token = authStore.token;
     if (!token) return config;
 
     const tokenType = getTokenType() || 'Bearer';
@@ -105,8 +108,9 @@ api.interceptors.response.use(
 
       if (!newAccessToken) throw new Error('no accessToken');
 
-      // 更新 localStorage
-      saveState('token', newAccessToken);
+      // 更新 Pinia store（accessToken 存記憶體）+ localStorage（其他 token 資訊）
+      const authStore = useAuthStore();
+      authStore.setToken(newAccessToken);
       if (newRefreshToken) saveState('refreshToken', newRefreshToken);
       saveState('tokenType', newTokenType);
       saveState('expiresIn', newExpiresIn);
