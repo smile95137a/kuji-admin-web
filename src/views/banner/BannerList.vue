@@ -27,6 +27,43 @@
 
         <MButton :disabled="!canDisable" @click="disableSelected">下架</MButton>
         <MButton :disabled="!canEnable" @click="enableSelected">上架</MButton>
+        <MButton variant="secondary" @click="toggleSortMode">
+          {{ sortModeActive ? '隱藏排序模式' : '拖曳排序' }}
+        </MButton>
+      </div>
+
+      <!-- ===== 拖曳排序模式 ===== -->
+      <div v-if="sortModeActive" class="bl__sort-panel m-t-12">
+        <p class="bl__sort-hint">按住拖曳調整順序，完成後點「儲存排序」</p>
+        <ul class="bl__sort-list">
+          <li
+            v-for="(item, idx) in dragSortList"
+            :key="item.id"
+            class="bl__sort-item"
+            :class="{ 'bl__sort-item--over': dragOverIdx === idx }"
+            draggable="true"
+            @dragstart="onDragStart(idx)"
+            @dragover.prevent="onDragOver(idx)"
+            @drop.prevent="onDrop(idx)"
+            @dragend="dragOverIdx = null"
+          >
+            <span class="bl__sort-handle">☰</span>
+            <img
+              v-if="item.imageUrl"
+              :src="resolveImageUrl(item.imageUrl)"
+              alt="banner"
+              class="bl__sort-thumb"
+            />
+            <span class="bl__sort-title">{{ item.title || item.id }}</span>
+            <span class="bl__sort-num"># {{ idx + 1 }}</span>
+          </li>
+        </ul>
+        <div class="flex justify-center gap-x-12 m-t-8">
+          <MButton @click="submitSort" :disabled="sortSaving">
+            {{ sortSaving ? '儲存中...' : '儲存排序' }}
+          </MButton>
+          <MButton variant="secondary" @click="exitSortMode">取消</MButton>
+        </div>
       </div>
 
       <template v-if="!hasData">
@@ -148,6 +185,7 @@ import {
   unpublishBanner,
   deleteBanner,
   updateBanner,
+  reorderBanners,
 } from '@/services/adminBannerService';
 
 /* ==============================
@@ -367,6 +405,83 @@ const refresh = async () => {
   selectedIds.value = [];
 };
 
+/* ==============================
+ * Drag-and-drop Sort Mode
+ * ============================== */
+const sortModeActive = ref(false);
+const dragSortList = ref<any[]>([]);
+const dragFromIdx = ref<number | null>(null);
+const dragOverIdx = ref<number | null>(null);
+const sortSaving = ref(false);
+
+const toggleSortMode = () => {
+  if (sortModeActive.value) {
+    exitSortMode();
+  } else {
+    enterSortMode();
+  }
+};
+
+const enterSortMode = () => {
+  // populate with current full list sorted by orderNum
+  dragSortList.value = [...list.value].sort(
+    (a: any, b: any) => (a.orderNum ?? 999) - (b.orderNum ?? 999)
+  );
+  sortModeActive.value = true;
+};
+
+const exitSortMode = () => {
+  sortModeActive.value = false;
+  dragSortList.value = [];
+  dragFromIdx.value = null;
+  dragOverIdx.value = null;
+};
+
+const onDragStart = (idx: number) => {
+  dragFromIdx.value = idx;
+};
+
+const onDragOver = (idx: number) => {
+  dragOverIdx.value = idx;
+};
+
+const onDrop = (toIdx: number) => {
+  const fromIdx = dragFromIdx.value;
+  if (fromIdx === null || fromIdx === toIdx) return;
+  const arr = [...dragSortList.value];
+  const [moved] = arr.splice(fromIdx, 1);
+  arr.splice(toIdx, 0, moved);
+  dragSortList.value = arr;
+  dragFromIdx.value = null;
+  dragOverIdx.value = null;
+};
+
+const submitSort = async () => {
+  sortSaving.value = true;
+  const ids = dragSortList.value.map((item: any) => item.id);
+  const originalOrder = [...dragSortList.value];
+  try {
+    await reorderBanners(ids);
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: 'Banner 排序已儲存',
+      iconType: 'success',
+    });
+    exitSortMode();
+    await refresh();
+  } catch {
+    // 回滚顯示順序
+    dragSortList.value = originalOrder;
+    await dialogStore.openInfoDialog({
+      title: '提示訊息',
+      message: '排序儲存失敗，請重試',
+      iconType: 'warning',
+    });
+  } finally {
+    sortSaving.value = false;
+  }
+};
+
 const enableSelected = async () => {
   if (!canEnable.value) {
     await dialogStore.openInfoDialog({
@@ -533,4 +648,79 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.bl {
+  &__sort-panel {
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 16px;
+    background: #f9fafb;
+  }
+
+  &__sort-hint {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 12px;
+  }
+
+  &__sort-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__sort-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: grab;
+    user-select: none;
+    transition: background 0.15s;
+
+    &--over {
+      background: #eef2ff;
+      border-color: #6366f1;
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__sort-handle {
+    font-size: 16px;
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+
+  &__sort-thumb {
+    width: 48px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  &__sort-title {
+    flex: 1;
+    font-size: 14px;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__sort-num {
+    font-size: 13px;
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+}
+</style>

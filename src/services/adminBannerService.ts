@@ -116,3 +116,17 @@ export const updateBannerOrder = async (
     throw e;
   }
 };
+
+/** 批次更新 Banner 排序（拖曳排序用） */
+export const reorderBanners = async (
+  ids: string[]
+): Promise<ApiResponse<any>> => {
+  try {
+    // 後端：PUT /admin/banner/reorder  body: { ids: string[] }
+    const res = await api.put(`${basePath}/reorder`, { ids });
+    return res.data;
+  } catch (e) {
+    console.error('AdminBanner - reorderBanners error:', e);
+    throw e;
+  }
+};
