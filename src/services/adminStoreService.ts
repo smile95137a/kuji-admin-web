@@ -100,6 +100,19 @@ export const updateStore = async (
   }
 };
 
+/** 新增店家（POST /admin/stores） */
+export const createStore = async (
+  req: RequestData
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminStore - createStore error:', e);
+    throw e;
+  }
+};
+
 /** 啟用店家（POST /admin/stores/{storeId}/activate）（ADMIN ONLY） */
 export const activateStore = async (
   storeId: string
