@@ -5,7 +5,7 @@ import { getAuthToken, getRefreshToken, getTokenType } from './AuthService';
 
 export const api: AxiosInstance = axios.create({
   baseURL: `${import.meta.env.VITE_BASE_API_URL}/api`,
-  timeout: 1000000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -46,7 +46,7 @@ api.interceptors.response.use(
     }
 
     const url = originalRequest?.url || '';
-    if (url.includes('/admin/auth/refresh-token')) {
+    if (url.includes('/admin/auth/refresh')) {
       removeAllState();
       window.location.href = '/login';
       return Promise.reject(error);
@@ -88,7 +88,7 @@ api.interceptors.response.use(
 
     try {
       const refreshRes = await axios.post(
-        `${import.meta.env.VITE_BASE_API_URL}/api/admin/auth/refresh-token`,
+        `${import.meta.env.VITE_BASE_API_URL}/api/admin/auth/refresh`,
         { refreshToken: rt },
         { headers: { 'Content-Type': 'application/json' } }
       );
