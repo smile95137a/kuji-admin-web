@@ -53,15 +53,18 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
     <template v-else-if="reportData">
       <!-- Summary (generic KV display if object shape unknown) -->
       <div class="rp__cards m-t-16" v-if="reportData && !Array.isArray(reportData)">
-        <div
+        <template
           v-for="(val, key) in reportData"
           :key="String(key)"
-          class="rp__card"
-          v-if="typeof val !== 'object'"
         >
-          <p class="rp__card-label">{{ key }}</p>
-          <p class="rp__card-value">{{ val }}</p>
-        </div>
+          <div
+            v-if="typeof val !== 'object'"
+            class="rp__card"
+          >
+            <p class="rp__card-label">{{ key }}</p>
+            <p class="rp__card-value">{{ val }}</p>
+          </div>
+        </template>
       </div>
 
       <!-- Raw Data Table -->

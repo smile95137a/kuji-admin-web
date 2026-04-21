@@ -32,6 +32,39 @@
 
         <div class="w-50 w-md-100 p-6">
           <FormInput
+            label="帳號狀態"
+            :modelValue="statusDisplayText"
+            disabled
+          />
+        </div>
+
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="金幣餘額"
+            :modelValue="detail?.goldCoins !== undefined && detail?.goldCoins !== null ? String(detail.goldCoins) : '-'"
+            disabled
+          />
+        </div>
+
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="紅利餘額"
+            :modelValue="detail?.bonusCoins !== undefined && detail?.bonusCoins !== null ? String(detail.bonusCoins) : '-'"
+            disabled
+          />
+        </div>
+
+        <!-- 鎖定資訊 -->
+        <div class="w-50 w-md-100 p-6" v-if="isAccountLocked">
+          <FormInput
+            label="帳號鎖定至"
+            :modelValue="formatDateTime(detail?.lockedUntil)"
+            disabled
+          />
+        </div>
+
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
             label="最後登入"
             :modelValue="formatDateTime(detail?.lastLoginAt)"
             disabled
@@ -244,6 +277,15 @@
         <MButton type="button" :disabled="!canSuspend" @click="suspendOne">
           暫停
         </MButton>
+
+        <!-- 解鎖（僅 ROLE_ADMIN 且帳號鎖定中） -->
+        <MButton
+          v-if="isAdmin && isAccountLocked"
+          type="button"
+          @click="unlockOne"
+        >
+          解鎖帳號
+        </MButton>
       </div>
     </form>
   </MCard>
@@ -271,6 +313,90 @@
       </div>
 
       <!-- 手動調整點數已移除（T-MEM-01）：餘額唯讀顯示即可 -->
+    </MCard>
+  </div>
+
+  <!-- ===== 手動調整點數（僅 ROLE_ADMIN） ===== -->
+  <div class="m-t-12" v-if="isAdmin">
+    <MCard>
+      <p class="form__text form__text--title">手動調整點數</p>
+
+      <div class="flex flex-wrap m-t-8">
+        <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="幣別"
+            v-model="adjustCoinType"
+            :options="coinTypeOptions"
+          />
+        </div>
+        <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="調整方式"
+            v-model="adjustDirection"
+            :options="adjustDirectionOptions"
+          />
+        </div>
+        <div class="w-50 w-md-100 p-6">
+          <FormInput
+            label="調整數量（正整數）"
+            v-model="adjustAmount"
+            type="number"
+            :min="1"
+            placeholder="例如：100"
+          />
+          <p v-if="adjustAmountError" class="form__text" style="color:var(--color-red, red); font-size:12px; margin-top:4px;">{{ adjustAmountError }}</p>
+        </div>
+        <div class="w-100 p-6">
+          <FormInput
+            label="備註（必填）"
+            v-model="adjustRemark"
+            placeholder="請填寫調整原因"
+          />
+          <p v-if="adjustRemarkError" class="form__text" style="color:var(--color-red, red); font-size:12px; margin-top:4px;">{{ adjustRemarkError }}</p>
+        </div>
+      </div>
+
+      <div class="flex justify-center m-t-8">
+        <MButton type="button" @click="submitCoinAdjust">送出調整</MButton>
+      </div>
+    </MCard>
+  </div>
+
+  <!-- ===== 登入記錄（僅 ROLE_ADMIN） ===== -->
+  <div class="m-t-12" v-if="isAdmin">
+    <MCard>
+      <div class="flex items-center gap-x-12">
+        <p class="form__text form__text--title">登入記錄</p>
+        <MButton type="button" @click="loadLoginHistory">載入記錄</MButton>
+      </div>
+
+      <template v-if="loginHistoryLoading">
+        <p class="form__text m-t-8">載入中...</p>
+      </template>
+      <template v-else-if="loginHistory.length > 0">
+        <ReportTable
+          class="m-t-12"
+          :columns="loginHistoryColumns"
+          :items="loginHistory"
+          row-key="id"
+          :useWidthClass="true"
+        >
+          <template #cell-loginTime="{ item }">
+            <span>{{ formatDateTime(item.loginTime) }}</span>
+          </template>
+          <template #cell-status="{ item }">
+            <span :style="item.status === 'SUCCESS' ? 'color:green' : 'color:red'">
+              {{ item.status }}
+            </span>
+          </template>
+          <template #cell-failReason="{ item }">
+            <span>{{ item.failReason || '-' }}</span>
+          </template>
+        </ReportTable>
+      </template>
+      <template v-else-if="loginHistoryLoaded">
+        <p class="form__text m-t-8" style="opacity:0.6">無登入記錄</p>
+      </template>
     </MCard>
   </div>
 
@@ -328,7 +454,7 @@ import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
-import { useDialogStore } from '@/stores';
+import { useDialogStore, useAuthStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import {
@@ -337,6 +463,9 @@ import {
   activateFrontendUser,
   deactivateFrontendUser,
   suspendFrontendUser,
+  unlockFrontendUser,
+  getLoginHistory,
+  coinAdjust,
 } from '@/services/adminFrontendUserService';
 
 import {
@@ -356,6 +485,7 @@ interface SelectOption {
 const route = useRoute();
 const router = useRouter();
 const dialogStore = useDialogStore();
+const authStore = useAuthStore();
 
 const id = computed(() => String(route.params.id || ''));
 
@@ -365,6 +495,27 @@ const goBack = () => router.push('/home/member/list');
 const detail = ref<any>(null);
 
 const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
+
+/* 角色判斷 */
+const isAdmin = computed(() =>
+  Array.isArray(authStore.user?.roles) && authStore.user.roles.includes('ROLE_ADMIN')
+);
+
+/* 帳號狀態 */
+const isAccountLocked = computed(() => {
+  if (!detail.value?.lockedUntil) return false;
+  return new Date(detail.value.lockedUntil) > new Date();
+});
+
+const statusDisplayText = computed(() => {
+  const s = detail.value?.status;
+  if (!s) return '-';
+  if (s === 'ACTIVE') return '啟用';
+  if (s === 'INACTIVE') return '停用';
+  if (s === 'SUSPENDED') return '暫停';
+  if (s === 'LOCKED') return '鎖定';
+  return s;
+});
 
 /* 發票類型 options（req: DUPLICATE/TRIPLICATE/CARRIER/DONATE） */
 const invoiceTypeOptions: SelectOption[] = [
@@ -711,6 +862,27 @@ const suspendOne = async () => {
   });
 };
 
+const unlockOne = async () => {
+  const ok = await dialogStore.openConfirmDialog({
+    title: '解鎖確認',
+    message: '確定要解除此會員的帳號鎖定嗎？解鎖後會員可立即嘗試登入。',
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () => unlockFrontendUser(id.value),
+    onSuccess: async () => {
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: '帳號鎖定已解除',
+        iconType: 'success',
+      });
+      await loadDetail();
+    },
+    showSuccessDialog: false,
+  });
+};
+
 onMounted(async () => {
   await loadDetail();
   await loadWallet();
@@ -777,6 +949,114 @@ const loadPrizeBox = async () => {
 const resetPrizeBox = () => {
   prizeBoxList.value = [];
   prizeBoxSearched.value = false;
+};
+
+/* ==============================
+ * 手動調整點數（僅 ROLE_ADMIN）
+ * ============================== */
+const coinTypeOptions: SelectOption[] = [
+  { label: '金幣（GOLD）', value: 'GOLD' },
+  { label: '紅利（BONUS）', value: 'BONUS' },
+];
+
+const adjustDirectionOptions: SelectOption[] = [
+  { label: '增加', value: 'ADD' },
+  { label: '扣除', value: 'DEDUCT' },
+];
+
+const adjustCoinType = ref<'GOLD' | 'BONUS'>('GOLD');
+const adjustDirection = ref<'ADD' | 'DEDUCT'>('ADD');
+const adjustAmount = ref<string>('');
+const adjustRemark = ref<string>('');
+const adjustAmountError = ref<string>('');
+const adjustRemarkError = ref<string>('');
+
+const submitCoinAdjust = async () => {
+  adjustAmountError.value = '';
+  adjustRemarkError.value = '';
+
+  const amount = Number(adjustAmount.value);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    adjustAmountError.value = '請輸入正整數';
+    return;
+  }
+  if (!adjustRemark.value.trim()) {
+    adjustRemarkError.value = '備註為必填';
+    return;
+  }
+
+  const currentBalance =
+    adjustCoinType.value === 'GOLD'
+      ? (detail.value?.goldCoins ?? 0)
+      : (detail.value?.bonusCoins ?? 0);
+
+  const expectedNew =
+    adjustDirection.value === 'ADD'
+      ? currentBalance + amount
+      : currentBalance - amount;
+
+  const coinLabel = adjustCoinType.value === 'GOLD' ? '金幣' : '紅利';
+  const dirLabel = adjustDirection.value === 'ADD' ? '增加' : '扣除';
+
+  const ok = await dialogStore.openConfirmDialog({
+    title: '確認調整',
+    message: `確定要對此會員${dirLabel} ${amount} ${coinLabel}？\n調整後預期餘額：${expectedNew} ${coinLabel}`,
+  });
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () =>
+      coinAdjust(id.value, {
+        coinType: adjustCoinType.value,
+        direction: adjustDirection.value,
+        amount,
+        remark: adjustRemark.value.trim(),
+      }),
+    onSuccess: async (res: any) => {
+      const newBalance = res?.data?.newBalance ?? res?.data?.balance ?? expectedNew;
+      await dialogStore.openInfoDialog({
+        title: '提示訊息',
+        message: `調整成功！新餘額：${newBalance} ${coinLabel}`,
+        iconType: 'success',
+      });
+      adjustAmount.value = '';
+      adjustRemark.value = '';
+      await loadDetail();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+/* ==============================
+ * 登入記錄（僅 ROLE_ADMIN）
+ * ============================== */
+const loginHistory = ref<any[]>([]);
+const loginHistoryLoading = ref(false);
+const loginHistoryLoaded = ref(false);
+
+const loginHistoryColumns = [
+  { field: 'loginTime', label: '時間', width: 170 },
+  { field: 'ipAddress', label: 'IP 位址', width: 140 },
+  { field: 'deviceInfo', label: '裝置資訊', width: 220 },
+  { field: 'loginMethod', label: '登入方式', width: 120 },
+  { field: 'status', label: '結果', width: 100 },
+  { field: 'failReason', label: '失敗原因', width: 180 },
+];
+
+const loadLoginHistory = async () => {
+  if (!id.value) return;
+  loginHistoryLoading.value = true;
+  loginHistoryLoaded.value = false;
+  try {
+    const res = await getLoginHistory(id.value);
+    const data = (res as any)?.data ?? res;
+    loginHistory.value = Array.isArray(data) ? data : [];
+  } catch {
+    loginHistory.value = [];
+  } finally {
+    loginHistoryLoading.value = false;
+    loginHistoryLoaded.value = true;
+  }
 };
 </script>
 

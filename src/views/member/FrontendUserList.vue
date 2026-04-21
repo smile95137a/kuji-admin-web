@@ -69,6 +69,19 @@
             <span v-else>-</span>
           </template>
 
+          <template #cell-bonusCoins="{ item }">
+            <NumberFormatter
+              v-if="
+                item.bonusCoins !== null &&
+                item.bonusCoins !== undefined &&
+                item.bonusCoins !== ''
+              "
+              :number="item.bonusCoins"
+              locale="zh-TW"
+            />
+            <span v-else>-</span>
+          </template>
+
           <template #cell-statusName="{ item }">
             <span>{{ item.statusName || statusText(item.status) }}</span>
           </template>
@@ -80,11 +93,11 @@
             />
           </template>
 
-          <template #cell-updatedAt="{ item }">
-            <DateFormatter
-              :date="item.updatedAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
+          <template #cell-lastLoginAt="{ item }">
+            <span v-if="item.lastLoginAt">
+              <DateFormatter :date="item.lastLoginAt" format="YYYY-MM-DD HH:mm:ss" />
+            </span>
+            <span v-else>從未登入</span>
           </template>
         </ReportTable>
 
@@ -179,9 +192,10 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
  * ============================== */
 const statusOptions = ref<SelectOption[]>([
   { label: '全部', value: '' },
-  { label: 'ACTIVE', value: 'ACTIVE' },
-  { label: 'DEACTIVATED', value: 'DEACTIVATED' },
-  { label: 'SUSPENDED', value: 'SUSPENDED' },
+  { label: 'ACTIVE（啟用）', value: 'ACTIVE' },
+  { label: 'INACTIVE（停用）', value: 'INACTIVE' },
+  { label: 'SUSPENDED（暫停）', value: 'SUSPENDED' },
+  { label: 'LOCKED（鎖定）', value: 'LOCKED' },
 ]);
 
 const providerOptions = ref<SelectOption[]>([
@@ -204,10 +218,14 @@ const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
 const statusText = (status?: string) =>
   status === 'ACTIVE'
     ? '啟用'
+    : status === 'INACTIVE'
+    ? '停用'
     : status === 'DEACTIVATED'
     ? '停用'
     : status === 'SUSPENDED'
     ? '暫停'
+    : status === 'LOCKED'
+    ? '鎖定'
     : '-';
 
 const providerText = (p?: string) =>
@@ -272,9 +290,10 @@ const columns = [
   { field: 'email', label: 'Email', width: 240, sortable: true },
   { field: 'provider', label: '登入方式', width: 120, sortable: true },
   { field: 'goldCoins', label: '金幣', width: 120, sortable: true },
+  { field: 'bonusCoins', label: '紅利', width: 120, sortable: true },
   { field: 'statusName', label: '狀態', width: 120, sortable: true },
   { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
+  { field: 'lastLoginAt', label: '上次登入', width: 170, sortable: true },
 ];
 
 /* ==============================

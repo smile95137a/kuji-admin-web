@@ -1,6 +1,7 @@
 // services/frontend/FrontAPI.ts
 import axios, { AxiosError, AxiosInstance, AxiosHeaders } from 'axios';
 import { removeAllState, saveState } from '@/utils/Localstorage';
+import { saveSession, removeAllSession } from '@/utils/SessionStorage';
 import { getRefreshToken, getTokenType } from './AuthService';
 import { useAuthStore } from '@/stores';
 
@@ -44,18 +45,27 @@ api.interceptors.response.use(
   async (error: AxiosError<any>) => {
     const originalRequest: any = error.config;
 
+    if (error.response?.status === 403) {
+      removeAllSession();
+      removeAllState();
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
     const url = originalRequest?.url || '';
     if (url.includes('/admin/auth/refresh')) {
+      removeAllSession();
       removeAllState();
       window.location.href = '/login';
       return Promise.reject(error);
     }
 
     if (originalRequest?._retry) {
+      removeAllSession();
       removeAllState();
       window.location.href = '/login';
       return Promise.reject(error);
@@ -64,6 +74,7 @@ api.interceptors.response.use(
 
     const rt = getRefreshToken();
     if (!rt) {
+      removeAllSession();
       removeAllState();
       window.location.href = '/login';
       return Promise.reject(error);
@@ -108,10 +119,10 @@ api.interceptors.response.use(
 
       if (!newAccessToken) throw new Error('no accessToken');
 
-      // 更新 Pinia store（accessToken 存記憶體）+ localStorage（其他 token 資訊）
+      // 更新 Pinia store（accessToken 存記憶體）、sessionStorage（refreshToken）、localStorage（其他）
       const authStore = useAuthStore();
       authStore.setToken(newAccessToken);
-      if (newRefreshToken) saveState('refreshToken', newRefreshToken);
+      if (newRefreshToken) saveSession('refreshToken', newRefreshToken);
       saveState('tokenType', newTokenType);
       saveState('expiresIn', newExpiresIn);
 
@@ -125,6 +136,7 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (err) {
       resolveQueue(null);
+      removeAllSession();
       removeAllState();
       window.location.href = '/login';
       return Promise.reject(err);

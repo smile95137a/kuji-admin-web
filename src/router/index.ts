@@ -84,8 +84,11 @@ const router = createRouter({
   },
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore();
+
+  // F5 後 Pinia 歸零，先靜默嘗試用 refreshToken 恢復 accessToken
+  await authStore.initializeAuth();
 
   const requiresAuth = Boolean(to.meta?.requiresAuth);
 

@@ -105,3 +105,46 @@ export const suspendFrontendUser = async (
     throw e;
   }
 };
+
+/** 解鎖帳號（因登入失敗被系統鎖定） */
+export const unlockFrontendUser = async (
+  id: string
+): Promise<ApiResponse<any>> => {
+  try {
+    // 後端：POST /admin/frontend-users/{id}/unlock
+    const res = await api.post(`${basePath}/${id}/unlock`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminFrontendUser - unlockFrontendUser error:', e);
+    throw e;
+  }
+};
+
+/** 查看登入歷史（最多 50 筆，倒序） */
+export const getLoginHistory = async (
+  id: string
+): Promise<ApiResponse<any>> => {
+  try {
+    // 後端：GET /admin/frontend-users/{id}/login-history
+    const res = await api.get(`${basePath}/${id}/login-history`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminFrontendUser - getLoginHistory error:', e);
+    throw e;
+  }
+};
+
+/** 手動調整點數（CoinAdjustReq: coinType / direction / amount / remark） */
+export const coinAdjust = async (
+  id: string,
+  req: { coinType: 'GOLD' | 'BONUS'; direction: 'ADD' | 'DEDUCT'; amount: number; remark: string }
+): Promise<ApiResponse<any>> => {
+  try {
+    // 後端：POST /admin/frontend-users/{id}/coin-adjust
+    const res = await api.post(`${basePath}/${id}/coin-adjust`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminFrontendUser - coinAdjust error:', e);
+    throw e;
+  }
+};

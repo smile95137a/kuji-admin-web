@@ -1,7 +1,7 @@
 // services/adminBannerService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/admin/banner';
+const basePath = '/admin/banners';
 
 interface RequestData {
   [key: string]: any;

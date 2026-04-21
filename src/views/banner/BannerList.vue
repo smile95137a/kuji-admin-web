@@ -325,7 +325,7 @@ const columns = [
  * Submit (Query)
  * ============================== */
 const onSubmit = async (values: any) => {
-  // 你的後端是 POST /admin/banner/list，body: { condition: BannerCondition }
+  // 你的後端是 POST /admin/banners/list，body: { condition: BannerCondition }
   const req = { condition: values };
 
   await query(() => queryBanners(req));

@@ -51,7 +51,7 @@ export const refreshToken = async (
   req: RequestData
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.post(`${basePath}/refresh-token`, req);
+    const res = await api.post(`${basePath}/refresh`, req);
     return res.data;
   } catch (e) {
     console.error('AdminAuth - refreshToken error:', e);
