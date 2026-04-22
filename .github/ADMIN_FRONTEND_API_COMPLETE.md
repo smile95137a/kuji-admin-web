@@ -777,14 +777,14 @@ Base：`/admin/news`
 
 ## 十四、Banner 管理
 
-Base：`/admin/banner`  
+Base：`/admin/banners`  
 **全部 ADMIN ONLY**
 
-#### POST /admin/banner/list — 查詢 Banner 列表
+#### POST /admin/banners/list — 查詢 Banner 列表
 
-#### GET /admin/banner/{id} — 取得單一 Banner
+#### GET /admin/banners/{id} — 取得單一 Banner
 
-#### POST /admin/banner — 建立 Banner
+#### POST /admin/banners — 建立 Banner
 
 ```jsonc
 // Request
@@ -796,18 +796,18 @@ Base：`/admin/banner`
 }
 ```
 
-#### PUT /admin/banner/{id} — 更新 Banner
+#### PUT /admin/banners/{id} — 更新 Banner
 
-#### DELETE /admin/banner/{id} — 刪除
+#### DELETE /admin/banners/{id} — 刪除
 
-#### POST /admin/banner/{id}/publish — 發布
+#### POST /admin/banners/{id}/publish — 發布
 
-#### POST /admin/banner/{id}/unpublish — 取消發布
+#### POST /admin/banners/{id}/unpublish — 取消發布
 
-#### PUT /admin/banner/{id}/order — 更新排序
+#### PUT /admin/banners/{id}/order — 更新排序
 
 ```jsonc
-// Query: PUT /admin/banner/{id}/order?orderNum=3
+// Query: PUT /admin/banners/{id}/order?orderNum=3
 // Response: BannerRes
 ```
 

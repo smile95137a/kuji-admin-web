@@ -9,11 +9,11 @@
 
 **檔案**：`src/views/banner/BannerList.vue`
 
-**確認**：檢查 BannerList.vue 是否有拖曳排序 UI，以及是否呼叫 `PUT /admin/banner/reorder`
+**確認**：檢查 BannerList.vue 是否有拖曳排序 UI，以及是否呼叫 `PUT /admin/banners/reorder`
 
 **若缺失，補實作**：
 1. 使用瀏覽器原生 `dragstart`/`dragover`/`drop` events（不引入新庫）
-2. 拖曳後更新本地順序，呼叫 `adminBannerService.reorderBanners(ids: string[])` → `PUT /admin/banner/reorder`
+2. 拖曳後更新本地順序，呼叫 `adminBannerService.reorderBanners(ids: string[])` → `PUT /admin/banners/reorder`
 3. 樂觀更新排序，API 失敗時回滾
 
 **完成條件**：可拖曳調整 Banner 順序，儲存後排序持久化

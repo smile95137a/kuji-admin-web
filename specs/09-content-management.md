@@ -6,17 +6,17 @@
 
 ## Banner 管理
 
-### 路由前綴：`/admin/banner`
+### 路由前綴：`/admin/banners`
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| POST | `/admin/banner/list` | 查詢 Banner 列表 |
-| GET | `/admin/banner/{id}` | 取得 Banner 詳情 |
-| POST | `/admin/banner` | 新增 Banner |
-| PUT | `/admin/banner/{id}` | 更新 Banner |
-| DELETE | `/admin/banner/{id}` | 刪除 Banner |
-| PUT | `/admin/banner/{id}/status` | 發布/下線 Banner |
-| PUT | `/admin/banner/reorder` | 重新排序 |
+| POST | `/admin/banners/list` | 查詢 Banner 列表 |
+| GET | `/admin/banners/{id}` | 取得 Banner 詳情 |
+| POST | `/admin/banners` | 新增 Banner |
+| PUT | `/admin/banners/{id}` | 更新 Banner |
+| DELETE | `/admin/banners/{id}` | 刪除 Banner |
+| PUT | `/admin/banners/{id}/status` | 發布/下線 Banner |
+| PUT | `/admin/banners/reorder` | 重新排序 |
 
 ### Banner 資料結構
 ```typescript

@@ -166,7 +166,7 @@ Instructions 為開發約束與技術規範，指導 AI Agent 的行為準則。
 | 後端 basePath | 前台 Service basePath | 一致 |
 |--------------|----------------------|------|
 | `/admin/auth` | `/admin/auth` | ✅ |
-| `/admin/banner` | `/admin/banner` | ✅ |
+| `/admin/banners` | `/admin/banners` | ✅ |
 | `/admin/news` | `/admin/news` | ✅ |
 | `/admin/lottery` | `/admin/lottery` | ✅ |
 | `/admin/lotteries` | `/admin/lotteries` | ✅ |
