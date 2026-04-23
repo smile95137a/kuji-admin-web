@@ -33,10 +33,10 @@
             <span class="od__v">{{ formatDateTime(detail.createdAt) }}</span>
           </div>
           <div class="od__kv">
-            <span class="od__k">狀態</span>
+            <span class="od__k">出貨狀態</span>
             <span class="od__v">
-              <span :class="['od__badge', statusBadgeClass(detail.status)]">
-                {{ statusLabel(detail.status) }}
+              <span :class="['od__badge', statusBadgeClass(detail.shippingStatus)]">
+                {{ detail.shippingStatusName || statusLabel(detail.shippingStatus) }}
               </span>
             </span>
           </div>
@@ -105,7 +105,7 @@
             </div>
             <div class="od__kv od__kv--full">
               <span class="od__k">收件地址</span>
-              <span class="od__v">{{ shippingInfo?.address || '-' }}</span>
+              <span class="od__v">{{ detail.recipientAddress || shippingInfo?.address || '-' }}</span>
             </div>
           </div>
         </template>
@@ -131,6 +131,48 @@
         </template>
       </div>
 
+      <!-- ========== 付款資訊 ========== -->
+      <div class="od__section">
+        <p class="od__section-title">付款資訊</p>
+        <div class="od__grid">
+          <div class="od__kv">
+            <span class="od__k">付款方式</span>
+            <span class="od__v">{{ detail.paymentMethod || '-' }}</span>
+          </div>
+          <div class="od__kv">
+            <span class="od__k">付款狀態</span>
+            <span class="od__v">
+              <span :class="['od__badge', statusBadgeClass(detail.paymentStatus)]">
+                {{ detail.paymentStatusName || statusLabel(detail.paymentStatus) }}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 金額明細 ========== -->
+      <div class="od__section">
+        <p class="od__section-title">金額明細</p>
+        <div class="od__grid">
+          <div class="od__kv">
+            <span class="od__k">小計</span>
+            <span class="od__v">NT$ {{ detail.subtotal ?? 0 }}</span>
+          </div>
+          <div class="od__kv">
+            <span class="od__k">運費</span>
+            <span class="od__v">NT$ {{ detail.shippingFee ?? 0 }}</span>
+          </div>
+          <div class="od__kv">
+            <span class="od__k">折扣</span>
+            <span class="od__v">- NT$ {{ detail.discount ?? 0 }}</span>
+          </div>
+          <div class="od__kv">
+            <span class="od__k">合計</span>
+            <span class="od__v" style="font-weight: 700; color: #111827">NT$ {{ detail.totalAmount ?? 0 }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- ========== 獎品列表 ========== -->
       <div class="od__section">
         <p class="od__section-title">獎品列表（共 {{ prizeCount }} 件）</p>
@@ -139,24 +181,20 @@
             <table class="od__prize-table">
               <thead>
                 <tr>
-                  <th>圖片</th>
-                  <th>名稱</th>
+                  <th>#</th>
+                  <th>商品</th>
+                  <th>獎品名稱</th>
                   <th>等級</th>
+                  <th>時間</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(prize, idx) in prizes" :key="idx">
-                  <td>
-                    <img
-                      v-if="prize.imageUrl"
-                      :src="prize.imageUrl"
-                      :alt="prize.name"
-                      class="od__prize-img"
-                    />
-                    <span v-else>-</span>
-                  </td>
-                  <td>{{ prize.name || '-' }}</td>
-                  <td>{{ prize.level || prize.grade || '-' }}</td>
+                <tr v-for="(prize, idx) in prizes" :key="prize.id || idx">
+                  <td>{{ idx + 1 }}</td>
+                  <td>{{ prize.lotteryTitle || '-' }}</td>
+                  <td>{{ prize.prizeName || prize.name || '-' }}</td>
+                  <td>{{ prize.prizeLevel || prize.level || '-' }}</td>
+                  <td>{{ formatDateTime(prize.createdAt) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -177,13 +215,13 @@
               :key="idx"
               class="od__timeline-item"
             >
-              <div class="od__timeline-dot" :class="statusBadgeClass(entry.status)" />
+              <div class="od__timeline-dot" :class="statusBadgeClass(entry.toStatus ?? entry.status)" />
               <div class="od__timeline-content">
-                <span class="od__timeline-status">{{ statusLabel(entry.status) }}</span>
+                <span class="od__timeline-status">{{ entry.toStatusLabel || statusLabel(entry.toStatus ?? entry.status) }}</span>
                 <span class="od__timeline-meta">
-                  {{ entry.operator?.displayName || entry.operator?.email || '系統' }}
+                  {{ entry.operatorType === 'USER' ? '會員操作' : entry.operatorType === 'ADMIN' ? '管理員' : entry.operator?.displayName || entry.operator?.email || '系統' }}
                   ·
-                  {{ formatDateTime(entry.timestamp || entry.createdAt) }}
+                  {{ formatDateTime(entry.createdAt ?? entry.timestamp) }}
                 </span>
               </div>
             </div>
@@ -197,17 +235,17 @@
       <!-- ========== 操作區 ========== -->
       <div class="od__section od__actions">
         <!-- 下一步狀態按鈕 -->
-        <template v-if="detail.status === 'PENDING'">
+        <template v-if="detail.shippingStatus === 'PENDING'">
           <MButton :loading="actionLoading" @click="doPrepare">
             開始準備
           </MButton>
         </template>
-        <template v-else-if="detail.status === 'PREPARING'">
+        <template v-else-if="detail.shippingStatus === 'PREPARING'">
           <MButton :loading="actionLoading" @click="openShipModal">
             標記已出貨
           </MButton>
         </template>
-        <template v-else-if="detail.status === 'SHIPPED'">
+        <template v-else-if="detail.shippingStatus === 'SHIPPED'">
           <MButton :loading="actionLoading" @click="doComplete">
             確認完成
           </MButton>
@@ -325,13 +363,10 @@ const actionLoading = ref(false);
  * ============================== */
 const shippingInfo = computed(() => detail.value?.shippingInfo ?? null);
 const shippingMethod = computed(
-  () =>
-    shippingInfo.value?.method ??
-    detail.value?.shippingMethod ??
-    '',
+  () => detail.value?.shippingMethod ?? shippingInfo.value?.method ?? '',
 );
 const prizes = computed<any[]>(
-  () => detail.value?.prizes ?? [],
+  () => detail.value?.items ?? detail.value?.prizes ?? [],
 );
 const prizeCount = computed(
   () =>
@@ -343,7 +378,7 @@ const statusHistory = computed<any[]>(
   () => [...(detail.value?.statusHistory ?? [])].reverse(),
 );
 const canCancel = computed(() =>
-  ['PENDING', 'PREPARING'].includes(detail.value?.status ?? ''),
+  ['PENDING', 'PREPARING'].includes(detail.value?.shippingStatus ?? detail.value?.status ?? ''),
 );
 
 /* ==============================
@@ -367,6 +402,7 @@ function formatDateTime(val: any): string {
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  PAYMENT_PENDING: '待付款',
   PENDING: '待出貨',
   PREPARING: '準備中',
   SHIPPED: '已出貨',
@@ -378,6 +414,7 @@ function statusLabel(s: string): string {
 }
 
 const STATUS_BADGE: Record<string, string> = {
+  PAYMENT_PENDING: 'od__badge--yellow',
   PENDING: 'od__badge--yellow',
   PREPARING: 'od__badge--blue',
   SHIPPED: 'od__badge--purple',
