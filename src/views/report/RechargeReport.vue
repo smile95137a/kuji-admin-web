@@ -32,8 +32,11 @@ const chartOption = ref<any>({
 
 const planColumns = [
   { field: 'planName', label: '方案名稱', width: 200 },
-  { field: 'amount', label: '金額 (NT$)', width: 120 },
-  { field: 'orderCount', label: '訂單數', width: 100 },
+  { field: 'planPrice', label: '方案金額 (NT$)', width: 130 },
+  { field: 'bonusPoints', label: '贈送點數', width: 110 },
+  { field: 'purchaseCount', label: '購買次數', width: 100 },
+  { field: 'totalAmount', label: '總金額 (NT$)', width: 130 },
+  { field: 'percentage', label: '占比 (%)', width: 90 },
 ];
 
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
@@ -43,7 +46,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
   try {
     const res = await getRechargeReport({ condition: filter });
     reportData.value = (res as any)?.data ?? res;
-    const daily = reportData.value?.daily ?? [];
+    const daily = reportData.value?.dailyDetails ?? [];
     chartOption.value = {
       ...chartOption.value,
       xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
@@ -64,23 +67,22 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
     <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
 
     <template v-else-if="reportData">
-      <!-- Summary Cards -->
       <div class="rp__cards m-t-16">
         <div class="rp__card">
-          <p class="rp__card-label">總儲值金額 (NT$)</p>
+          <p class="rp__card-label">總儲値金額 (NT$)</p>
           <p class="rp__card-value">NT$ {{ reportData.totalAmount?.toLocaleString() ?? '-' }}</p>
         </div>
         <div class="rp__card">
-          <p class="rp__card-label">總發放金幣</p>
-          <p class="rp__card-value">{{ reportData.totalGoldIssued?.toLocaleString() ?? '-' }}</p>
+          <p class="rp__card-label">儲値筆數</p>
+          <p class="rp__card-value">{{ reportData.totalCount?.toLocaleString() ?? '-' }}</p>
         </div>
         <div class="rp__card">
-          <p class="rp__card-label">總贈送點數</p>
-          <p class="rp__card-value">{{ reportData.totalBonusIssued?.toLocaleString() ?? '-' }}</p>
+          <p class="rp__card-label">均底儲値金額</p>
+          <p class="rp__card-value">NT$ {{ reportData.avgAmount?.toLocaleString() ?? '-' }}</p>
         </div>
         <div class="rp__card">
-          <p class="rp__card-label">訂單數</p>
-          <p class="rp__card-value">{{ reportData.orderCount ?? '-' }}</p>
+          <p class="rp__card-label">成長率</p>
+          <p class="rp__card-value">{{ reportData.growthRate != null ? reportData.growthRate + '%' : '-' }}</p>
         </div>
       </div>
 

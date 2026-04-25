@@ -18,7 +18,7 @@ import { useReportFilter } from '@/composables/useReportFilter';
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent]);
 
 const authStore = useAuthStore();
-const isAdmin = ref(authStore.user?.role === 'ADMIN' || authStore.user?.roles?.includes('ADMIN'));
+const isAdmin = ref(Array.isArray(authStore.user?.roles) && authStore.user.roles.includes('ROLE_ADMIN'));
 
 const storeOptions = ref<{ label: string; value: string }[]>([]);
 const reportData = ref<any>(null);
@@ -36,14 +36,15 @@ const chartOption = ref<any>({
 const dailyColumns = [
   { field: 'date', label: '日期', width: 120 },
   { field: 'revenue', label: '營收 (NT$)', width: 130 },
-  { field: 'orderCount', label: '訂單數', width: 100 },
-  { field: 'drawCount', label: '抽獎次數', width: 110 },
+  { field: 'orders', label: '訂單數', width: 100 },
+  { field: 'draws', label: '抽獎次數', width: 110 },
 ];
 
 const storeColumns = [
   { field: 'storeName', label: '店家', width: 180 },
   { field: 'revenue', label: '營收 (NT$)', width: 130 },
-  { field: 'orderCount', label: '訂單數', width: 100 },
+  { field: 'orders', label: '訂單數', width: 100 },
+  { field: 'percentage', label: '占比 (%)', width: 100 },
 ];
 
 onMounted(async () => {
@@ -64,7 +65,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
   try {
     const res = await getRevenueReport({ condition: filter });
     reportData.value = (res as any)?.data ?? res;
-    const daily = reportData.value?.daily ?? [];
+    const daily = reportData.value?.dailyDetails ?? [];
     chartOption.value = {
       ...chartOption.value,
       xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
@@ -104,8 +105,12 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
           <p class="rp__card-value">{{ reportData.totalDraws ?? '-' }}</p>
         </div>
         <div class="rp__card">
-          <p class="rp__card-label">日均營收</p>
-          <p class="rp__card-value">NT$ {{ reportData.avgRevenuePerDay?.toLocaleString() ?? '-' }}</p>
+          <p class="rp__card-label">均底訂單金額</p>
+          <p class="rp__card-value">NT$ {{ reportData.avgOrderAmount?.toLocaleString() ?? '-' }}</p>
+        </div>
+        <div class="rp__card">
+          <p class="rp__card-label">成長率</p>
+          <p class="rp__card-value">{{ reportData.growthRate != null ? reportData.growthRate + '%' : '-' }}</p>
         </div>
       </div>
 
@@ -119,18 +124,18 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
         <p class="form__text form__text--red m-b-8">每日明細</p>
         <ReportTable
           :columns="dailyColumns"
-          :items="reportData.daily ?? []"
+          :items="reportData.dailyDetails ?? []"
           row-key="date"
           :useWidthClass="true"
         />
       </div>
 
       <!-- ByStore Table (Admin only) -->
-      <div v-if="isAdmin && reportData.byStore?.length" class="m-t-20">
+      <div v-if="isAdmin && reportData.storeDetails?.length" class="m-t-20">
         <p class="form__text form__text--red m-b-8">各店家營收</p>
         <ReportTable
           :columns="storeColumns"
-          :items="reportData.byStore"
+          :items="reportData.storeDetails"
           row-key="storeName"
           :useWidthClass="true"
         />

@@ -33,11 +33,11 @@
 
         <!-- logType -->
         <div class="w-50 w-md-100 p-6" v-if="values.queryMode === 'TYPE'">
-          <FormInput
-            label="Log Type"
+          <FormSelect
+            label="Log 類型"
             :modelValue="values.logType"
             @update:modelValue="setFieldValue('logType', $event)"
-            placeholder="例如：LOGIN / ORDER / ADMIN_ACTION ..."
+            :options="logTypeOptions"
           />
         </div>
 
@@ -109,20 +109,23 @@
             <span v-else>-</span>
           </template>
 
-          <!-- updatedAt -->
-          <template #cell-updatedAt="{ item }">
-            <DateFormatter
-              v-if="item.updatedAt"
-              :date="item.updatedAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else>-</span>
+          <!-- requestUrl（太長就截斷） -->
+          <template #cell-requestUrl="{ item }">
+            <span :title="item.requestUrl || ''">{{ truncate(item.requestUrl, 50) }}</span>
           </template>
 
-          <!-- message（太長就截斷） -->
-          <template #cell-message="{ item }">
-            <span :title="item.message || ''">
-              {{ truncate(item.message) }}
+          <!-- errorMessage（太長就截斷） -->
+          <template #cell-errorMessage="{ item }">
+            <span v-if="item.errorMessage" :title="item.errorMessage" style="color: #ef4444">
+              {{ truncate(item.errorMessage, 50) }}
+            </span>
+            <span v-else style="color: #9ca3af">-</span>
+          </template>
+
+          <!-- responseStatus badge -->
+          <template #cell-responseStatus="{ item }">
+            <span :style="{ color: item.responseStatus >= 400 ? '#ef4444' : '#059669', fontWeight: '600' }">
+              {{ item.responseStatus ?? '-' }}
             </span>
           </template>
         </ReportTable>
@@ -197,6 +200,13 @@ const queryModeOptions: SelectOption[] = [
   { label: '依類型（logType）', value: 'TYPE' },
   { label: '依使用者（userId）', value: 'USER' },
   { label: '依時間區間（start/end）', value: 'DATE_RANGE' },
+];
+
+const logTypeOptions: SelectOption[] = [
+  { label: 'LOGIN（登入日誌）', value: 'LOGIN' },
+  { label: 'DRAW（抽獎日誌）', value: 'DRAW' },
+  { label: 'PAYMENT（支付日誌）', value: 'PAYMENT' },
+  { label: 'ADMIN（後台操作日誌）', value: 'ADMIN' },
 ];
 
 /* ==============================
@@ -282,11 +292,17 @@ const {
  * 你只要再補 columns + template 就好
  */
 const columns = [
-  { field: 'logType', label: '類型', width: 140, sortable: true },
-  { field: 'userId', label: '使用者', width: 220, sortable: true },
-  { field: 'message', label: '訊息', width: 360, sortable: true },
-  { field: 'createdAt', label: '建立時間', width: 160, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
+  { field: 'logType', label: '類型', width: 110, sortable: true },
+  { field: 'action', label: '動作', width: 160, sortable: true },
+  { field: 'userType', label: '用戶類型', width: 90, sortable: true },
+  { field: 'userId', label: '使用者 ID', width: 220, sortable: true },
+  { field: 'requestIp', label: 'IP', width: 130, sortable: true },
+  { field: 'requestMethod', label: 'Method', width: 80, sortable: true },
+  { field: 'requestUrl', label: 'URL', width: 240, sortable: true },
+  { field: 'responseStatus', label: 'HTTP', width: 70, sortable: true },
+  { field: 'durationMs', label: '耗時(ms)', width: 90, sortable: true },
+  { field: 'errorMessage', label: '錯誤訊息', width: 200, sortable: true },
+  { field: 'createdAt', label: '時間', width: 160, sortable: true },
 ];
 
 /* ==============================

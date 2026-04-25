@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * BonusReport.vue
- * ⚠️ BonusReportRes 欄位待後端確認。
- * 目前以 summary 卡片 + raw data table 骨架呈現。
- */
 import { ref, onMounted } from 'vue';
 import MCard from '@/components/common/MCard.vue';
 import ReportFilterBar from '@/components/report/ReportFilterBar.vue';
@@ -12,10 +7,33 @@ import { getBonusReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 
 const reportData = ref<any>(null);
-const rawItems = ref<any[]>([]);
-const rawColumns = ref<{ field: string; label: string; width: number }[]>([]);
 const isLoading = ref(false);
 const { dateRange } = useReportFilter();
+
+// API: POST /admin/report/bonus
+// Response: { totalBonusPoints, totalCount, benefitUsers, growthRate, dailyDetails[], typeStats[] }
+// typeStats.bonusType: REFERRAL / PROMOTION / ADJUSTMENT / REGISTRATION
+
+const BONUS_TYPE_LABEL: Record<string, string> = {
+  REFERRAL: '推薦好友',
+  PROMOTION: '活動贈點',
+  ADJUSTMENT: '手動調整',
+  REGISTRATION: '註冊贈點',
+};
+
+const dailyColumns = [
+  { field: 'date', label: '日期', width: 120 },
+  { field: 'points', label: '贈點數', width: 120 },
+  { field: 'count', label: '筆數', width: 90 },
+];
+
+const typeStatsColumns = [
+  { field: 'typeName', label: '類型', width: 140 },
+  { field: 'bonusType', label: '代碼', width: 130 },
+  { field: 'totalPoints', label: '總點數', width: 120 },
+  { field: 'count', label: '筆數', width: 90 },
+  { field: 'percentage', label: '佔比(%)', width: 100 },
+];
 
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
 
@@ -23,18 +41,15 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
   isLoading.value = true;
   try {
     const res = await getBonusReport({ condition: filter });
-    reportData.value = (res as any)?.data ?? res;
-
-    // Auto-build columns from first item keys (skeleton mode)
-    const data = Array.isArray(reportData.value) ? reportData.value : (reportData.value?.items ?? []);
-    rawItems.value = data;
-    if (data.length > 0) {
-      rawColumns.value = Object.keys(data[0]).map((key) => ({
-        field: key,
-        label: key,
-        width: 140,
+    const raw = (res as any)?.data ?? res;
+    // Normalize typeStats labels
+    if (raw?.typeStats) {
+      raw.typeStats = raw.typeStats.map((t: any) => ({
+        ...t,
+        typeName: t.typeName ?? BONUS_TYPE_LABEL[t.bonusType] ?? t.bonusType,
       }));
     }
+    reportData.value = raw;
   } finally {
     isLoading.value = false;
   }
@@ -44,42 +59,73 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
 <template>
   <MCard>
     <p class="form__text form__text--title">紅利報表</p>
-    <p class="rp__notice">⚠️ 欄位待後端確認，目前顯示原始資料骨架</p>
 
     <ReportFilterBar @update:filter="fetchReport" />
 
     <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
 
     <template v-else-if="reportData">
-      <!-- Summary (generic KV display if object shape unknown) -->
-      <div class="rp__cards m-t-16" v-if="reportData && !Array.isArray(reportData)">
-        <template
-          v-for="(val, key) in reportData"
-          :key="String(key)"
-        >
-          <div
-            v-if="typeof val !== 'object'"
-            class="rp__card"
-          >
-            <p class="rp__card-label">{{ key }}</p>
-            <p class="rp__card-value">{{ val }}</p>
-          </div>
-        </template>
+      <!-- Summary Cards -->
+      <div class="rp__cards m-t-16">
+        <div class="rp__card">
+          <p class="rp__card-label">總贈點數</p>
+          <p class="rp__card-value">{{ reportData.totalBonusPoints?.toLocaleString() ?? '-' }}</p>
+        </div>
+        <div class="rp__card">
+          <p class="rp__card-label">總贈點筆數</p>
+          <p class="rp__card-value">{{ reportData.totalCount?.toLocaleString() ?? '-' }}</p>
+        </div>
+        <div class="rp__card">
+          <p class="rp__card-label">受益人數</p>
+          <p class="rp__card-value">{{ reportData.benefitUsers?.toLocaleString() ?? '-' }}</p>
+        </div>
+        <div class="rp__card">
+          <p class="rp__card-label">成長率</p>
+          <p class="rp__card-value">{{ reportData.growthRate != null ? reportData.growthRate + '%' : '-' }}</p>
+        </div>
       </div>
 
-      <!-- Raw Data Table -->
-      <div v-if="rawItems.length" class="m-t-16">
-        <p class="form__text form__text--red m-b-8">原始資料（待欄位確認後更新）</p>
+      <!-- 類型統計 -->
+      <div v-if="reportData.typeStats?.length" class="m-t-20">
+        <p class="form__text form__text--red m-b-8">贈點類型統計</p>
         <ReportTable
-          :columns="rawColumns"
-          :items="rawItems"
-          row-key="id"
+          :columns="typeStatsColumns"
+          :items="reportData.typeStats"
+          row-key="bonusType"
           :useWidthClass="true"
         />
       </div>
-      <div v-else class="rp__empty m-t-16">無資料</div>
+
+      <!-- 每日明細 -->
+      <div v-if="reportData.dailyDetails?.length" class="m-t-20">
+        <p class="form__text form__text--red m-b-8">每日明細</p>
+        <ReportTable
+          :columns="dailyColumns"
+          :items="reportData.dailyDetails"
+          row-key="date"
+          :useWidthClass="true"
+        />
+      </div>
+
+      <div v-if="!reportData.typeStats?.length && !reportData.dailyDetails?.length" class="rp__empty m-t-16">
+        無資料
+      </div>
     </template>
   </MCard>
+</template>
+
+<style scoped lang="scss">
+.rp {
+  &__loading, &__empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 24px; }
+  &__cards { display: flex; gap: 12px; flex-wrap: wrap; }
+  &__card {
+    flex: 1; min-width: 160px;
+    background: #fef9c3; border-radius: 8px; padding: 16px 20px; text-align: center;
+  }
+  &__card-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+  &__card-value { font-size: 22px; font-weight: 700; color: #d97706; }
+}
+</style>
 </template>
 
 <style scoped lang="scss">

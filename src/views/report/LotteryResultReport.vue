@@ -11,18 +11,21 @@ const isLoading = ref(false);
 const { dateRange } = useReportFilter();
 
 const prizeStatsColumns = [
-  { field: 'prizeName', label: '獎品名稱', width: 200 },
   { field: 'prizeLevel', label: '獎品等級', width: 100 },
-  { field: 'drawnQuantity', label: '已抽數量', width: 100 },
-  { field: 'totalQuantity', label: '總數量', width: 100 },
-  { field: 'drawRate', label: '抽出率', width: 100 },
+  { field: 'totalCount', label: '總數量', width: 100 },
+  { field: 'wonCount', label: '已抽數', width: 100 },
+  { field: 'remainCount', label: '剩餘數', width: 100 },
+  { field: 'wonPercentage', label: '抽出率(%)', width: 100 },
 ];
 
 const lotteryStatsColumns = [
-  { field: 'lotteryTitle', label: '商品名稱', width: 240 },
-  { field: 'totalDraws', label: '總抽次', width: 100 },
+  { field: 'lotteryTitle', label: '商品名稱', width: 200 },
+  { field: 'storeName', label: '店家', width: 140 },
+  { field: 'totalSlots', label: '總签數', width: 90 },
+  { field: 'soldSlots', label: '已售', width: 80 },
+  { field: 'remainSlots', label: '剩餘', width: 80 },
+  { field: 'soldPercentage', label: '售出率(%)', width: 100 },
   { field: 'revenue', label: '營收 (NT$)', width: 120 },
-  { field: 'isCompleted', label: '已完抽', width: 80 },
 ];
 
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
@@ -53,12 +56,16 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
           <p class="rp__card-value">{{ reportData.totalDraws ?? '-' }}</p>
         </div>
         <div class="rp__card">
-          <p class="rp__card-label">頭獎數</p>
-          <p class="rp__card-value">{{ reportData.totalGrandPrizes ?? '-' }}</p>
+          <p class="rp__card-label">總獎品數</p>
+          <p class="rp__card-value">{{ reportData.totalPrizes ?? '-' }}</p>
         </div>
         <div class="rp__card">
-          <p class="rp__card-label">完抽率</p>
-          <p class="rp__card-value">{{ reportData.completionRate ?? '-' }}</p>
+          <p class="rp__card-label">大獎數</p>
+          <p class="rp__card-value">{{ reportData.bigPrizes ?? '-' }}</p>
+        </div>
+        <div class="rp__card">
+          <p class="rp__card-label">總營收 (NT$)</p>
+          <p class="rp__card-value">NT$ {{ reportData.totalAmount?.toLocaleString() ?? '-' }}</p>
         </div>
       </div>
 
