@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores';
 import { getStoreOptions } from '@/services/adminStoreService';
 import { getRevenueReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
+import { executeApi } from '@/utils/executeApiUtils';
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent]);
 
@@ -22,7 +23,6 @@ const isAdmin = ref(Array.isArray(authStore.user?.roles) && authStore.user.roles
 
 const storeOptions = ref<{ label: string; value: string }[]>([]);
 const reportData = ref<any>(null);
-const isLoading = ref(false);
 
 const { dateRange } = useReportFilter();
 
@@ -61,19 +61,19 @@ onMounted(async () => {
 });
 
 async function fetchReport(filter: { startDate: string; endDate: string; storeId?: string }) {
-  isLoading.value = true;
-  try {
-    const res = await getRevenueReport({ condition: filter });
-    reportData.value = (res as any)?.data ?? res;
-    const daily = reportData.value?.dailyDetails ?? [];
-    chartOption.value = {
-      ...chartOption.value,
-      xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
-      series: [{ name: '日營收', type: 'line', data: daily.map((d: any) => d.revenue ?? 0), smooth: true }],
-    };
-  } finally {
-    isLoading.value = false;
-  }
+  await executeApi({
+    fn: () => getRevenueReport({ condition: filter }),
+    onSuccess: (data) => {
+      reportData.value = data;
+      const daily = (data as any)?.dailyDetails ?? [];
+      chartOption.value = {
+        ...chartOption.value,
+        xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
+        series: [{ name: '日營收', type: 'line', data: daily.map((d: any) => d.revenue ?? 0), smooth: true }],
+      };
+    },
+    showSuccessDialog: false,
+  });
 }
 </script>
 
@@ -87,9 +87,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
       @update:filter="fetchReport"
     />
 
-    <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
-
-    <template v-else-if="reportData">
+    <div v-if="reportData">
       <!-- Summary Cards -->
       <div class="rp__cards m-t-16">
         <div class="rp__card">
@@ -140,7 +138,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
           :useWidthClass="true"
         />
       </div>
-    </template>
+    </div>
   </MCard>
 </template>
 

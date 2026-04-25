@@ -5,9 +5,9 @@ import ReportFilterBar from '@/components/report/ReportFilterBar.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import { getLotteryResultReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
+import { executeApi } from '@/utils/executeApiUtils';
 
 const reportData = ref<any>(null);
-const isLoading = ref(false);
 const { dateRange } = useReportFilter();
 
 const prizeStatsColumns = [
@@ -31,13 +31,11 @@ const lotteryStatsColumns = [
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
 
 async function fetchReport(filter: { startDate: string; endDate: string; storeId?: string }) {
-  isLoading.value = true;
-  try {
-    const res = await getLotteryResultReport({ condition: filter });
-    reportData.value = (res as any)?.data ?? res;
-  } finally {
-    isLoading.value = false;
-  }
+  await executeApi({
+    fn: () => getLotteryResultReport({ condition: filter }),
+    onSuccess: (data) => { reportData.value = data; },
+    showSuccessDialog: false,
+  });
 }
 </script>
 
@@ -47,9 +45,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
 
     <ReportFilterBar @update:filter="fetchReport" />
 
-    <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
-
-    <template v-else-if="reportData">
+    <div v-if="reportData">
       <div class="rp__cards m-t-16">
         <div class="rp__card">
           <p class="rp__card-label">總抽獎次數</p>
@@ -88,7 +84,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
           :useWidthClass="true"
         />
       </div>
-    </template>
+    </div>
   </MCard>
 </template>
 

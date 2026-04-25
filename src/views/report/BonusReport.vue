@@ -5,9 +5,9 @@ import ReportFilterBar from '@/components/report/ReportFilterBar.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import { getBonusReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
+import { executeApi } from '@/utils/executeApiUtils';
 
 const reportData = ref<any>(null);
-const isLoading = ref(false);
 const { dateRange } = useReportFilter();
 
 // API: POST /admin/report/bonus
@@ -38,21 +38,20 @@ const typeStatsColumns = [
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
 
 async function fetchReport(filter: { startDate: string; endDate: string }) {
-  isLoading.value = true;
-  try {
-    const res = await getBonusReport({ condition: filter });
-    const raw = (res as any)?.data ?? res;
-    // Normalize typeStats labels
-    if (raw?.typeStats) {
-      raw.typeStats = raw.typeStats.map((t: any) => ({
-        ...t,
-        typeName: t.typeName ?? BONUS_TYPE_LABEL[t.bonusType] ?? t.bonusType,
-      }));
-    }
-    reportData.value = raw;
-  } finally {
-    isLoading.value = false;
-  }
+  await executeApi({
+    fn: () => getBonusReport({ condition: filter }),
+    onSuccess: (data) => {
+      const raw = data as any;
+      if (raw?.typeStats) {
+        raw.typeStats = raw.typeStats.map((t: any) => ({
+          ...t,
+          typeName: t.typeName ?? BONUS_TYPE_LABEL[t.bonusType] ?? t.bonusType,
+        }));
+      }
+      reportData.value = raw;
+    },
+    showSuccessDialog: false,
+  });
 }
 </script>
 
@@ -62,9 +61,7 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
 
     <ReportFilterBar @update:filter="fetchReport" />
 
-    <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
-
-    <template v-else-if="reportData">
+    <div v-if="reportData">
       <!-- Summary Cards -->
       <div class="rp__cards m-t-16">
         <div class="rp__card">
@@ -110,7 +107,7 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
       <div v-if="!reportData.typeStats?.length && !reportData.dailyDetails?.length" class="rp__empty m-t-16">
         無資料
       </div>
-    </template>
+    </div>
   </MCard>
 </template>
 
@@ -124,27 +121,5 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
   }
   &__card-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
   &__card-value { font-size: 22px; font-weight: 700; color: #d97706; }
-}
-</style>
-</template>
-
-<style scoped lang="scss">
-.rp {
-  &__notice {
-    font-size: 12px;
-    color: #d97706;
-    background: #fef3c7;
-    padding: 6px 12px;
-    border-radius: 4px;
-    margin: 8px 0;
-  }
-  &__loading, &__empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 24px; }
-  &__cards { display: flex; gap: 12px; flex-wrap: wrap; }
-  &__card {
-    flex: 1; min-width: 140px;
-    background: #fef9c3; border-radius: 8px; padding: 14px 16px; text-align: center;
-  }
-  &__card-label { font-size: 11px; color: #6b7280; margin-bottom: 4px; word-break: break-all; }
-  &__card-value { font-size: 18px; font-weight: 700; color: #374151; }
 }
 </style>

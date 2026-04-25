@@ -174,6 +174,7 @@ import { useDialogStore, useAuthStore } from '@/stores';
 
 import {
   getAllAdminUsers,
+  queryAdminUsers,
   activateAdminUser,
   deactivateAdminUser,
   deleteAdminUser,
@@ -299,37 +300,8 @@ const storeText = (u: any) => {
     .join(', ');
 };
 
-/* filtered list */
-const filteredList = computed(() => {
-  const kw = String(keyword.value || '')
-    .trim()
-    .toLowerCase();
-  const st = String(status.value || '').trim();
-  const sid = String(storeId.value || '').trim();
-
-  return (list.value || []).filter((u: any) => {
-    const matchKw =
-      !kw ||
-      String(u?.email || '')
-        .toLowerCase()
-        .includes(kw) ||
-      String(u?.username || '')
-        .toLowerCase()
-        .includes(kw) ||
-      String(u?.displayName || '')
-        .toLowerCase()
-        .includes(kw);
-
-    const matchStatus = !st || String(u?.status || '') === st;
-
-    const matchStore =
-      !sid ||
-      (Array.isArray(u?.stores) &&
-        u.stores.some((s: any) => String(s?.id || '') === sid));
-
-    return matchKw && matchStatus && matchStore;
-  });
-});
+/* filtered list — now handled server-side via queryAdminUsers */
+const filteredList = computed(() => list.value ?? []);
 
 /* sorting */
 const sortKey = ref('');
@@ -380,12 +352,16 @@ const columns = [
 
 /* load list */
 const fetchList = async () => {
-  await query(() => getAllAdminUsers());
+  const condition = {
+    keyword: keyword.value?.trim() || undefined,
+    status: status.value?.trim() || undefined,
+    storeId: storeId.value?.trim() || undefined,
+  };
+  await query(() => queryAdminUsers({ condition }));
   goToPage(1);
 };
 
 const onSubmit = handleSubmit(async () => {
-  // 這支 API 是 GET 全部，查詢條件走前端 filter
   await fetchList();
   isSearch.value = true;
 });

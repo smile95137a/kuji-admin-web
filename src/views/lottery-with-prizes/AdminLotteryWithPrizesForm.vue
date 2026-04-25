@@ -95,15 +95,7 @@
                 @select="handleSelectedGalleryImage"
                 @clear="clearGallerySelectedFileUi"
               />
-              <div class="m-t-12">
-                <FormInput
-                  label="商品圖集 URL（逗號分隔，可直接貼 / 編輯）"
-                  v-model="galleryImagesText"
-                  :error="errors.galleryImagesText"
-                  placeholder="https://a.jpg, https://b.jpg"
-                  @blur="syncGalleryArrayFromText"
-                />
-              </div>
+
               <div class="m-t-12" v-if="galleryImageUrls.length">
                 <div class="m-t-12">
                   <MButton
@@ -420,7 +412,6 @@ const [playMode] = defineField('playMode');
 const [subCategory] = defineField('subCategory');
 
 const [imageUrl] = defineField('imageUrl');
-const [galleryImagesText] = defineField('galleryImagesText');
 
 const [content] = defineField('content');
 
@@ -496,22 +487,12 @@ const galleryImageUrls = ref<string[]>([]);
 const galleryUploadFileName = ref('');
 const galleryUploadErrorMessage = ref<string | null>(null);
 
-const syncGalleryTextFromArray = () => {
-  galleryImagesText.value = galleryImageUrls.value.join(',');
-};
-
-const syncGalleryArrayFromText = () => {
-  galleryImageUrls.value = parseCsvText(galleryImagesText.value);
-};
-
 const removeGalleryImage = (index: number) => {
   galleryImageUrls.value.splice(index, 1);
-  syncGalleryTextFromArray();
 };
 
 const clearGalleryImages = () => {
   galleryImageUrls.value = [];
-  galleryImagesText.value = '';
 };
 
 const clearGallerySelectedFileUi = () => {
@@ -721,7 +702,6 @@ const onCropConfirm = async (croppedFile: File) => {
       }
 
       galleryImageUrls.value.push(url);
-      syncGalleryTextFromArray();
 
       await dialogStore.openInfoDialog({
         title: '提示訊息',
@@ -877,9 +857,6 @@ const loadDetail = async () => {
       theme: data?.theme ?? '',
 
       imageUrl: data?.imageUrl ?? '',
-      galleryImagesText: Array.isArray(data?.galleryImages)
-        ? data.galleryImages.join(',')
-        : '',
 
       description: data?.description ?? '',
       content: data?.content ?? '',
@@ -912,11 +889,10 @@ const loadDetail = async () => {
     //  主圖預覽
     mainImagePreview.value = data?.imageUrl ?? '';
 
-    //  圖集回填（array + text 同步）
+    //  圖集回填
     galleryImageUrls.value = Array.isArray(data?.galleryImages)
       ? data.galleryImages
       : [];
-    syncGalleryTextFromArray();
 
     // prizes
     prizes.splice(0, prizes.length);
@@ -984,9 +960,6 @@ const onSubmit = handleSubmit(async (values) => {
   }
 
   try {
-    // 防止使用者只改文字欄：再同步一次
-    syncGalleryArrayFromText();
-
     const payload = {
       lottery: {
         storeId: cleanText(values.storeId),

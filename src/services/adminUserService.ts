@@ -49,6 +49,21 @@ export const getAdminUserById = async (
   }
 };
 
+/** 取得所有帳號列表（條件查詢，後端：POST /admin/users/list） */
+export const queryAdminUsers = async (req: {
+  condition?: { keyword?: string; status?: string; storeId?: string };
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/list`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminUser - queryAdminUsers error:', e);
+    throw e;
+  }
+};
+
 /** 取得所有帳號列表 */
 export const getAllAdminUsers = async (): Promise<ApiResponse<any>> => {
   try {

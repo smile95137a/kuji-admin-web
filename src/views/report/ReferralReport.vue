@@ -5,9 +5,9 @@ import ReportFilterBar from '@/components/report/ReportFilterBar.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import { getReferralReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
+import { executeApi } from '@/utils/executeApiUtils';
 
 const reportData = ref<any>(null);
-const isLoading = ref(false);
 const { dateRange } = useReportFilter();
 
 const rankingColumns = [
@@ -27,13 +27,11 @@ const dailyColumns = [
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
 
 async function fetchReport(filter: { startDate: string; endDate: string }) {
-  isLoading.value = true;
-  try {
-    const res = await getReferralReport({ condition: filter });
-    reportData.value = (res as any)?.data ?? res;
-  } finally {
-    isLoading.value = false;
-  }
+  await executeApi({
+    fn: () => getReferralReport({ condition: filter }),
+    onSuccess: (data) => { reportData.value = data; },
+    showSuccessDialog: false,
+  });
 }
 
 function rankingWithIndex(list: any[]) {
@@ -50,9 +48,7 @@ function rankingWithIndex(list: any[]) {
 
     <ReportFilterBar @update:filter="fetchReport" />
 
-    <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
-
-    <template v-else-if="reportData">
+    <div v-if="reportData">
       <div class="rp__cards m-t-16">
         <div class="rp__card">
           <p class="rp__card-label">總推薦人數</p>
@@ -87,7 +83,7 @@ function rankingWithIndex(list: any[]) {
           :useWidthClass="true"
         />
       </div>
-    </template>
+    </div>
   </MCard>
 </template>
 

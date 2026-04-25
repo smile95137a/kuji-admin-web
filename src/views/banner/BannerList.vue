@@ -4,7 +4,7 @@
     <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
       <FormTitle title="Banner 管理" />
 
-      <BannerSearchForm :status-options="statusOptions" />
+      <BannerSearchForm :status-options="statusOptions" :store-options="storeOptions" />
 
       <div class="flex justify-center m-y-8">
         <MButton type="submit">查詢</MButton>
@@ -187,6 +187,7 @@ import {
   updateBanner,
   reorderBanners,
 } from '@/services/adminBannerService';
+import { getStoreOptions } from '@/services/adminStoreService';
 
 /* ==============================
  * Permission / Router / Store
@@ -205,7 +206,6 @@ const initValues = ref<any>({
   status: '',
   title: '',
   storeId: '',
-  keyword: '',
   createdAtStart: '',
   createdAtEnd: '',
 });
@@ -225,8 +225,17 @@ const statusOptions = ref<SelectOption[]>([
   { label: '下架', value: 'UNPUBLISHED' },
 ]);
 
+const storeOptions = ref<SelectOption[]>([]);
+
 const loadSelectOptions = async () => {
-  await nextTick();
+  await executeApi<any[]>({
+    fn: () => getStoreOptions({ activeOnly: true }),
+    onSuccess: (data) => {
+      storeOptions.value = Array.isArray(data)
+        ? data.map((s: any) => ({ label: s.label ?? s.storeName, value: s.value ?? s.id }))
+        : [];
+    },
+  });
 };
 
 /* ==============================

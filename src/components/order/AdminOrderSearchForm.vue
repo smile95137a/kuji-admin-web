@@ -24,13 +24,13 @@
       />
     </div>
 
-    <!-- 玩家 ID -->
+    <!-- 玩家關鍵字 -->
     <div class="w-25 w-md-50 w-sm-100 p-6">
       <FormInput
-        label="玩家 ID"
-        v-model="userId"
-        :error="userIdError"
-        placeholder="輸入玩家 ID"
+        label="玩家（暱稱 / Email / 手機）"
+        v-model="userKeyword"
+        :error="userKeywordError"
+        placeholder="輸入暱稱、Email 或手機號碼"
       />
     </div>
 
@@ -90,7 +90,7 @@ const { value: orderNo, errorMessage: orderNoError } =
 const { value: shippingStatus, errorMessage: shippingStatusError } =
   useField<string>('shippingStatus');
 
-const { value: userId, errorMessage: userIdError } = useField<string>('userId');
+const { value: userKeyword, errorMessage: userKeywordError } = useField<string>('userKeyword');
 
 const { value: shippingMethod, errorMessage: shippingMethodError } =
   useField<string>('shippingMethod');

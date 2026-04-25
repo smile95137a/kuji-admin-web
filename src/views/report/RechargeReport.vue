@@ -13,6 +13,7 @@ import ReportTable from '@/components/common/ReportTable.vue';
 import { useAuthStore } from '@/stores';
 import { getRechargeReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
+import { executeApi } from '@/utils/executeApiUtils';
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent]);
 
@@ -20,7 +21,6 @@ const authStore = useAuthStore();
 const isAdmin = ref(authStore.user?.role === 'ADMIN' || authStore.user?.roles?.includes('ADMIN'));
 
 const reportData = ref<any>(null);
-const isLoading = ref(false);
 const { dateRange } = useReportFilter();
 
 const chartOption = ref<any>({
@@ -42,19 +42,19 @@ const planColumns = [
 onMounted(() => fetchReport({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate }));
 
 async function fetchReport(filter: { startDate: string; endDate: string; storeId?: string }) {
-  isLoading.value = true;
-  try {
-    const res = await getRechargeReport({ condition: filter });
-    reportData.value = (res as any)?.data ?? res;
-    const daily = reportData.value?.dailyDetails ?? [];
-    chartOption.value = {
-      ...chartOption.value,
-      xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
-      series: [{ name: '日儲值金額', type: 'line', data: daily.map((d: any) => d.amount ?? 0), smooth: true, areaStyle: {} }],
-    };
-  } finally {
-    isLoading.value = false;
-  }
+  await executeApi({
+    fn: () => getRechargeReport({ condition: filter }),
+    onSuccess: (data) => {
+      reportData.value = data;
+      const daily = (data as any)?.dailyDetails ?? [];
+      chartOption.value = {
+        ...chartOption.value,
+        xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
+        series: [{ name: '日儲值金額', type: 'line', data: daily.map((d: any) => d.amount ?? 0), smooth: true, areaStyle: {} }],
+      };
+    },
+    showSuccessDialog: false,
+  });
 }
 </script>
 
@@ -64,9 +64,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
 
     <ReportFilterBar :show-store-filter="isAdmin" @update:filter="fetchReport" />
 
-    <div v-if="isLoading" class="rp__loading m-t-12">載入中...</div>
-
-    <template v-else-if="reportData">
+    <div v-if="reportData">
       <div class="rp__cards m-t-16">
         <div class="rp__card">
           <p class="rp__card-label">總儲値金額 (NT$)</p>
@@ -101,7 +99,7 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
           :useWidthClass="true"
         />
       </div>
-    </template>
+    </div>
   </MCard>
 </template>
 
