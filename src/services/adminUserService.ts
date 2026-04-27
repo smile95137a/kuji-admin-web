@@ -51,7 +51,12 @@ export const getAdminUserById = async (
 
 /** 取得所有帳號列表（條件查詢，後端：POST /admin/users/list） */
 export const queryAdminUsers = async (req: {
-  condition?: { keyword?: string; status?: string; storeId?: string };
+  condition?: {
+    keyword?: string;
+    status?: string;
+    storeId?: string;
+    roleCode?: string;
+  };
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
 }): Promise<ApiResponse<any>> => {

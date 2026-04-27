@@ -36,6 +36,18 @@
             :allValue="''"
           />
         </div>
+
+        <div class="w-25 w-md-50 w-sm-100 p-6">
+          <FormSelect
+            label="角色"
+            v-model="roleCode"
+            :options="roleCodeOptions"
+            :error="errors.roleCode"
+            :showAll="true"
+            allLabel="全部"
+            :allValue="''"
+          />
+        </div>
       </div>
 
       <div class="flex justify-center m-y-8 gap-x-12 flex-wrap">
@@ -225,6 +237,7 @@ const schema = yup.object({
   keyword: yup.string().nullable(),
   status: yup.string().nullable(),
   storeId: yup.string().nullable(),
+  roleCode: yup.string().nullable(),
 });
 
 const statusOptions = ref<SelectOption[]>([
@@ -233,21 +246,29 @@ const statusOptions = ref<SelectOption[]>([
   { label: '待審核', value: 'PENDING' },
 ]);
 
+const roleCodeOptions = ref<SelectOption[]>([
+  { label: '系統管理員', value: 'ROLE_ADMIN' },
+  { label: '店家負責人', value: 'ROLE_STORE_OWNER' },
+  { label: '店家編輯', value: 'ROLE_STORE_EDITOR' },
+]);
+
 const { errors, handleSubmit, setValues, defineField } = useForm({
   validationSchema: schema,
   initialValues: {
     keyword: '',
     status: '',
     storeId: '',
+    roleCode: '',
   },
 });
 
 const [keyword] = defineField('keyword');
 const [status] = defineField('status');
 const [storeId] = defineField('storeId');
+const [roleCode] = defineField('roleCode');
 
 const resetFilters = async () => {
-  setValues({ keyword: '', status: '', storeId: '' });
+  setValues({ keyword: '', status: '', storeId: '', roleCode: '' });
   await onSubmit();
 };
 
@@ -356,6 +377,7 @@ const fetchList = async () => {
     keyword: keyword.value?.trim() || undefined,
     status: status.value?.trim() || undefined,
     storeId: storeId.value?.trim() || undefined,
+    roleCode: roleCode.value?.trim() || undefined,
   };
   await query(() => queryAdminUsers({ condition }));
   goToPage(1);

@@ -16,6 +16,7 @@ const props = defineProps<{
   statusOptions: SelectOption[];
   boolOptions: SelectOption[];
   isAdmin?: boolean;
+  isEdit?: boolean;
 }>();
 
 const { defineField, errors } = useFormContext();
@@ -50,6 +51,7 @@ const [autoDiscountEnabled] = defineField('autoDiscountEnabled');
 
 const [allowMultiDraw] = defineField('allowMultiDraw');
 const [multiDrawOptionsText] = defineField('multiDrawOptionsText');
+const [pendingDesignatedPrizeNumber] = defineField('pendingDesignatedPrizeNumber');
 
 const [bonusEnabled] = defineField('bonusEnabled');
 const [bonusPointsPerDraw] = defineField('bonusPointsPerDraw');
@@ -87,6 +89,19 @@ const addRemark = (r: string) => {
 };
 
 const isCustomGacha = computed(() => category.value === 'CUSTOM_GACHA');
+
+const addMultiDrawOption = (n: number) => {
+  const current = (multiDrawOptionsText.value || '')
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  const str = String(n);
+  if (!current.includes(str)) {
+    current.push(str);
+    current.sort((a: string, b: string) => Number(a) - Number(b));
+    multiDrawOptionsText.value = current.join(',');
+  }
+};
 
 /** 刮刮樂模式：以 subCategory 為依據，不再依賴 playMode 的選取 */
 const isScratchMode = computed(
@@ -212,14 +227,26 @@ watch(
           />
         </div>
 
+        <!-- SCRATCH_STORE：新增時直接輸入大獎號碼；編輯時由「指定大獎號碼」按鈕操作 -->
         <div class="w-100 w-md-100 p-6" v-if="isScratchStore">
-          <FormInput
-            label="指定大獎號碼（designatedPrizeNumbers，JSON 格式）"
-            v-model="designatedPrizeNumbers"
-            :error="errors.designatedPrizeNumbers"
-            type="textarea"
-            placeholder='[{"revealedNumber": 42, "prizeId": "uuid"}, ...]'
-          />
+          <template v-if="!props.isEdit">
+            <FormInput
+              label="大獎號碼（店家指定）"
+              type="number"
+              v-model="pendingDesignatedPrizeNumber"
+              :error="errors.pendingDesignatedPrizeNumber"
+              placeholder="輸入 1 ~ 總抽數 之間的號碼，可留空稍後在編輯頁設定"
+              :min="1"
+            />
+            <p class="form__text m-t-4" style="font-size:12px;color:#7c4a00;">
+              💡 指定後系統自動將其餘籤號設為銘謝惠顧，且不可變更。若現在不確定，可以先留空，儲存後到編輯頁再指定。
+            </p>
+          </template>
+          <template v-else>
+            <div style="background:#e6f7ff;border-left:4px solid #1890ff;padding:10px 14px;border-radius:4px;font-size:13px;color:#005a99;">
+              ℹ️ 大獎號碼請使用上方「指定大獎號碼」按鈕設定。
+            </div>
+          </template>
         </div>
 
         <div class="w-50 w-md-100 p-6">
@@ -259,6 +286,37 @@ watch(
             :error="errors.maxDraws"
             type="number"
             required
+          />
+        </div>
+
+        <!-- 多連抽設定 -->
+        <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="允許多連抽"
+            v-model="allowMultiDraw"
+            :options="props.boolOptions"
+            :error="errors.allowMultiDraw"
+          />
+        </div>
+
+        <div class="w-100 p-6" v-if="allowMultiDraw === true || allowMultiDraw === 'true'">
+          <p class="form__text">多連抽選項（可勾選預設值或直接編輯）</p>
+          <div class="flex flex-wrap gap-8 m-t-4 m-b-8">
+            <button
+              v-for="n in [3, 5, 10, 30, 50, 100]"
+              :key="n"
+              type="button"
+              class="basicFields__presetBtn"
+              @click="addMultiDrawOption(n)"
+            >
+              {{ n }} 連抽
+            </button>
+          </div>
+          <FormInput
+            label="多連抽選項（逗號分隔，例如：10,50,100）"
+            v-model="multiDrawOptionsText"
+            :error="errors.multiDrawOptionsText"
+            placeholder="10,50,100"
           />
         </div>
       </div>

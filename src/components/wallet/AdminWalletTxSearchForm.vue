@@ -1,15 +1,6 @@
 <template>
   <div class="flex flex-wrap">
     <div class="w-25 w-md-50 w-sm-100 p-6">
-      <FormInput
-        label="User ID"
-        v-model="userId"
-        :error="userIdError"
-        placeholder="可空"
-      />
-    </div>
-
-    <div class="w-25 w-md-50 w-sm-100 p-6">
       <FormSelect
         label="幣別"
         v-model="coinType"
@@ -82,7 +73,6 @@ const txTypeOptionsWithAll = computed<SelectOption[]>(() => [
   ]),
 ]);
 
-const { value: userId, errorMessage: userIdError } = useField<string>('userId');
 const { value: coinType, errorMessage: coinTypeError } =
   useField<string>('coinType');
 const { value: type, errorMessage: typeError } = useField<string>('type');

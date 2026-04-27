@@ -33,10 +33,10 @@
 
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="關鍵字"
+            label="內容關鍵字"
             :modelValue="values.keyword"
             @update:modelValue="setFieldValue('keyword', $event)"
-            placeholder="keyword"
+            placeholder="輸入內文關鍵字搜尋"
           />
         </div>
       </div>

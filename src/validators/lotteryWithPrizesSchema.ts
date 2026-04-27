@@ -56,6 +56,12 @@ export const lotteryWithPrizesSchema = yup.object({
   allowMultiDraw: yup.boolean().notRequired(),
   multiDrawOptionsText: yup.string().notRequired(),
 
+  pendingDesignatedPrizeNumber: yup
+    .number()
+    .transform((v, o) => (o === '' || o == null ? undefined : v))
+    .min(1, '號碼不可小於 1')
+    .notRequired(),
+
   bonusEnabled: yup.boolean().notRequired(),
   bonusPointsPerDraw: yup
     .number()
@@ -106,6 +112,8 @@ export const lotteryWithPrizesInitialValues = {
 
   allowMultiDraw: true,
   multiDrawOptionsText: '10',
+
+  pendingDesignatedPrizeNumber: undefined as any,
 
   bonusEnabled: false,
   bonusPointsPerDraw: undefined as any,

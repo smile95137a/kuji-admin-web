@@ -1,16 +1,6 @@
 <template>
   <div class="flex flex-wrap">
     <div class="w-50 w-md-100 p-6">
-      <FormInput
-        label="User ID"
-        v-model="userId"
-        :error="userIdError"
-        placeholder="要調整的 userId"
-        required
-      />
-    </div>
-
-    <div class="w-50 w-md-100 p-6">
       <FormSelect
         label="幣別"
         v-model="coinType"
@@ -31,7 +21,7 @@
       />
     </div>
 
-    <div class="w-50 w-md-100 p-6">
+    <div class="w-100 p-6">
       <FormInput
         label="原因（選填）"
         v-model="reason"
@@ -54,7 +44,6 @@ interface SelectOption {
 
 defineProps<{ coinTypeOptions: SelectOption[] }>();
 
-const { value: userId, errorMessage: userIdError } = useField<string>('userId');
 const { value: coinType, errorMessage: coinTypeError } =
   useField<string>('coinType');
 const { value: amount, errorMessage: amountError } = useField<any>('amount');

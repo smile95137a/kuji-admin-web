@@ -3,10 +3,10 @@
   <div class="flex flex-wrap">
     <div class="w-50 w-md-100 p-6">
       <FormInput
-        label="關鍵字"
+        label="方案名稱"
         v-model="keyword"
         :error="keywordError"
-        placeholder="目前後端為全查；此欄位先保留（之後可改成前端過濾/後端條件）"
+        placeholder="輸入方案名稱關鍵字"
       />
     </div>
   </div>

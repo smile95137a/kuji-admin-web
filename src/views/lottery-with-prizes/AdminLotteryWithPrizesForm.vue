@@ -22,6 +22,7 @@
             :statusOptions="statusOptions"
             :boolOptions="boolOptions"
             :isAdmin="isAdmin"
+            :isEdit="isEdit"
           />
         </div>
         <MCard class="m-t-12">
@@ -283,6 +284,7 @@ import {
   createLotteryWithPrizes,
   updateLotteryWithPrizes,
   getLotteryWithPrizes,
+  designatePrize,
 } from '@/services/adminLotteryWithPrizesService';
 
 import { getStoreOptions } from '@/services/adminStoreService';
@@ -1044,7 +1046,30 @@ const onSubmit = handleSubmit(async (values) => {
     }
 
     if (!isEdit.value) {
-      await createLotteryWithPrizes(payload);
+      const createRes = await createLotteryWithPrizes(payload);
+      const newId = createRes?.data?.id ?? createRes?.data;
+
+      /* Auto-designate prize if user filled in the number during create */
+      const pendingNum = (values as any).pendingDesignatedPrizeNumber;
+      if (
+        (values as any).gameMode === 'SCRATCH_STORE' &&
+        pendingNum != null &&
+        String(pendingNum) !== '' &&
+        newId
+      ) {
+        try {
+          await designatePrize(String(newId), { designatedPrizeNumber: Number(pendingNum) });
+        } catch (designateErr: any) {
+          await dialogStore.openInfoDialog({
+            title: '大獎號碼指定失敗',
+            message: `商品已建立，但大獎號碼指定失敗：${designateErr?.message ?? '請到編輯頁重試'}`,
+            iconType: 'warning',
+          });
+          router.push('/home/lottery-with-prizes');
+          return;
+        }
+      }
+
       dialogStore.openInfoDialog({
         title: '新增成功',
         message: '商品與獎品已建立完成',

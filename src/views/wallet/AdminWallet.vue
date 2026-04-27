@@ -1,18 +1,29 @@
 <!-- src/views/wallet/AdminWallet.vue -->
 <template>
+  <!-- 玩家選擇器（全頁共用） -->
+  <MCard>
+    <FormTitle title="錢包管理" />
+    <div class="p-6">
+      <MemberPicker
+        v-model="selectedUserId"
+        v-model:selectedLabel="selectedUserLabel"
+        @clear="onMemberClear"
+      />
+    </div>
+  </MCard>
+
   <!-- 玩家錢包查詢 -->
+  <div class="m-t-12">
   <MCard>
     <Form
       ref="walletFormRef"
       :initial-values="walletInitValues"
       @submit="onWalletSubmit"
     >
-      <FormTitle title="錢包管理" />
-
-      <AdminWalletSearchForm />
+      <FormTitle title="錢包資訊" />
 
       <div class="flex justify-center m-y-8 gap-x-12">
-        <MButton type="submit">查詢錢包</MButton>
+        <MButton type="submit" :disabled="!selectedUserId">查詢錢包</MButton>
         <MButton type="button" variant="secondary" @click="resetWallet"
           >清除</MButton
         >
@@ -58,6 +69,7 @@
       </template>
     </div>
   </MCard>
+  </div>
 
   <!-- 手動調整點數 -->
   <div class="m-t-12">
@@ -72,7 +84,7 @@
         <AdminWalletAdjustForm :coin-type-options="coinTypeOptions" />
 
         <div class="flex justify-center m-y-8 gap-x-12">
-          <MButton type="submit">送出調整</MButton>
+          <MButton type="submit" :disabled="!selectedUserId">送出調整</MButton>
           <MButton type="button" variant="secondary" @click="resetAdjust"
             >清除</MButton
           >
@@ -90,7 +102,7 @@
         <AdminWalletTxSearchForm :coin-type-options="coinTypeOptions" />
 
         <div class="flex justify-center m-y-8 gap-x-12">
-          <MButton type="submit">查詢</MButton>
+          <MButton type="submit" :disabled="!selectedUserId">查詢</MButton>
           <MButton type="button" variant="secondary" @click="resetTx"
             >清除</MButton
           >
@@ -164,8 +176,8 @@ import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
+import MemberPicker from '@/components/common/MemberPicker.vue';
 
-import AdminWalletSearchForm from '@/components/wallet/AdminWalletSearchForm.vue';
 import AdminWalletAdjustForm from '@/components/wallet/AdminWalletAdjustForm.vue';
 import AdminWalletTxSearchForm from '@/components/wallet/AdminWalletTxSearchForm.vue';
 
@@ -228,23 +240,35 @@ const formatSignedMoney = (n: any) => {
 };
 
 /* ==============================
+ * 共用：選取玩家
+ * ============================== */
+const selectedUserId = ref('');
+const selectedUserLabel = ref('');
+
+const onMemberClear = () => {
+  selectedUserId.value = '';
+  selectedUserLabel.value = '';
+  resetWallet();
+  list.value = [];
+  isSearch.value = false;
+};
+
+/* ==============================
  * 1) Wallet Query Form
  * ============================== */
 const walletFormRef = ref<FormContext | null>(null);
-const walletInitValues = ref<any>({
-  userId: '',
-});
+const walletInitValues = ref<any>({});
 
 const walletLoading = ref(false);
 const walletSearched = ref(false);
 const wallet = ref<any>(null);
 
-const onWalletSubmit = async (values: any) => {
-  const userId = String(values?.userId || '').trim();
+const onWalletSubmit = async () => {
+  const userId = selectedUserId.value.trim();
   if (!userId) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '請輸入 userId',
+      message: '請先搜尋並選取玩家',
       iconType: 'warning',
     });
     return;
@@ -278,7 +302,6 @@ const resetWallet = () => {
 const adjustFormRef = ref<FormContext | null>(null);
 
 const adjustInitValues = ref<any>({
-  userId: '',
   coinType: 'COIN',
   amount: '',
   reason: '',
@@ -286,7 +309,7 @@ const adjustInitValues = ref<any>({
 
 const onAdjustSubmit = async (values: any) => {
   const payload = {
-    userId: String(values?.userId || '').trim(),
+    userId: selectedUserId.value.trim(),
     coinType: values?.coinType,
     amount: Number(values?.amount),
     reason: String(values?.reason || '').trim(),
@@ -295,7 +318,7 @@ const onAdjustSubmit = async (values: any) => {
   if (!payload.userId) {
     await dialogStore.openInfoDialog({
       title: '提示訊息',
-      message: '請輸入 userId',
+      message: '請先搜尋並選取玩家',
       iconType: 'warning',
     });
     return;
@@ -319,7 +342,7 @@ const onAdjustSubmit = async (values: any) => {
 
   const ok = await dialogStore.openConfirmDialog({
     title: '調整確認',
-    message: `確定要調整玩家點數嗎？\nuserId=${payload.userId}\ncoinType=${payload.coinType}\namount=${payload.amount}`,
+    message: `確定要調整玩家點數嗎？\n玩家：${selectedUserLabel.value || payload.userId}\ncoinType=${payload.coinType}\namount=${payload.amount}`,
   });
   if (!ok) return;
 
@@ -332,12 +355,9 @@ const onAdjustSubmit = async (values: any) => {
         iconType: 'success',
       });
 
-      // 調整完順便刷新錢包（如果 userId 一樣）
-      const currentWalletUserId = String(
-        walletFormRef.value?.values?.userId || ''
-      ).trim();
-      if (currentWalletUserId && currentWalletUserId === payload.userId) {
-        await onWalletSubmit({ userId: payload.userId });
+      // 調整完順便刷新錢包
+      if (selectedUserId.value) {
+        await onWalletSubmit();
       }
     },
     showSuccessDialog: false,
@@ -354,7 +374,6 @@ const resetAdjust = () => {
 const txFormRef = ref<FormContext | null>(null);
 
 const txInitValues = ref<any>({
-  userId: '',
   coinType: '',
   type: '',
   createdAtStart: '',
@@ -414,10 +433,9 @@ const columns = [
 ];
 
 const onTxSubmit = async (values: any) => {
-  // 後端：POST /admin/wallet/transactions/list body 可為空
   const req = {
     condition: {
-      userId: values?.userId || null,
+      userId: selectedUserId.value || null,
       coinType: values?.coinType || null,
       type: values?.type || null,
       createdAtStart: values?.createdAtStart || null,

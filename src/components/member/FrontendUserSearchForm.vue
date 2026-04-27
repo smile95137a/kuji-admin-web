@@ -21,6 +21,16 @@
       />
     </div>
 
+    <!-- Phone -->
+    <div class="w-50 w-md-100 p-6">
+      <FormInput
+        label="手機號碼"
+        v-model="phone"
+        :error="phoneError"
+        placeholder="模糊查詢"
+      />
+    </div>
+
     <!-- Status -->
     <div class="w-50 w-md-100 p-6">
       <FormSelect
@@ -91,6 +101,7 @@ defineProps<{
 const { value: email, errorMessage: emailError } = useField<string>('email');
 const { value: nickname, errorMessage: nicknameError } =
   useField<string>('nickname');
+const { value: phone, errorMessage: phoneError } = useField<string>('phone');
 const { value: status, errorMessage: statusError } = useField<string>('status');
 const { value: provider, errorMessage: providerError } =
   useField<string>('provider');

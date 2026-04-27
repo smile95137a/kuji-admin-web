@@ -174,6 +174,7 @@ const formRef = ref<FormContext | null>(null);
 const initValues = ref<any>({
   email: '',
   nickname: '',
+  phone: '',
   status: '',
   provider: '',
   goldCoinsMin: '',
@@ -304,6 +305,7 @@ const onSubmit = async (values: any) => {
     condition: {
       email: values.email || null,
       nickname: values.nickname || null,
+      phone: values.phone || null,
       status: values.status || null,
       provider: values.provider || null,
       goldCoinsMin:
