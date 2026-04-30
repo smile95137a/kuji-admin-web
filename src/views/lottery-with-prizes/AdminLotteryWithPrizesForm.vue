@@ -21,6 +21,8 @@
             :themeOptions="themeOptions"
             :statusOptions="statusOptions"
             :boolOptions="boolOptions"
+            :paymentTypeOptions="paymentTypeOptions"
+            :delistStrategyOptions="delistStrategyOptions"
             :isAdmin="isAdmin"
             :isEdit="isEdit"
           />
@@ -305,6 +307,8 @@ import {
   levelOptions,
   prizeTypeOptions,
   boolOptions,
+  delistStrategyOptions,
+  paymentTypeOptions,
 } from '@/constants/lotteryOptions';
 import {
   lotteryWithPrizesInitialValues,
@@ -850,6 +854,10 @@ const loadDetail = async () => {
             ? data.designatedPrizeNumbers
             : JSON.stringify(data.designatedPrizeNumbers))
         : '',
+      delistStrategy: data?.delistStrategy ?? '',
+      paymentType: data?.paymentType ?? 'GOLD',
+      freeDrawThreshold:
+        data?.freeDrawThreshold == null ? '' : String(data.freeDrawThreshold),
       status: data?.status ?? 'DRAFT',
 
       pricePerDraw: Number(data?.pricePerDraw ?? 0),
@@ -1003,6 +1011,16 @@ const onSubmit = handleSubmit(async (values) => {
             ? undefined
             : Number((values as any).hotCount),
         theme: cleanText((values as any).theme),
+
+        delistStrategy:
+          cleanText((values as any).delistStrategy) || undefined,
+        paymentType:
+          cleanText((values as any).paymentType) || undefined,
+        freeDrawThreshold:
+          (values as any).freeDrawThreshold === '' ||
+          values.freeDrawThreshold == null
+            ? undefined
+            : Number(values.freeDrawThreshold),
 
         galleryImages: galleryImageUrls.value,
 

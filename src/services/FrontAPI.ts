@@ -44,8 +44,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<any>) => {
     const originalRequest: any = error.config;
+    const reqHeaders = AxiosHeaders.from(originalRequest?.headers || {});
+    const skipGlobal403 =
+      String(reqHeaders.get('X-Skip-Global-403') ?? '').toLowerCase() ===
+      'true';
 
     if (error.response?.status === 403) {
+      if (skipGlobal403) {
+        return Promise.reject(error);
+      }
       removeAllSession();
       removeAllState();
       window.location.href = '/login';

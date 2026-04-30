@@ -3,71 +3,62 @@ import { api } from './FrontAPI';
 
 const basePath = '/admin/report';
 
+export interface QueryReq<TCondition = Record<string, any>> {
+  condition: TCondition;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
 interface RequestData {
   [key: string]: any;
 }
 
-/** 營收報表（POST /admin/report/revenue） */
-export const getRevenueReport = async (
-  req?: RequestData
+const reportHeaders = {
+  'X-Skip-Global-403': 'true',
+};
+
+const postReport = async (
+  path: string,
+  req: QueryReq<RequestData>
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.post(`${basePath}/revenue`, req ?? null);
+    const res = await api.post(`${basePath}/${path}`, req, {
+      headers: reportHeaders,
+    });
     return res.data;
   } catch (e) {
-    console.error('AdminReport - getRevenueReport error:', e);
+    console.error(`AdminReport - ${path} error:`, e);
     throw e;
   }
 };
 
-/** 推薦碼報表（POST /admin/report/referral） */
-export const getReferralReport = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.post(`${basePath}/referral`, req ?? null);
-    return res.data;
-  } catch (e) {
-    console.error('AdminReport - getReferralReport error:', e);
-    throw e;
-  }
-};
+/** 獎品出貨報表（POST /admin/report/prize-shipment） */
+export const getPrizeShipmentReport = (req: QueryReq<RequestData>) =>
+  postReport('prize-shipment', req);
 
-/** 抽獎結果報表（POST /admin/report/lottery-result） */
-export const getLotteryResultReport = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.post(`${basePath}/lottery-result`, req ?? null);
-    return res.data;
-  } catch (e) {
-    console.error('AdminReport - getLotteryResultReport error:', e);
-    throw e;
-  }
-};
+/** 會員成長報表（POST /admin/report/member-growth） */
+export const getMemberGrowthReport = (req: QueryReq<RequestData>) =>
+  postReport('member-growth', req);
 
-/** 儲值報表（POST /admin/report/recharge） */
-export const getRechargeReport = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.post(`${basePath}/recharge`, req ?? null);
-    return res.data;
-  } catch (e) {
-    console.error('AdminReport - getRechargeReport error:', e);
-    throw e;
-  }
-};
+/** 抽獎銷售報表（POST /admin/report/lottery-sales） */
+export const getLotterySalesReport = (req: QueryReq<RequestData>) =>
+  postReport('lottery-sales', req);
 
-/** 紅利報表（POST /admin/report/bonus） */
-export const getBonusReport = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.post(`${basePath}/bonus`, req ?? null);
-    return res.data;
-  } catch (e) {
-    console.error('AdminReport - getBonusReport error:', e);
-    throw e;
-  }
-};
+/** 店家績效報表（POST /admin/report/store-performance） */
+export const getStorePerformanceReport = (req: QueryReq<RequestData>) =>
+  postReport('store-performance', req);
+
+/**
+ * Deprecated reports (kept for compatibility with old views)
+ * 2026-04-30 scope: replaced by new four reports.
+ */
+export const getRevenueReport = (req: QueryReq<RequestData>) =>
+  postReport('lottery-sales', req);
+export const getReferralReport = (req: QueryReq<RequestData>) =>
+  postReport('member-growth', req);
+export const getLotteryResultReport = (req: QueryReq<RequestData>) =>
+  postReport('prize-shipment', req);
+export const getRechargeReport = (req: QueryReq<RequestData>) =>
+  postReport('store-performance', req);
+export const getBonusReport = (req: QueryReq<RequestData>) =>
+  postReport('member-growth', req);

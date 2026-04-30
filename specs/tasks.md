@@ -319,6 +319,25 @@ T032 → T033       （最後收尾）
 
 ---
 
+## Phase 18 — 2026-04-30 後端改動對接（報表 + 抽獎商品規則）
+
+> 來源：`newbackend.md`，詳見 `specs/admin/backend-change-2026-04-30-scope.md`
+
+- [X] T062 [P1] Extend `src/services/adminReportService.ts` — 新增四支 API 對接：`POST /admin/report/prize-shipment`、`/member-growth`、`/lottery-sales`、`/store-performance`；payload 統一 `QueryReq<Condition>`（`sortBy`/`sortOrder`/`condition`）
+- [X] T063 [P1] Update `src/router/reportRoutes.ts` — 新增四支報表路由，並確認側邊欄與權限可訪問（保留舊報表或下線策略需與 PM 決策後同步）
+- [X] T064 [P1] Create report views for new endpoints — 建立對應頁面與表格：`PrizeShipmentReport.vue`、`MemberGrowthReport.vue`、`LotterySalesReport.vue`、`StorePerformanceReport.vue`
+- [X] T065 [P1] Update `src/components/report/ReportFilterBar.vue` role guard — `ROLE_STORE_OWNER` 不提供跨店查詢 UI（或固定值 disabled），避免前端主動送跨店條件
+- [X] T066 [P1] Add 403 explicit handling in report views — 報表 API 回傳 403（越權店家查詢）時顯示明確提示，不僅使用通用錯誤訊息
+- [ ] T067 [P1] Update `src/components/lottery-with-prizes/AdminLotteryWithPrizesBasicFields.vue` — 新增「是否啟用免費抽機制」與 `freeDrawThreshold` 欄位；未啟用時送 `null`；啟用時才顯示門檻輸入
+- [ ] T068 [P1] Update `src/validators/lotteryWithPrizesSchema.ts` — 增加條件式驗證：啟用免費抽時 `freeDrawThreshold >= 1`；未啟用時允許 `null`
+- [ ] T069 [P1] Update `src/views/lottery-with-prizes/AdminLotteryWithPrizesForm.vue` payload — `freeDrawThreshold` 正確送 `null | number`；欄位錯誤可回填到表單
+- [ ] T070 [P1] Restrict payment type in lottery form — `paymentType` 僅顯示 `GOLD` / `BONUS`；若 `status !== 'DRAFT'`，欄位鎖定不可編輯
+- [ ] T071 [P2] Deprecate old multi-draw dependency — `allowMultiDraw` / `multiDrawOptions` 不再作為新流程判斷依據，僅做相容讀取（必要時）
+- [ ] T072 [P1] Backend validation mapping — 將後端回傳的 `freeDrawThreshold` 驗證錯誤顯示為欄位級訊息（非只顯示 toast）
+- [ ] T073 [P2] Cross-project coordination (frontend app) — 前台抽獎/消費紀錄顯示改為依 `costType/paymentType` 呈現 `GOLD/BONUS`，且 `freeDrawThreshold = null` 不顯示門檻文案（此項為跨 repo 追蹤）
+
+---
+
 ## Dependency Graph（完整）
 
 ```
@@ -384,3 +403,4 @@ T061 (獨立)
 | 15 | 011 抽獎商品 | T051–T054 | 🔲 Pending |
 | 16 | 012 推薦碼 | T055–T057 | 🔲 Pending |
 | 17 | 013 店家帳號 | T058–T061 | 🔲 Pending |
+| 18 | 2026-04-30 後端改動對接 | T062–T073 | 🔲 Pending |

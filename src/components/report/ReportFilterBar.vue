@@ -5,11 +5,15 @@ import { useReportFilter, type ReportPreset } from '@/composables/useReportFilte
 interface Props {
   showStoreFilter?: boolean;
   storeOptions?: { label: string; value: string }[];
+  storeFilterDisabled?: boolean;
+  selectedStoreId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showStoreFilter: false,
   storeOptions: () => [],
+  storeFilterDisabled: false,
+  selectedStoreId: '',
 });
 
 const emit = defineEmits<{
@@ -22,6 +26,14 @@ const emit = defineEmits<{
 
 const { startDate, endDate, preset, setPreset, setCustomRange } = useReportFilter();
 const selectedStoreId = ref('');
+
+watch(
+  () => props.selectedStoreId,
+  (value) => {
+    selectedStoreId.value = value || '';
+  },
+  { immediate: true }
+);
 
 const presets: { label: string; value: ReportPreset }[] = [
   { label: '今天', value: 'today' },
@@ -83,7 +95,11 @@ function emitFilter() {
 
     <!-- Store Filter (Admin only) -->
     <div v-if="showStoreFilter" class="rfb__store">
-      <select v-model="selectedStoreId" class="rfb__select">
+      <select
+        v-model="selectedStoreId"
+        class="rfb__select"
+        :disabled="storeFilterDisabled"
+      >
         <option value="">全部店家</option>
         <option
           v-for="opt in storeOptions"
@@ -168,6 +184,12 @@ function emitFilter() {
     font-size: 13px;
     color: #374151;
     min-width: 160px;
+
+    &:disabled {
+      background: #f3f4f6;
+      color: #6b7280;
+      cursor: not-allowed;
+    }
 
     &:focus { outline: none; border-color: #6366f1; }
   }

@@ -11,6 +11,26 @@ export const lotteryWithPrizesSchema = yup.object({
   playMode: yup.string().notRequired(),
   gameMode: yup.string().notRequired(),
   designatedPrizeNumbers: yup.string().notRequired(),
+  delistStrategy: yup
+    .string()
+    .notRequired()
+    .when('category', (category, schema) =>
+      category === 'OFFICIAL_ICHIBAN'
+        ? schema
+            .required('下架策略不可為空')
+            .oneOf(['GRAND_PRIZE_DRAWN', 'ALL_DRAWN', 'MANUAL'], '下架策略格式錯誤')
+        : schema,
+    ),
+  paymentType: yup
+    .string()
+    .notRequired()
+    .oneOf(['GOLD', 'BONUS'], '付款方式必須為 GOLD 或 BONUS'),
+  freeDrawThreshold: yup
+    .number()
+    .transform((v, o) => (o === '' || o == null ? undefined : v))
+    .nullable()
+    .notRequired()
+    .min(1, '免費抽門檻必須大於或等於 1'),
   status: yup.string().notRequired(),
 
   pricePerDraw: yup
@@ -86,6 +106,9 @@ export const lotteryWithPrizesInitialValues = {
   playMode: 'LOTTERY_MODE',
   gameMode: '',
   designatedPrizeNumbers: '',
+  delistStrategy: '',
+  paymentType: 'GOLD',
+  freeDrawThreshold: undefined as any,
   status: 'DRAFT',
 
   pricePerDraw: 0,

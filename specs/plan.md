@@ -12,6 +12,22 @@ KUJI 後台管理介面（Admin Panel）是一套 Vue 3 SPA，涵蓋 10 個業�
 2. **修正差距**：對照各 spec 澄清結論，確認現有實作是否符合規格
 3. **路由修復**：006 錢包路由已被從 router 移除，需修復
 
+### Scope Update (2026-04-30)
+
+依後端 `main` 最新改動，前端業務範圍新增：
+
+1. 報表模組需新增對接四支 API：`prize-shipment` / `member-growth` / `lottery-sales` / `store-performance`，且查詢 payload 統一 `QueryReq<Condition>`（保留 `sortBy` / `sortOrder` / `condition`）。
+2. 報表角色隔離收斂：`ROLE_ADMIN` 可跨店、`ROLE_STORE_OWNER` 僅可查自身店家；前端不得提供可跨店操作入口。
+3. 抽獎商品表單規則更新：
+   - `freeDrawThreshold` 可為 `null`（未啟用免費抽）
+   - 僅在啟用免費抽時驗證 `freeDrawThreshold >= 1`
+   - `paymentType` 限 `GOLD` / `BONUS`，且非 `DRAFT` 狀態不得編輯
+   - `allowMultiDraw` / `multiDrawOptions` 視為 deprecated，不可作為新流程依賴
+4. 錯誤處理強化：報表越權 403 必須明確提示、欄位驗證錯誤需映射到表單欄位。
+
+詳細影響、必改頁面、調整點與驗收項目見：
+`specs/admin/backend-change-2026-04-30-scope.md`
+
 ---
 
 ## Technical Context

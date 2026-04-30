@@ -15,6 +15,8 @@ const props = defineProps<{
   themeOptions: SelectOption[];
   statusOptions: SelectOption[];
   boolOptions: SelectOption[];
+  paymentTypeOptions: SelectOption[];
+  delistStrategyOptions: SelectOption[];
   isAdmin?: boolean;
   isEdit?: boolean;
 }>();
@@ -29,6 +31,9 @@ const [subCategory] = defineField('subCategory');
 const [playMode] = defineField('playMode');
 const [gameMode] = defineField('gameMode');
 const [designatedPrizeNumbers] = defineField('designatedPrizeNumbers');
+const [delistStrategy] = defineField('delistStrategy');
+const [paymentType] = defineField('paymentType');
+const [freeDrawThreshold] = defineField('freeDrawThreshold');
 const [status] = defineField('status');
 
 const [pricePerDraw] = defineField('pricePerDraw');
@@ -227,6 +232,26 @@ watch(
           />
         </div>
 
+        <div class="w-50 w-md-100 p-6">
+          <FormSelect
+            label="付款方式"
+            v-model="paymentType"
+            :options="props.paymentTypeOptions"
+            :error="errors.paymentType"
+            :disabled="status !== 'DRAFT'"
+          />
+        </div>
+
+        <div class="w-50 w-md-100 p-6" v-if="category === 'OFFICIAL_ICHIBAN'">
+          <FormSelect
+            label="下架策略"
+            v-model="delistStrategy"
+            :options="props.delistStrategyOptions"
+            :error="errors.delistStrategy"
+            required
+          />
+        </div>
+
         <!-- SCRATCH_STORE：新增時直接輸入大獎號碼；編輯時由「指定大獎號碼」按鈕操作 -->
         <div class="w-100 w-md-100 p-6" v-if="isScratchStore">
           <template v-if="!props.isEdit">
@@ -287,6 +312,20 @@ watch(
             type="number"
             required
           />
+        </div>
+
+        <div class="w-50 w-md-100 p-6" v-if="isScratchMode">
+          <FormInput
+            label="免費抽門檻（留空表示不啟用）"
+            v-model="freeDrawThreshold"
+            :error="errors.freeDrawThreshold"
+            type="number"
+            min="1"
+            placeholder="請填 1 或以上"
+          />
+          <p class="form__text m-t-4" style="font-size:12px;color:#6b7280;">
+            若啟用，系統會根據此門檻判定是否觸發免費抽或免單。
+          </p>
         </div>
 
         <!-- 多連抽設定 -->
