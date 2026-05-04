@@ -212,6 +212,7 @@
   >
     <div class="orderActionDialog">
       <p class="orderActionDialog__title">取消訂單</p>
+      <p class="orderActionDialog__warning">取消訂單後，賞品盒將回到可領取狀態。此操作無法復原。</p>
 
       <div class="orderActionDialog__form">
         <FormInput
@@ -743,8 +744,8 @@ const submitCancel = async () => {
     title: '取消確認',
     message:
       cancelMode.value === 'bulk'
-        ? `確定要取消選中的 ${selectedIds.value.length} 筆訂單嗎？`
-        : '確定要取消此訂單嗎？',
+        ? `取消訂單後，賞品盒將回到可領取狀態。確定取消選中的 ${selectedIds.value.length} 筆訂單？`
+        : '取消訂單後，賞品盒將回到可領取狀態。確定取消？',
   });
   if (!ok) return;
 
@@ -808,6 +809,12 @@ onMounted(async () => {
   &__title {
     font-size: 16px;
     font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  &__warning {
+    font-size: 13px;
+    color: #d97706;
     margin-bottom: 12px;
   }
 

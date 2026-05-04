@@ -137,6 +137,21 @@ export const resetAdminUserPassword = async (
   }
 };
 
+/** 修改密碼（本人操作，首次強制修改或一般修改皆使用此端點） */
+export const changeAdminUserPassword = async (
+  id: string,
+  req: { currentPassword: string; newPassword: string }
+): Promise<ApiResponse<any>> => {
+  try {
+    // 後端：POST /admin/users/{id}/change-password
+    const res = await api.post(`${basePath}/${id}/change-password`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminUser - changeAdminUserPassword error:', e);
+    throw e;
+  }
+};
+
 /** 刪除帳號（後端描述：軟刪除=停用） */
 export const deleteAdminUser = async (
   id: string

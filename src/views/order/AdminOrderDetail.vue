@@ -303,7 +303,7 @@
     <div class="od__modal-body">
       <p class="od__modal-title">取消訂單</p>
       <p class="od__modal-warning">
-        取消後獎品將退回玩家的獎品箱，此操作無法復原。
+        取消訂單後，賞品盒將回到可領取狀態。此操作無法復原。
       </p>
       <div class="od__modal-form">
         <FormInput
@@ -629,7 +629,7 @@ const submitCancel = async () => {
 
   const ok = await dialogStore.openConfirmDialog({
     title: '取消確認',
-    message: '確定要取消此訂單嗎？此操作無法復原。',
+    message: '取消訂單後，賞品盒將回到可領取狀態。確定取消？',
   });
   if (!ok) return;
 

@@ -549,8 +549,8 @@ const doResetPassword = async (item: any) => {
     fn: async () => resetAdminUserPassword(userId),
     onSuccess: async (data) => {
       await dialogStore.openInfoDialog({
-        title: '新密碼',
-        message: `新密碼：${data?.newPassword || '-'}`,
+        title: '重設成功',
+        message: `密碼已重設，新密碼已發送至用戶 Email。${data?.newPassword ? `（臨時密碼：${data.newPassword}，請告知用戶）` : ''}`,
         iconType: 'success',
       });
     },

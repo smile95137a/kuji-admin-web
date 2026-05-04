@@ -13,6 +13,18 @@
           <div class="login__forms">
             <form @submit.prevent="onSubmit">
               <div class="form-group">
+                <label for="currentPassword">目前密碼（初始密碼）</label>
+                <input
+                  id="currentPassword"
+                  v-model="currentPassword"
+                  type="password"
+                  placeholder="請輸入目前的密碼"
+                  :class="['form-control', { 'is-invalid': currentPasswordError }]"
+                />
+                <div v-if="currentPasswordError" class="invalid-feedback">{{ currentPasswordError }}</div>
+              </div>
+
+              <div class="form-group mt-3">
                 <label for="newPassword">新密碼</label>
                 <input
                   id="newPassword"
@@ -54,13 +66,14 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useField, useForm } from 'vee-validate';
 import * as yup from 'yup';
-import { firstLoginChangePassword } from '@/services/adminAuthService';
+import { changeAdminUserPassword } from '@/services/adminUserService';
 import { useAuthStore } from '@/stores';
 
 const router = useRouter();
 const authStore = useAuthStore();
 
 const schema = yup.object({
+  currentPassword: yup.string().required('目前密碼為必填'),
   newPassword: yup
     .string()
     .required('新密碼為必填')
@@ -73,6 +86,7 @@ const schema = yup.object({
 
 const { handleSubmit, isSubmitting } = useForm({ validationSchema: schema });
 
+const { value: currentPassword, errorMessage: currentPasswordError } = useField<string>('currentPassword');
 const { value: newPassword, errorMessage: newPasswordError } = useField<string>('newPassword');
 const { value: confirmPassword, errorMessage: confirmPasswordError } = useField<string>('confirmPassword');
 
@@ -80,14 +94,18 @@ const submitError = ref<string | null>(null);
 
 const onSubmit = handleSubmit(async (values) => {
   submitError.value = null;
+  const userId = authStore.user?.id;
+  if (!userId) {
+    submitError.value = '無法取得用戶資訊，請重新登入';
+    return;
+  }
   try {
-    const res = await firstLoginChangePassword({
+    const res = await changeAdminUserPassword(userId, {
+      currentPassword: values.currentPassword,
       newPassword: values.newPassword,
-      confirmPassword: values.confirmPassword,
     });
 
     if (res?.success) {
-      // 清除 forceChangePassword 旗標，保留其他 auth 狀態
       authStore.setForceChangePassword(false);
       router.push('/home');
     } else {

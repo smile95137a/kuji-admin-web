@@ -15,12 +15,15 @@
         v-for="tab in LOG_TABS"
         :key="tab.value"
         class="sl-tab"
-        :class="[`sl-tab--${tab.value.toLowerCase()}`, { 'sl-tab--active': activeTab === tab.value }]"
+        :class="[`sl-tab--${tab.value.toLowerCase()}`, { 'sl-tab--active': activeTab === tab.value, 'sl-tab--disabled': tab.disabled }]"
+        :disabled="tab.disabled"
+        :title="tab.disabled ? '後端尚未支援此日誌類型' : undefined"
         type="button"
-        @click="switchTab(tab.value)"
+        @click="!tab.disabled && switchTab(tab.value)"
       >
         <span class="sl-tab__dot"></span>
         <span>{{ tab.label }}</span>
+        <span v-if="tab.disabled" class="sl-tab__unsupported">（尚未支援）</span>
       </button>
     </div>
   </MCard>
@@ -148,10 +151,10 @@ import {
  * Constants
  * ============================== */
 const LOG_TABS = [
-  { label: '登入日誌', value: 'LOGIN' },
-  { label: '後台操作', value: 'ADMIN' },
-  { label: '抽獎日誌', value: 'DRAW' },
-  { label: '支付日誌', value: 'PAYMENT' },
+  { label: '登入日誌', value: 'LOGIN', disabled: false },
+  { label: '後台操作', value: 'ADMIN_ACTION', disabled: false },
+  { label: '抽獎日誌', value: 'DRAW', disabled: true },
+  { label: '支付日誌', value: 'PAYMENT', disabled: true },
 ] as const;
 
 type LogType = typeof LOG_TABS[number]['value'];
@@ -272,14 +275,14 @@ const fetchLogs = async (logType: LogType) => {
       const all: any[] = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
       rows = all.filter((r) => r?.logType === logType);
     } else {
-      // 無時間區間：直接依類型查
+      // 無時間區間：直接依類型查（LOGIN / ADMIN_ACTION）
       const res = await getSystemLogsByType(logType, limit);
       rows = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
     }
 
     // 前端 userId 篩選
     if (uid) {
-      rows = rows.filter((r) => String(r?.userId ?? '').includes(uid));
+      rows = rows.filter((r) => String(r?.userId ?? r?.operatorId ?? '').includes(uid));
     }
 
     return rows;
@@ -405,14 +408,26 @@ onMounted(() => {
 .sl-tab--login .sl-tab__dot { background: #3b82f6; }
 .sl-tab--login.sl-tab--active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
 
-.sl-tab--admin .sl-tab__dot { background: #f59e0b; }
-.sl-tab--admin.sl-tab--active { background: #fffbeb; border-color: #f59e0b; color: #d97706; font-weight: 600; }
+.sl-tab--admin_action .sl-tab__dot { background: #f59e0b; }
+.sl-tab--admin_action.sl-tab--active { background: #fffbeb; border-color: #f59e0b; color: #d97706; font-weight: 600; }
 
 .sl-tab--draw .sl-tab__dot { background: #10b981; }
 .sl-tab--draw.sl-tab--active { background: #ecfdf5; border-color: #10b981; color: #059669; font-weight: 600; }
 
 .sl-tab--payment .sl-tab__dot { background: #8b5cf6; }
 .sl-tab--payment.sl-tab--active { background: #f5f3ff; border-color: #8b5cf6; color: #7c3aed; font-weight: 600; }
+
+.sl-tab--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.sl-tab__unsupported {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-left: 2px;
+}
 
 /* ── Filters ── */
 .sl-filter-grid {

@@ -196,14 +196,12 @@ const menuItems = ref([
   {
     title: '營運工具',
     submenu: [
-      { title: '賞品盒管理', route: '/home/prize-box' },
       { title: '推薦碼管理', route: '/home/referral-codes' },
     ],
   },
   {
     title: '錢包管理',
     submenu: [
-      { title: '錢包/交易紀錄', route: '/home/wallet' },
       { title: '儲值方案', route: '/home/recharge-plan' },
     ],
   },

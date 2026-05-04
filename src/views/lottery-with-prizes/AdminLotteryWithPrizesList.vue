@@ -197,12 +197,12 @@
                 @click="changeStatus(item, 'ENDED', `確定要結束「${item.title}」的抽獎？`)"
               >結束抽獎</MButton>
 
-              <!-- non-ACTIVE → 刪除 -->
+              <!-- non-ACTIVE → 刪除（ACTIVE 狀態須先結束才能刪除） -->
               <MButton
                 v-if="item.status !== 'ACTIVE'"
                 size="sm"
                 class="mbtn--red"
-                @click="changeStatus(item, 'CANCELLED', `確定要取消/刪除「${item.title}」？`)"
+                @click="changeStatus(item, 'DELETED', `確定要刪除「${item.title}」？（此操作不可復原）`)"
               >刪除</MButton>
             </div>
           </template>
@@ -542,7 +542,7 @@ const refresh = async () => {
 /** 單列狀態變更 */
 const changeStatus = async (
   item: any,
-  newStatus: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED',
+  newStatus: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED' | 'DELETED',
   confirmMsg: string,
 ) => {
   const ok = await dialogStore.openConfirmDialog({
@@ -569,17 +569,34 @@ const changeStatus = async (
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
+  // 篩出可刪除的（非 ACTIVE）
+  const deletable = selectedRows.value.filter((r: any) => r.status !== 'ACTIVE');
+  const activeCount = selectedRows.value.length - deletable.length;
+
+  if (deletable.length === 0) {
+    await dialogStore.openInfoDialog({
+      title: '無法刪除',
+      message: '選中的商品均為「抽獎中」狀態，請先結束抽獎後再刪除。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  const warningMsg = activeCount > 0
+    ? `共選 ${selectedRows.value.length} 筆，其中 ${activeCount} 筆為「抽獎中」狀態無法刪除，確定要刪除其餘 ${deletable.length} 筆嗎？（刪除後無法復原）`
+    : `確定要刪除選中的 ${deletable.length} 筆商品嗎？（刪除後無法復原）`;
+
   const ok = await dialogStore.openConfirmDialog({
     title: '刪除確認',
-    message: `確定要刪除選中的 ${selectedIds.value.length} 筆商品嗎？（刪除後無法復原）`,
+    message: warningMsg,
   });
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) =>
-          changeLotteryWithPrizesStatus(id, 'CANCELLED'),
+        deletable.map((row: any) =>
+          changeLotteryWithPrizesStatus(row.id, 'DELETED'),
         ),
       ),
     onSuccess: async (results: any[]) => {

@@ -21,10 +21,14 @@
             label="角色代碼"
             v-model="code"
             :error="errors.code"
-            required
+            :required="mode === 'add'"
             maxlength="50"
             placeholder="例如：ROLE_STORE_OWNER"
+            :disabled="mode === 'edit' || isDetail"
           />
+          <p v-if="mode === 'edit'" class="form__text form__text--gray m-t-4" style="font-size:12px;color:#9ca3af;">
+            角色代碼建立後不可修改
+          </p>
         </div>
 
         <div class="w-100 p-6">
@@ -221,7 +225,6 @@ const onSubmit = handleSubmit(async (values) => {
         return updateRole({
           id: id.value,
           name: values.name?.trim(),
-          code: values.code?.trim(),
           description: values.description?.trim() || null,
         });
       }
