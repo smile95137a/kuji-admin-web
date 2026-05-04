@@ -8,20 +8,20 @@
         <section class="login__card">
           <div class="login__card-header">
             <h2>首次登入 — 請修改密碼</h2>
-            <p class="login__card-subtitle">為確保帳號安全，請設定新密碼後繼續使用。</p>
+            <p class="login__card-subtitle">為確保帳號安全，請輸入初始密碼並設定新密碼後繼續使用。</p>
           </div>
           <div class="login__forms">
             <form @submit.prevent="onSubmit">
               <div class="form-group">
-                <label for="currentPassword">目前密碼（初始密碼）</label>
+                <label for="oldPassword">目前密碼（初始密碼）</label>
                 <input
-                  id="currentPassword"
-                  v-model="currentPassword"
+                  id="oldPassword"
+                  v-model="oldPassword"
                   type="password"
-                  placeholder="請輸入目前的密碼"
-                  :class="['form-control', { 'is-invalid': currentPasswordError }]"
+                  placeholder="請輸入 Email 收到的初始密碼"
+                  :class="['form-control', { 'is-invalid': oldPasswordError }]"
                 />
-                <div v-if="currentPasswordError" class="invalid-feedback">{{ currentPasswordError }}</div>
+                <div v-if="oldPasswordError" class="invalid-feedback">{{ oldPasswordError }}</div>
               </div>
 
               <div class="form-group mt-3">
@@ -66,14 +66,14 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useField, useForm } from 'vee-validate';
 import * as yup from 'yup';
-import { changeAdminUserPassword } from '@/services/adminUserService';
+import { firstLoginChangePassword } from '@/services/adminAuthService';
 import { useAuthStore } from '@/stores';
 
 const router = useRouter();
 const authStore = useAuthStore();
 
 const schema = yup.object({
-  currentPassword: yup.string().required('目前密碼為必填'),
+  oldPassword: yup.string().required('初始密碼為必填'),
   newPassword: yup
     .string()
     .required('新密碼為必填')
@@ -86,7 +86,7 @@ const schema = yup.object({
 
 const { handleSubmit, isSubmitting } = useForm({ validationSchema: schema });
 
-const { value: currentPassword, errorMessage: currentPasswordError } = useField<string>('currentPassword');
+const { value: oldPassword, errorMessage: oldPasswordError } = useField<string>('oldPassword');
 const { value: newPassword, errorMessage: newPasswordError } = useField<string>('newPassword');
 const { value: confirmPassword, errorMessage: confirmPasswordError } = useField<string>('confirmPassword');
 
@@ -94,15 +94,11 @@ const submitError = ref<string | null>(null);
 
 const onSubmit = handleSubmit(async (values) => {
   submitError.value = null;
-  const userId = authStore.user?.id;
-  if (!userId) {
-    submitError.value = '無法取得用戶資訊，請重新登入';
-    return;
-  }
   try {
-    const res = await changeAdminUserPassword(userId, {
-      currentPassword: values.currentPassword,
+    const res = await firstLoginChangePassword({
+      oldPassword: values.oldPassword,
       newPassword: values.newPassword,
+      confirmPassword: values.confirmPassword,
     });
 
     if (res?.success) {
