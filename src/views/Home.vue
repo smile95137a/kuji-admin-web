@@ -203,9 +203,43 @@ const transformMenu = (raw: any[]): MenuItem[] => {
     }));
 };
 
-/* --------------------------------------
- * Sidebar actions
- * -------------------------------------- */
+onMounted(async () => {
+  window.addEventListener('resize', handleResize);
+  window.addEventListener('keydown', handleKeydown);
+  // 初始同步一次
+  handleResize();
+  initPrivilege();
+  updateActiveMenu();
+
+  await executeApi({
+    fn: async () => getAccessibleMenuTree(),
+    onSuccess: async (data) => {
+      menuItems.value = transformMenu(data);
+
+      // 重新同步目前路由的 active / breadcrumbs
+      updateActiveMenu();
+    },
+
+    showSuccessDialog: false,
+  });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
+  window.removeEventListener('keydown', handleKeydown);
+});
+
+// 開關 body 滾動（避免手機打開側欄背景滾動）
+watch([isMobile, sidebarVisible], ([mobile, open]) => {
+  if (mobile && open) {
+    document.body.classList.add('no-scroll');
+  } else {
+    document.body.classList.remove('no-scroll');
+  }
+});
+
+// ----- Menu data -----
+
 const toggleSidebar = () => {
   sidebarVisible.value = !sidebarVisible.value;
 };

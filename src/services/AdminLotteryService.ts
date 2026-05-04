@@ -62,14 +62,28 @@ export const updateLottery = async (
   }
 };
 
-/** 刪除商品 */
+/** 刪除商品（PUT /admin/lottery/{id}/status，targetStatus=DELETED） */
 export const deleteLottery = async (id: string): Promise<ApiResponse<any>> => {
   try {
-    // DELETE /admin/lottery/{id}
-    const res = await api.delete(`${basePath}/${id}`);
+    const res = await api.put(`${basePath}/${id}/status`, { targetStatus: 'DELETED' });
     return res.data;
   } catch (e) {
     console.error('AdminLottery - deleteLottery error:', e);
+    throw e;
+  }
+};
+
+/** 變更商品狀態（PUT /admin/lottery/{id}/status） */
+export const changeLotteryStatus = async (
+  id: string,
+  targetStatus: string,
+  reason?: string,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.put(`${basePath}/${id}/status`, { targetStatus, reason: reason ?? null });
+    return res.data;
+  } catch (e) {
+    console.error('AdminLottery - changeLotteryStatus error:', e);
     throw e;
   }
 };

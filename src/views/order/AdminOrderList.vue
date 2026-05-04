@@ -68,7 +68,9 @@
           <template #cell-user="{ item }">
             <span>
               {{ item.userNickname || '-' }}
-              <template v-if="item.userEmail"> / {{ item.userEmail }}</template>
+              <template v-if="item.userEmail">
+                / {{ item.userEmail }}
+              </template>
             </span>
           </template>
 
@@ -242,6 +244,10 @@
         取消訂單
       </p>
 
+      <p class="order-action-dialog__warning">
+        取消訂單後，賞品盒將回到可領取狀態。此操作無法復原。
+      </p>
+
       <div class="order-action-dialog__form">
         <FormInput
           label="取消原因"
@@ -266,7 +272,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 
 import { usePagination } from '@/hook/usePagination';
 import { useSearchPage } from '@/hook/useSearchPage';
@@ -284,7 +290,7 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import AdminOrderSearchForm from '@/components/order/AdminOrderSearchForm.vue';
 
-import { useDialogStore, useAuthStore } from '@/stores';
+import { useAuthStore } from '@/stores';
 import { useAdminOrderStore } from '@/stores/order/useAdminOrderStore';
 import { executeApi } from '@/utils/executeApiUtils';
 
@@ -295,6 +301,7 @@ import {
   completeOrder,
   cancelOrderWithReason,
 } from '@/services/adminOrderService';
+
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
@@ -304,7 +311,6 @@ interface SelectOption {
 }
 
 const router = useRouter();
-const dialogStore = useDialogStore();
 const authStore = useAuthStore();
 const adminOrderStore = useAdminOrderStore();
 
@@ -365,6 +371,7 @@ const statusText = (status?: string) => {
   if (status === 'SHIPPED') return '已出貨';
   if (status === 'COMPLETED') return '已完成';
   if (status === 'CANCELLED') return '已取消';
+
   return '-';
 };
 
@@ -374,17 +381,20 @@ const statusBadgeClass = (status?: string) => {
   if (status === 'SHIPPED') return 'badge badge--purple';
   if (status === 'COMPLETED') return 'badge badge--green';
   if (status === 'CANCELLED') return 'badge badge--gray';
+
   return 'badge badge--gray';
 };
 
 const shippingMethodText = (value?: string) => {
   if (value === 'HOME_DELIVERY') return '宅配';
   if (value === 'CONVENIENCE_STORE') return '超商取貨';
+
   return value || '-';
 };
 
 const getOrderId = (row: any) => {
   if (!row) return '';
+
   return String(row.id || row.orderId || '').trim();
 };
 
@@ -524,6 +534,7 @@ const onSubmit = async (values: any) => {
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
+
   await onSubmit(values);
 };
 
@@ -590,6 +601,7 @@ const saveListState = () => {
 
 const navigateToDetail = (item: any) => {
   const orderId = getOrderId(item);
+
   if (!orderId) return;
 
   saveListState();
@@ -861,8 +873,8 @@ const submitCancel = async () => {
     title: '取消確認',
     message:
       cancelMode.value === 'bulk'
-        ? `確定要取消選中的 ${selectedIds.value.length} 筆訂單嗎？`
-        : '確定要取消此訂單嗎？',
+        ? `取消訂單後，賞品盒將回到可領取狀態。確定取消選中的 ${selectedIds.value.length} 筆訂單？`
+        : '取消訂單後，賞品盒將回到可領取狀態。確定取消？',
   });
 
   if (!ok) return;
@@ -956,13 +968,29 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as tokens;
+
 .order-action-dialog {
   padding: 16px;
 
   &__title {
-    margin: 0 0 12px;
+    margin: 0 0 8px;
+    color: tokens.$form-text;
     font-size: 16px;
     font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__warning {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-left: 4px solid tokens.$brand;
+    border-radius: tokens.$form-radius;
+    background: color.mix(tokens.$brand-light, #fff, 35%);
+    color: tokens.$brand-dark;
+    font-size: 13px;
+    line-height: 1.5;
   }
 
   &__form {

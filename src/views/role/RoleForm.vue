@@ -19,24 +19,26 @@
               :disabled="isDetail"
             />
           </div>
-        </div>
-        <div class="flex flex-wrap">
+
           <!-- 角色代碼 -->
           <div class="w-50 w-md-100 p-6">
             <FormInput
               label="角色代碼"
               v-model="code"
               :error="displayErrors.code"
-              required
+              :required="mode === 'add'"
               maxlength="50"
               placeholder="例如：ROLE_STORE_OWNER"
-              :disabled="isDetail"
+              :disabled="isEdit || isDetail"
             />
+
+            <p v-if="isEdit" class="form__text form__text--section m-t-4">
+              角色代碼建立後不可修改
+            </p>
           </div>
-        </div>
-        <div class="flex flex-wrap">
+
           <!-- 描述 -->
-          <div class="w-50 w-md-100 p-6">
+          <div class="w-100 p-6">
             <FormInput
               label="描述"
               v-model="description"
@@ -107,7 +109,6 @@ import FormSection from '@/components/common/FormSection.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useDialogStore } from '@/stores';
 import { useRoleStore } from '@/stores/role/useRoleStore';
 
 import {
@@ -122,7 +123,6 @@ import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const route = useRoute();
 const router = useRouter();
-const dialogStore = useDialogStore();
 const roleStore = useRoleStore();
 
 /* --------------------------------------
@@ -236,7 +236,8 @@ const onSubmit = handleSubmit(
         if (isEdit.value) {
           return updateRole({
             id: id.value,
-            ...payload,
+            name: payload.name,
+            description: payload.description,
           });
         }
 

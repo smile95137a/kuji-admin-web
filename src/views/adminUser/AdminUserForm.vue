@@ -671,7 +671,7 @@ const onSubmit = handleSubmit(async (values) => {
       onSuccess: async () => {
         await openInfoDialog({
           title: '提示訊息',
-          message: '建立店家負責人成功',
+          message: `建立店家負責人成功，初始密碼已發送至 ${values.email}`,
           iconType: 'success',
         });
         router.push('/home/admin-users');
@@ -692,7 +692,7 @@ const onSubmit = handleSubmit(async (values) => {
     onSuccess: async () => {
       await openInfoDialog({
         title: '提示訊息',
-        message: '建立店家編輯成功',
+        message: `建立店家編輯成功，初始密碼已發送至 ${values.email}`,
         iconType: 'success',
       });
       router.push('/home/admin-users');
@@ -757,9 +757,12 @@ const doResetPassword = async () => {
   await executeApi<{ newPassword: string }>({
     fn: async () => resetAdminUserPassword(userId.value),
     onSuccess: async (data) => {
+      const extra = data?.newPassword
+        ? `（臨時密碼：${data.newPassword}，請告知用戶）`
+        : '';
       await openInfoDialog({
-        title: '新密碼',
-        message: `新密碼：${data?.newPassword || '-'}`,
+        title: '重設成功',
+        message: `密碼已重設，新密碼已發送至用戶 Email。${extra}`,
         iconType: 'success',
       });
     },

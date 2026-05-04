@@ -80,6 +80,23 @@
             </button>
           </template>
 
+          <template #cell-isPromotional="{ item }">
+            <span
+              v-if="item.isPromotional"
+              class="recharge__badge recharge__badge--promo"
+            >
+              活動方案
+              <span
+                v-if="item.isInPeriod"
+                class="recharge__badge recharge__badge--active"
+                >進行中</span
+              >
+            </span>
+            <span v-else class="recharge__badge recharge__badge--normal"
+              >一般</span
+            >
+          </template>
+
           <template #cell-displayOrder="{ item }">
             <span>{{ item.displayOrder ?? '-' }}</span>
           </template>
@@ -262,6 +279,7 @@ const columns = [
   { field: 'bonusCoins', label: '贈送', width: 100, sortable: true },
   { field: 'bonusPercentage', label: '加碼%', width: 100, sortable: true },
   { field: 'isActive', label: '狀態', width: 100, sortable: true },
+  { field: 'isPromotional', label: '活動方案', width: 110, sortable: true },
   { field: 'startTime', label: '開始時間', width: 170, sortable: true },
   { field: 'endTime', label: '結束時間', width: 170, sortable: true },
   { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
@@ -398,7 +416,30 @@ onMounted(async () => {
   background: #f3f4f6;
   color: #6b7280;
 }
+
 .recharge__toggle:hover {
   opacity: 0.8;
+}
+
+.recharge__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.recharge__badge--promo {
+  background: #fef3c7;
+  color: #d97706;
+}
+.recharge__badge--active {
+  background: #d1fae5;
+  color: #065f46;
+}
+.recharge__badge--normal {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 </style>

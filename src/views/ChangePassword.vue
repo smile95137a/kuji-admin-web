@@ -8,11 +8,23 @@
         <section class="login__card">
           <div class="login__card-header">
             <h2>首次登入 — 請修改密碼</h2>
-            <p class="login__card-subtitle">為確保帳號安全，請設定新密碼後繼續使用。</p>
+            <p class="login__card-subtitle">為確保帳號安全，請輸入初始密碼並設定新密碼後繼續使用。</p>
           </div>
           <div class="login__forms">
             <form @submit.prevent="onSubmit">
               <div class="form-group">
+                <label for="oldPassword">目前密碼（初始密碼）</label>
+                <input
+                  id="oldPassword"
+                  v-model="oldPassword"
+                  type="password"
+                  placeholder="請輸入 Email 收到的初始密碼"
+                  :class="['form-control', { 'is-invalid': oldPasswordError }]"
+                />
+                <div v-if="oldPasswordError" class="invalid-feedback">{{ oldPasswordError }}</div>
+              </div>
+
+              <div class="form-group mt-3">
                 <label for="newPassword">新密碼</label>
                 <input
                   id="newPassword"
@@ -61,6 +73,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const schema = yup.object({
+  oldPassword: yup.string().required('初始密碼為必填'),
   newPassword: yup
     .string()
     .required('新密碼為必填')
@@ -73,6 +86,7 @@ const schema = yup.object({
 
 const { handleSubmit, isSubmitting } = useForm({ validationSchema: schema });
 
+const { value: oldPassword, errorMessage: oldPasswordError } = useField<string>('oldPassword');
 const { value: newPassword, errorMessage: newPasswordError } = useField<string>('newPassword');
 const { value: confirmPassword, errorMessage: confirmPasswordError } = useField<string>('confirmPassword');
 
@@ -82,12 +96,12 @@ const onSubmit = handleSubmit(async (values) => {
   submitError.value = null;
   try {
     const res = await firstLoginChangePassword({
+      oldPassword: values.oldPassword,
       newPassword: values.newPassword,
       confirmPassword: values.confirmPassword,
     });
 
     if (res?.success) {
-      // 清除 forceChangePassword 旗標，保留其他 auth 狀態
       authStore.setForceChangePassword(false);
       router.push('/home');
     } else {
