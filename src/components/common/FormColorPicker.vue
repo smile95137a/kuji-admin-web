@@ -10,12 +10,10 @@
       class="form-color-picker__body"
       :class="{ 'form-color-picker__body--error': !!error }"
     >
-      <ColorPicker
-        v-model:pureColor="colorValue"
-        format="hex"
-        shape="square"
-        picker-type="chrome"
-        :disable-alpha="true"
+      <input
+        v-model="colorValue"
+        class="form-color-picker__native-input"
+        type="color"
       />
 
       <FormInput
@@ -40,8 +38,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ColorPicker } from 'vue3-colorpicker';
-import 'vue3-colorpicker/style.css';
 
 import FormInput from '@/components/common/FormInput.vue';
 
@@ -147,6 +143,16 @@ const normalizeHexColor = (value: any) => {
     height: 32px;
     margin: 0;
     border-radius: 8px;
+  }
+
+  &__native-input {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
   }
 }
 

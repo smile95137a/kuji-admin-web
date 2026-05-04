@@ -220,6 +220,7 @@ const normalizeIsActiveNum = (value: any): 1 | 0 => {
 const normalizeRows = (rows: any[]) => {
   return (rows || []).map((row: any) => ({
     ...row,
+    priority: row?.priority ?? row?.orderNum ?? null,
     isActive: normalizeIsActiveNum(row?.isActive),
   }));
 };

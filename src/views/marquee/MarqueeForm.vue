@@ -1,146 +1,5 @@
-<!-- src/views/menu/MenuForm.vue -->
-<template>
-  <MCard>
-    <form class="menu-form" @submit.prevent="onSubmit">
-      <p class="form__text form__text--title">{{ pageTitle }}</p>
-
-      <!-- 基本資料 -->
-      <FormSection title="基本資料">
-        <div class="flex flex-wrap">
-          <!-- 名稱 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="選單名稱"
-              v-model="name"
-              :error="displayErrors.name"
-              required
-              maxlength="50"
-              placeholder="例如：商品管理"
-            />
-          </div>
-
-          <!-- 代碼 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="選單代碼"
-              v-model="code"
-              :error="displayErrors.code"
-              required
-              maxlength="50"
-              placeholder="例如：product_management"
-            />
-          </div>
-
-          <!-- 路徑 -->
-          <div class="w-100 p-6">
-            <FormInput
-              label="選單路徑"
-              v-model="path"
-              :error="displayErrors.path"
-              maxlength="200"
-              placeholder="例如：/admin/products"
-            />
-          </div>
-        </div>
-      </FormSection>
-
-      <!-- 選單設定 -->
-      <FormSection title="選單設定">
-        <div class="flex flex-wrap">
-          <!-- 父選單 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="父選單"
-              v-model="parentId"
-              :options="parentOptions"
-              :error="displayErrors.parentId"
-              :showAll="true"
-              allLabel="（頂層）"
-              :allValue="''"
-            />
-
-            <p class="form__text m-t-6" v-if="parentLoading">父選單載入中...</p>
-          </div>
-
-          <!-- Icon -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="圖示"
-              v-model="icon"
-              :error="displayErrors.icon"
-              maxlength="100"
-              placeholder="例如：mdi-package-variant"
-            />
-          </div>
-
-          <!-- 排序 orderNum -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="排序"
-              type="number"
-              v-model="orderNum"
-              :error="displayErrors.orderNum"
-              placeholder="例如：1"
-            />
-          </div>
-
-          <!-- 是否可見 isVisible -->
-          <div class="w-50 w-md-100 p-6">
-            <FormCheckboxField
-              label="是否可見"
-              checkbox-label="顯示在選單中"
-              v-model="isVisible"
-              :trueValue="true"
-              :falseValue="false"
-              :error="displayErrors.isVisible"
-              required
-              hint="取消勾選後，該選單將不會顯示於前台選單列表。"
-            />
-          </div>
-        </div>
-      </FormSection>
-
-      <!-- 檢視資訊 -->
-      <FormSection v-if="isDetail" title="系統資訊">
-        <div class="flex flex-wrap">
-          <div class="w-50 w-md-100 p-6">
-            <p class="form__text">建立時間</p>
-            <DateFormatter
-              :date="detail?.createdAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <p class="form__text">更新時間</p>
-            <DateFormatter
-              :date="detail?.updatedAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-          </div>
-        </div>
-      </FormSection>
-
-      <!-- bottom button -->
-      <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
-        <template v-if="!isDetail">
-          <MButton type="submit">
-            <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
-            儲存
-          </MButton>
-        </template>
-
-        <MButton type="button" class="mbtn--red" @click="navigateBack">
-          <font-awesome-icon icon="fa-arrow-left" class="m-r-4" />
-          返回
-        </MButton>
-      </div>
-    </form>
-  </MCard>
-</template>
-
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -150,51 +9,29 @@ import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormSection from '@/components/common/FormSection.vue';
-import FormCheckboxField from '@/components/common/FormCheckboxField.vue';
-import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useMenuStore } from '@/stores/menu/useMenuStore';
-
+import { useMarqueeStore } from '@/stores/marquee/useMarqueeStore';
 import {
-  createMenu,
-  updateMenu,
-  getMenuById,
-  getAllMenus,
-} from '@/services/adminMenuService';
-
+  createMarquee,
+  getMarquee,
+  updateMarquee,
+} from '@/services/adminMarqueeService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
-interface SelectOption {
-  label: string;
-  value: any;
-}
-
 const route = useRoute();
 const router = useRouter();
-const menuStore = useMenuStore();
+const marqueeStore = useMarqueeStore();
 
-/* --------------------------------------
- * Mode
- * -------------------------------------- */
-const mode = computed<'add' | 'edit'>(() => {
-  if (route.name === 'MenuEdit') return 'edit';
-  return 'add';
-});
-
-const isDetail = computed(() => false);
-const isEdit = computed(() => mode.value === 'edit');
+const isEdit = computed(
+  () => route.name === 'MarqueeEdit' || Boolean(route.params.id),
+);
 const id = computed(() => String(route.params.id || ''));
+const pageTitle = computed(() =>
+  isEdit.value ? '編輯跑馬燈' : '新增跑馬燈',
+);
 
-/* --------------------------------------
- * Page title
- * -------------------------------------- */
-const pageTitle = computed(() => (isEdit.value ? '編輯選單' : '新增選單'));
-
-/* --------------------------------------
- * Submit error display
- * -------------------------------------- */
 const isSubmitted = ref(false);
 
 const displayErrors = computed<Record<string, string | undefined>>(() => {
@@ -202,82 +39,25 @@ const displayErrors = computed<Record<string, string | undefined>>(() => {
   return errors.value;
 });
 
-/* --------------------------------------
- * 父選單 options
- * -------------------------------------- */
-const parentOptions = ref<SelectOption[]>([]);
-const parentLoading = ref(false);
+const activeOptions: SelectOption[] = [
+  { label: '啟用', value: true },
+  { label: '停用', value: false },
+];
 
-/* --------------------------------------
- * Schema
- * -------------------------------------- */
-const schema = computed(() =>
-  yup.object({
-    name: yup.string().required('選單名稱不可為空').max(50, '選單名稱最多50字'),
+const linkTypeOptions: SelectOption[] = [
+  { label: '無連結', value: 'NONE' },
+  { label: '網址', value: 'URL' },
+  { label: '最新消息', value: 'NEWS' },
+  { label: 'Banner', value: 'BANNER' },
+];
 
-    code: yup.string().required('選單代碼不可為空').max(50, '選單代碼最多50字'),
-
-    path: yup.string().nullable().max(200, '選單路徑最多200字'),
-
-    parentId: yup.string().nullable(),
-
-    icon: yup.string().nullable().max(100, '圖示名稱最多100字'),
-
-    orderNum: yup
-      .number()
-      .nullable()
-      .typeError('排序必須是數字')
-      .transform((value, originalValue) =>
-        originalValue === '' ||
-        originalValue === null ||
-        originalValue === undefined
-          ? null
-          : value,
-      ),
-
-    isVisible: yup.boolean().required('是否可見必填'),
-  }),
-);
-
-/* --------------------------------------
- * useForm
- * -------------------------------------- */
-const { errors, handleSubmit, setValues, defineField } = useForm({
-  validationSchema: schema,
-  initialValues: {
-    name: '',
-    code: '',
-    path: '',
-    parentId: '',
-    icon: '',
-    orderNum: null as number | null,
-    isVisible: true,
-  },
-  validateOnMount: false,
-});
-
-const [name] = defineField('name');
-const [code] = defineField('code');
-const [path] = defineField('path');
-const [parentId] = defineField('parentId');
-const [icon] = defineField('icon');
-const [orderNum] = defineField('orderNum');
-const [isVisible] = defineField('isVisible');
-
-/* --------------------------------------
- * Detail
- * -------------------------------------- */
-const detail = ref<any>(null);
-
-/* --------------------------------------
- * Utils
- * -------------------------------------- */
-const emptyToNull = (value: any) => {
-  if (value === null || value === undefined || value === '') return null;
-  return String(value).trim() || null;
+const isHexColor = (value?: string | null) => {
+  const text = String(value ?? '').trim();
+  if (!text) return true;
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text);
 };
 
-const normalizeBoolean = (value: any) => {
+const normalizeBoolean = (value: unknown) => {
   if (value === true || value === false) return value;
 
   const text = String(value ?? '')
@@ -287,61 +67,156 @@ const normalizeBoolean = (value: any) => {
   if (text === 'true' || text === '1') return true;
   if (text === 'false' || text === '0') return false;
 
-  return true;
+  return false;
 };
 
-/* --------------------------------------
- * Load parent menus
- * -------------------------------------- */
-const loadParentOptions = async () => {
-  parentLoading.value = true;
+const toNullableNumber = (value: unknown) => {
+  if (value === '' || value === null || value === undefined) return null;
 
-  await executeApi<any>({
-    fn: async () => getAllMenus(),
-    onSuccess: (res: any) => {
-      const data = res?.data ?? res ?? [];
-      const arr = Array.isArray(data) ? data : [];
-
-      const filtered = isEdit.value
-        ? arr.filter((menu: any) => String(menu?.id) !== id.value)
-        : arr;
-
-      parentOptions.value = filtered.map((menu: any) => ({
-        label: menu?.name || menu?.title || menu?.code || '-',
-        value: menu?.id,
-      }));
-    },
-    onFinally: () => {
-      parentLoading.value = false;
-    },
-    showFailDialog: true,
-    showCatchDialog: true,
-    showSuccessDialog: false,
-  });
+  const num = Number(value);
+  return Number.isNaN(num) ? null : num;
 };
 
-/* --------------------------------------
- * Load detail
- * -------------------------------------- */
+const normalizeText = (value: unknown) => String(value ?? '').trim();
+
+const emptyToNull = (value: unknown) => {
+  const text = normalizeText(value);
+  return text ? text : null;
+};
+
+const normalizeColor = (value: unknown) => {
+  const text = normalizeText(value);
+  return text ? text : null;
+};
+
+const toDatetimeLocalValue = (value?: string | null) => {
+  const text = normalizeText(value);
+  if (!text) return '';
+  return text.length >= 16 ? text.slice(0, 16) : text;
+};
+
+const toBackendLocalDateTime = (value?: string | null) => {
+  const text = normalizeText(value);
+  if (!text) return null;
+  if (text.length >= 19) return text.slice(0, 19);
+  if (text.length === 16) return `${text}:00`;
+  return text;
+};
+
+const schema = yup.object({
+  content: yup
+    .string()
+    .required('請輸入跑馬燈內容')
+    .max(500, '跑馬燈內容最多 500 字'),
+  priority: yup
+    .number()
+    .nullable()
+    .typeError('排序必須是數字')
+    .min(0, '排序不可小於 0')
+    .transform((value, originalValue) =>
+      originalValue === '' ||
+      originalValue === null ||
+      originalValue === undefined
+        ? null
+        : value,
+    ),
+  isActive: yup.boolean().required('請選擇狀態'),
+  linkType: yup
+    .string()
+    .oneOf(linkTypeOptions.map((option) => option.value))
+    .required('請選擇連結類型'),
+  linkUrl: yup
+    .string()
+    .nullable()
+    .max(500, '連結網址最多 500 字')
+    .when('linkType', {
+      is: (value: string) => value && value !== 'NONE',
+      then: (rule) => rule.required('請輸入連結網址'),
+    }),
+  bgColor: yup
+    .string()
+    .nullable()
+    .max(20, '背景色最多 20 字')
+    .test('is-hex-color', '背景色格式錯誤，請輸入 HEX 色碼', (value) =>
+      isHexColor(value),
+    ),
+  textColor: yup
+    .string()
+    .nullable()
+    .max(20, '文字色最多 20 字')
+    .test('is-hex-color', '文字色格式錯誤，請輸入 HEX 色碼', (value) =>
+      isHexColor(value),
+    ),
+  startTime: yup.string().nullable(),
+  endTime: yup
+    .string()
+    .nullable()
+    .test('end-after-start', '結束時間必須晚於開始時間', function (value) {
+      const startTime = this.parent.startTime;
+      if (!startTime || !value) return true;
+      return value >= startTime;
+    }),
+});
+
+const { errors, handleSubmit, setValues, defineField } = useForm({
+  validationSchema: schema,
+  initialValues: {
+    content: '',
+    priority: null as number | null,
+    isActive: true,
+    linkType: 'NONE',
+    linkUrl: '',
+    bgColor: '',
+    textColor: '',
+    startTime: '',
+    endTime: '',
+  },
+  validateOnMount: false,
+});
+
+const [content] = defineField('content');
+const [priority] = defineField('priority');
+const [isActive] = defineField('isActive');
+const [linkType] = defineField('linkType');
+const [linkUrl] = defineField('linkUrl');
+const [bgColor] = defineField('bgColor');
+const [textColor] = defineField('textColor');
+const [startTime] = defineField('startTime');
+const [endTime] = defineField('endTime');
+
+const isLinkUrlDisabled = computed(() => linkType.value === 'NONE');
+const bgColorPreview = computed(() =>
+  isHexColor(bgColor.value) ? normalizeText(bgColor.value) : '',
+);
+const textColorPreview = computed(() =>
+  isHexColor(textColor.value) ? normalizeText(textColor.value) : '',
+);
+
+watch(linkType, (value) => {
+  if (value === 'NONE' && linkUrl.value) {
+    linkUrl.value = '';
+  }
+});
+
 const loadDetail = async () => {
   if (!isEdit.value || !id.value) return;
 
   await executeApi({
-    fn: async () => getMenuById(id.value),
+    fn: async () => getMarquee(id.value),
     onSuccess: (res: any) => {
       const data = res?.data ?? res;
 
-      detail.value = data;
-
       setValues(
         {
-          name: data?.name ?? '',
-          code: data?.code ?? '',
-          path: data?.path ?? '',
-          parentId: data?.parentId ?? '',
-          icon: data?.icon ?? '',
-          orderNum: data?.orderNum ?? null,
-          isVisible: normalizeBoolean(data?.isVisible),
+          content: data?.content ?? '',
+          priority: data?.priority ?? data?.orderNum ?? null,
+          isActive: normalizeBoolean(data?.isActive),
+          linkType: data?.linkType ?? 'NONE',
+          linkUrl: data?.linkUrl ?? '',
+          bgColor: data?.bgColor ?? '',
+          textColor: data?.textColor ?? '',
+          startTime: toDatetimeLocalValue(data?.startTime ?? data?.startAt),
+          endTime: toDatetimeLocalValue(data?.endTime ?? data?.endAt),
         },
         false,
       );
@@ -352,55 +227,49 @@ const loadDetail = async () => {
   });
 };
 
-/* --------------------------------------
- * Submit
- * -------------------------------------- */
 const onSubmit = handleSubmit(
-  async (values: any) => {
+  async (values) => {
     isSubmitted.value = true;
 
     const ok = await openConfirmDialog({
       title: '儲存確認',
-      message: '確定要儲存選單嗎？',
+      message: `確定要${isEdit.value ? '更新' : '新增'}跑馬燈嗎？`,
     });
 
     if (!ok) return;
 
-    const payloadBase = {
-      name: String(values.name ?? '').trim(),
-      code: String(values.code ?? '').trim(),
-      path: emptyToNull(values.path),
-      parentId: emptyToNull(values.parentId),
-      icon: emptyToNull(values.icon),
-      orderNum:
-        values.orderNum === '' ||
-        values.orderNum === null ||
-        values.orderNum === undefined
-          ? null
-          : Number(values.orderNum),
-      isVisible: normalizeBoolean(values.isVisible),
+    const priorityValue = toNullableNumber(values.priority);
+
+    const payload = {
+      content: normalizeText(values.content),
+      priority: priorityValue,
+      orderNum: priorityValue,
+      isActive: normalizeBoolean(values.isActive),
+      linkType: values.linkType,
+      linkUrl: values.linkType === 'NONE' ? null : emptyToNull(values.linkUrl),
+      bgColor: normalizeColor(values.bgColor),
+      textColor: normalizeColor(values.textColor),
+      startTime: toBackendLocalDateTime(values.startTime),
+      endTime: toBackendLocalDateTime(values.endTime),
     };
 
     await executeApi({
       fn: async () => {
         if (isEdit.value) {
-          return updateMenu({
-            id: id.value,
-            ...payloadBase,
-          });
+          return updateMarquee(id.value, payload);
         }
 
-        return createMenu(payloadBase);
+        return createMarquee(payload);
       },
       onSuccess: async () => {
         await openInfoDialog({
           title: '提示訊息',
-          message: '儲存成功',
+          message: isEdit.value ? '更新成功' : '新增成功',
           iconType: 'success',
         });
 
-        menuStore.setShouldRefresh(true);
-        router.push('/home/menus');
+        marqueeStore.setShouldRefresh(true);
+        router.push('/home/marquee');
       },
       showSuccessDialog: false,
       showFailDialog: true,
@@ -412,23 +281,173 @@ const onSubmit = handleSubmit(
   },
 );
 
-/* --------------------------------------
- * Navigation
- * -------------------------------------- */
 const navigateBack = () => {
-  router.push('/home/menus');
+  router.push('/home/marquee');
 };
 
-/* --------------------------------------
- * Mounted
- * -------------------------------------- */
 onMounted(async () => {
-  await loadParentOptions();
   await loadDetail();
 });
 </script>
 
+<template>
+  <MCard>
+    <form class="marquee-form" @submit.prevent="onSubmit">
+      <p class="form__text form__text--title">{{ pageTitle }}</p>
+
+      <FormSection title="基本資料">
+        <div class="flex flex-wrap">
+          <div class="w-100 p-6">
+            <FormInput
+              label="跑馬燈內容"
+              v-model="content"
+              :error="displayErrors.content"
+              required
+              maxlength="500"
+              placeholder="請輸入跑馬燈顯示文字"
+            />
+          </div>
+
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="排序"
+              type="number"
+              v-model="priority"
+              :error="displayErrors.priority"
+              placeholder="數字越小越前面"
+            />
+          </div>
+
+          <div class="w-50 w-md-100 p-6">
+            <FormSelect
+              label="狀態"
+              v-model="isActive"
+              :options="activeOptions"
+              :error="displayErrors.isActive"
+              required
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="連結設定">
+        <div class="flex flex-wrap">
+          <div class="w-50 w-md-100 p-6">
+            <FormSelect
+              label="連結類型"
+              v-model="linkType"
+              :options="linkTypeOptions"
+              :error="displayErrors.linkType"
+              required
+            />
+          </div>
+
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="連結網址"
+              v-model="linkUrl"
+              :error="displayErrors.linkUrl"
+              :disabled="isLinkUrlDisabled"
+              placeholder="連結類型為無連結時可留空"
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="樣式設定">
+        <div class="flex flex-wrap">
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="背景色（HEX 色碼）"
+              v-model="bgColor"
+              :error="displayErrors.bgColor"
+              maxlength="20"
+              placeholder="例如：#1a1a2e"
+            />
+
+            <div class="marquee-form__color-preview" v-if="bgColorPreview">
+              <span
+                class="marquee-form__color-dot"
+                :style="{ backgroundColor: bgColorPreview }"
+              />
+              <span>{{ bgColorPreview }}</span>
+            </div>
+          </div>
+
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="文字色（HEX 色碼）"
+              v-model="textColor"
+              :error="displayErrors.textColor"
+              maxlength="20"
+              placeholder="例如：#ffffff"
+            />
+
+            <div class="marquee-form__color-preview" v-if="textColorPreview">
+              <span
+                class="marquee-form__color-dot"
+                :style="{ backgroundColor: textColorPreview }"
+              />
+              <span>{{ textColorPreview }}</span>
+            </div>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="時間設定">
+        <div class="flex flex-wrap">
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="開始時間"
+              type="datetime-local"
+              v-model="startTime"
+              :error="displayErrors.startTime"
+            />
+          </div>
+
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="結束時間"
+              type="datetime-local"
+              v-model="endTime"
+              :error="displayErrors.endTime"
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
+          {{ isEdit ? '更新' : '新增' }}
+        </MButton>
+
+        <MButton type="button" class="mbtn--red" @click="navigateBack">
+          <font-awesome-icon icon="fa-arrow-left" class="m-r-4" />
+          返回
+        </MButton>
+      </div>
+    </form>
+  </MCard>
+</template>
+
 <style scoped lang="scss">
-.menu-form {
+.marquee-form {
+  &__color-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    color: #4b5563;
+    font-size: 13px;
+  }
+
+  &__color-dot {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
 }
 </style>
