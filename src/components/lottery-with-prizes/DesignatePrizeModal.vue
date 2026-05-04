@@ -43,11 +43,11 @@
           variant="secondary"
           @click="emit('close')"
           :disabled="submitting"
-        >取消</MButton>
-        <MButton
-          :disabled="!canConfirm || submitting"
-          @click="handleConfirm"
-        >確認</MButton>
+          >取消</MButton
+        >
+        <MButton :disabled="!canConfirm || submitting" @click="handleConfirm"
+          >確認</MButton
+        >
       </div>
     </div>
   </div>
@@ -59,6 +59,7 @@ import MButton from '@/components/common/MButton.vue';
 import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 import { designatePrize } from '@/services/adminLotteryWithPrizesService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 const props = defineProps<{
   show: boolean;
@@ -120,7 +121,7 @@ const handleConfirm = async () => {
 
   const num = props.maxDraws === 1 ? 1 : prizeNumber.value!;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '確認指定',
     message: `確定將第 ${num} 號指定為大獎？指定後系統將自動將其餘籤號設為銘謝惠顧，且此操作不可撤銷。`,
   });

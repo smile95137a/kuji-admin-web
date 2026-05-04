@@ -42,6 +42,7 @@
           :value="modelValue"
           :disabled="disabled"
           :readonly="readonly"
+          :required="required"
           :rows="rows"
           :maxlength="maxlength"
           :aria-required="required ? 'true' : 'false'"
@@ -86,7 +87,7 @@ const props = withDefaults(
     readonly?: boolean;
     success?: boolean;
     size?: Size;
-    rows?: number;
+    rows?: any;
     maxlength?: number;
     autofocus?: boolean;
     hideLabel?: boolean;
@@ -95,8 +96,8 @@ const props = withDefaults(
     size: 'md',
     rows: 4,
     autofocus: false,
-    hideLabel: false,
-  }
+    hideLabel: false, // 預設顯示 label
+  },
 );
 
 const emit = defineEmits<{
@@ -112,8 +113,8 @@ const sizeClass = computed(() => {
   return props.size === 'sm'
     ? 'form-textarea--sm'
     : props.size === 'lg'
-    ? 'form-textarea--lg'
-    : '';
+      ? 'form-textarea--lg'
+      : '';
 });
 
 function onInput(e: Event) {

@@ -43,7 +43,13 @@
                   :disabled="isEditorRole"
                   required
                 />
-                <span class="se__char-count" :class="{ 'se__char-count--over': (form.shortDescription?.length ?? 0) > 100 }">
+                <span
+                  class="se__char-count"
+                  :class="{
+                    'se__char-count--over':
+                      (form.shortDescription?.length ?? 0) > 100,
+                  }"
+                >
                   {{ form.shortDescription?.length ?? 0 }} / 100
                 </span>
               </div>
@@ -67,7 +73,9 @@
           <div class="flex flex-wrap">
             <!-- Logo -->
             <div class="w-50 w-md-100 p-6">
-              <p class="form__label">店家 Logo（建議尺寸 200×200px，最大 5MB）</p>
+              <p class="form__label">
+                店家 Logo（建議尺寸 200×200px，最大 5MB）
+              </p>
               <div class="se__upload-box" v-if="!isEditorRole">
                 <img
                   v-if="form.logoUrl"
@@ -82,12 +90,21 @@
                     class="se__upload-input"
                     @change="onLogoChange"
                   />
-                  <MButton type="button" size="sm" variant="secondary" @click.prevent>
+                  <MButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    @click.prevent
+                  >
                     {{ form.logoUrl ? '更換 Logo' : '上傳 Logo' }}
                   </MButton>
                 </label>
-                <span v-if="logoUploading" class="se__upload-hint">上傳中...</span>
-                <span v-if="logoError" class="se__upload-error">{{ logoError }}</span>
+                <span v-if="logoUploading" class="se__upload-hint"
+                  >上傳中...</span
+                >
+                <span v-if="logoError" class="se__upload-error">{{
+                  logoError
+                }}</span>
               </div>
               <div v-else>
                 <img
@@ -102,7 +119,9 @@
 
             <!-- Cover Image -->
             <div class="w-50 w-md-100 p-6">
-              <p class="form__label">封面圖片（建議尺寸 1200×400px，最大 5MB）</p>
+              <p class="form__label">
+                封面圖片（建議尺寸 1200×400px，最大 5MB）
+              </p>
               <div class="se__upload-box" v-if="!isEditorRole">
                 <img
                   v-if="form.coverImageUrl"
@@ -117,12 +136,21 @@
                     class="se__upload-input"
                     @change="onCoverChange"
                   />
-                  <MButton type="button" size="sm" variant="secondary" @click.prevent>
+                  <MButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    @click.prevent
+                  >
                     {{ form.coverImageUrl ? '更換封面' : '上傳封面' }}
                   </MButton>
                 </label>
-                <span v-if="coverUploading" class="se__upload-hint">上傳中...</span>
-                <span v-if="coverError" class="se__upload-error">{{ coverError }}</span>
+                <span v-if="coverUploading" class="se__upload-hint"
+                  >上傳中...</span
+                >
+                <span v-if="coverError" class="se__upload-error">{{
+                  coverError
+                }}</span>
               </div>
               <div v-else>
                 <img
@@ -201,11 +229,7 @@
         <div class="se__section">
           <p class="se__section-title">營業時間</p>
           <div class="se__hours-grid">
-            <div
-              v-for="day in weekdays"
-              :key="day.key"
-              class="se__hours-row"
-            >
+            <div v-for="day in weekdays" :key="day.key" class="se__hours-row">
               <span class="se__hours-label">{{ day.label }}</span>
               <label class="se__hours-rest">
                 <input
@@ -229,7 +253,9 @@
         <!-- ===== Actions ===== -->
         <div class="flex justify-center gap-x-12 m-t-16" v-if="!isEditorRole">
           <MButton type="submit" :loading="saving">儲存變更</MButton>
-          <MButton type="button" variant="secondary" @click="goBack">取消</MButton>
+          <MButton type="button" variant="secondary" @click="goBack"
+            >取消</MButton
+          >
         </div>
       </form>
     </template>
@@ -246,10 +272,8 @@ import FormInput from '@/components/common/FormInput.vue';
 
 import { useDialogStore, useAuthStore } from '@/stores';
 import { api } from '@/services/FrontAPI';
-import {
-  getStoreById,
-  updateStore,
-} from '@/services/adminStoreService';
+import { getStoreById, updateStore } from '@/services/adminStoreService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Router / Auth
@@ -266,11 +290,7 @@ const isEditorRole = computed(() =>
 
 const storeId = computed((): string => {
   if (isProfileMode.value) {
-    return (
-      authStore.user?.storeId ??
-      authStore.user?.stores?.[0]?.id ??
-      ''
-    );
+    return authStore.user?.storeId ?? authStore.user?.stores?.[0]?.id ?? '';
   }
   return String(route.params.id ?? '');
 });
@@ -309,10 +329,22 @@ const weekdays = [
 ];
 
 const businessHoursInput = ref<Record<string, string>>({
-  mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '',
+  mon: '',
+  tue: '',
+  wed: '',
+  thu: '',
+  fri: '',
+  sat: '',
+  sun: '',
 });
 const restDays = ref<Record<string, boolean>>({
-  mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false,
+  mon: false,
+  tue: false,
+  wed: false,
+  thu: false,
+  fri: false,
+  sat: false,
+  sun: false,
 });
 
 function onRestToggle(key: string) {
@@ -338,7 +370,9 @@ function parseBusinessHours(bh: Record<string, string> | null | undefined) {
 function buildBusinessHours(): Record<string, string> {
   const result: Record<string, string> = {};
   weekdays.forEach(({ key }) => {
-    result[key] = restDays.value[key] ? '休息' : (businessHoursInput.value[key] || '');
+    result[key] = restDays.value[key]
+      ? '休息'
+      : businessHoursInput.value[key] || '';
   });
   return result;
 }
@@ -351,7 +385,10 @@ const coverUploading = ref(false);
 const logoError = ref('');
 const coverError = ref('');
 
-async function uploadImage(file: File, type: 'store-logo' | 'store-cover'): Promise<string> {
+async function uploadImage(
+  file: File,
+  type: 'store-logo' | 'store-cover',
+): Promise<string> {
   if (file.size > 5 * 1024 * 1024) {
     throw new Error('圖片大小不能超過 5MB');
   }
@@ -397,7 +434,8 @@ async function onCoverChange(e: Event) {
 function validate(): boolean {
   const e: Record<string, string> = {};
   if (!form.value.name?.trim()) e.name = '店家名稱為必填';
-  if (!form.value.shortDescription?.trim()) e.shortDescription = '簡短描述為必填';
+  if (!form.value.shortDescription?.trim())
+    e.shortDescription = '簡短描述為必填';
   if ((form.value.shortDescription?.length ?? 0) > 100)
     e.shortDescription = '簡短描述最多 100 字';
   if (form.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email))
@@ -433,7 +471,7 @@ const loadStore = async () => {
     });
     parseBusinessHours(d.businessHours);
   } catch {
-    dialogStore.openInfoDialog({
+    openInfoDialog({
       title: '提示訊息',
       message: '載入店家資料失敗',
       iconType: 'warning',
@@ -456,13 +494,13 @@ const submitForm = async () => {
       ...form.value,
       businessHours: buildBusinessHours(),
     });
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '店家資訊已更新',
       iconType: 'success',
     });
   } catch {
-    dialogStore.openInfoDialog({
+    openInfoDialog({
       title: '提示訊息',
       message: '儲存失敗，請重試',
       iconType: 'warning',

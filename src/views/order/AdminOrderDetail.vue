@@ -35,8 +35,13 @@
           <div class="od__kv">
             <span class="od__k">出貨狀態</span>
             <span class="od__v">
-              <span :class="['od__badge', statusBadgeClass(detail.shippingStatus)]">
-                {{ detail.shippingStatusName || statusLabel(detail.shippingStatus) }}
+              <span
+                :class="['od__badge', statusBadgeClass(detail.shippingStatus)]"
+              >
+                {{
+                  detail.shippingStatusName ||
+                  statusLabel(detail.shippingStatus)
+                }}
               </span>
             </span>
           </div>
@@ -53,11 +58,15 @@
         <div class="od__grid">
           <div class="od__kv">
             <span class="od__k">暱稱</span>
-            <span class="od__v">{{ detail.player?.nickname || detail.userNickname || '-' }}</span>
+            <span class="od__v">{{
+              detail.player?.nickname || detail.userNickname || '-'
+            }}</span>
           </div>
           <div class="od__kv">
             <span class="od__k">Email</span>
-            <span class="od__v">{{ detail.player?.email || detail.userEmail || '-' }}</span>
+            <span class="od__v">{{
+              detail.player?.email || detail.userEmail || '-'
+            }}</span>
           </div>
         </div>
       </div>
@@ -97,15 +106,21 @@
             </div>
             <div class="od__kv">
               <span class="od__k">收件人</span>
-              <span class="od__v">{{ shippingInfo?.recipientName || detail.recipientName || '-' }}</span>
+              <span class="od__v">{{
+                shippingInfo?.recipientName || detail.recipientName || '-'
+              }}</span>
             </div>
             <div class="od__kv">
               <span class="od__k">聯絡電話</span>
-              <span class="od__v">{{ shippingInfo?.recipientPhone || detail.recipientPhone || '-' }}</span>
+              <span class="od__v">{{
+                shippingInfo?.recipientPhone || detail.recipientPhone || '-'
+              }}</span>
             </div>
             <div class="od__kv od__kv--full">
               <span class="od__k">收件地址</span>
-              <span class="od__v">{{ detail.recipientAddress || shippingInfo?.address || '-' }}</span>
+              <span class="od__v">{{
+                detail.recipientAddress || shippingInfo?.address || '-'
+              }}</span>
             </div>
           </div>
         </template>
@@ -113,7 +128,9 @@
           <div class="od__grid">
             <div class="od__kv">
               <span class="od__k">配送方式</span>
-              <span class="od__v">{{ detail.shippingMethodName || shippingMethod || '-' }}</span>
+              <span class="od__v">{{
+                detail.shippingMethodName || shippingMethod || '-'
+              }}</span>
             </div>
             <div class="od__kv">
               <span class="od__k">收件人</span>
@@ -142,8 +159,12 @@
           <div class="od__kv">
             <span class="od__k">付款狀態</span>
             <span class="od__v">
-              <span :class="['od__badge', statusBadgeClass(detail.paymentStatus)]">
-                {{ detail.paymentStatusName || statusLabel(detail.paymentStatus) }}
+              <span
+                :class="['od__badge', statusBadgeClass(detail.paymentStatus)]"
+              >
+                {{
+                  detail.paymentStatusName || statusLabel(detail.paymentStatus)
+                }}
               </span>
             </span>
           </div>
@@ -168,7 +189,9 @@
           </div>
           <div class="od__kv">
             <span class="od__k">合計</span>
-            <span class="od__v" style="font-weight: 700; color: #111827">NT$ {{ detail.totalAmount ?? 0 }}</span>
+            <span class="od__v" style="font-weight: 700; color: #111827"
+              >NT$ {{ detail.totalAmount ?? 0 }}</span
+            >
           </div>
         </div>
       </div>
@@ -215,11 +238,25 @@
               :key="idx"
               class="od__timeline-item"
             >
-              <div class="od__timeline-dot" :class="statusBadgeClass(entry.toStatus ?? entry.status)" />
+              <div
+                class="od__timeline-dot"
+                :class="statusBadgeClass(entry.toStatus ?? entry.status)"
+              />
               <div class="od__timeline-content">
-                <span class="od__timeline-status">{{ entry.toStatusLabel || statusLabel(entry.toStatus ?? entry.status) }}</span>
+                <span class="od__timeline-status">{{
+                  entry.toStatusLabel ||
+                  statusLabel(entry.toStatus ?? entry.status)
+                }}</span>
                 <span class="od__timeline-meta">
-                  {{ entry.operatorType === 'USER' ? '會員操作' : entry.operatorType === 'ADMIN' ? '管理員' : entry.operator?.displayName || entry.operator?.email || '系統' }}
+                  {{
+                    entry.operatorType === 'USER'
+                      ? '會員操作'
+                      : entry.operatorType === 'ADMIN'
+                        ? '管理員'
+                        : entry.operator?.displayName ||
+                          entry.operator?.email ||
+                          '系統'
+                  }}
                   ·
                   {{ formatDateTime(entry.createdAt ?? entry.timestamp) }}
                 </span>
@@ -287,7 +324,9 @@
           placeholder="例如：超商取貨 / 指定時段"
         />
         <div class="flex justify-center gap-x-12 m-t-12">
-          <MButton :loading="actionLoading" @click="submitShip">確認出貨</MButton>
+          <MButton :loading="actionLoading" @click="submitShip"
+            >確認出貨</MButton
+          >
           <MButton variant="secondary" @click="closeShipModal">取消</MButton>
         </div>
       </div>
@@ -316,10 +355,16 @@
           required
         />
         <div class="flex justify-center gap-x-12 m-t-12">
-          <MButton class="mbtn--red" :loading="actionLoading" @click="submitCancel">
+          <MButton
+            class="mbtn--red"
+            :loading="actionLoading"
+            @click="submitCancel"
+          >
             確認取消
           </MButton>
-          <MButton variant="secondary" @click="cancelModalOpen = false">返回</MButton>
+          <MButton variant="secondary" @click="cancelModalOpen = false"
+            >返回</MButton
+          >
         </div>
       </div>
     </div>
@@ -345,6 +390,8 @@ import {
   updateOrderStatus,
   cancelOrderWithReason,
 } from '@/services/adminOrderService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const route = useRoute();
 const router = useRouter();
@@ -369,16 +416,15 @@ const prizes = computed<any[]>(
   () => detail.value?.items ?? detail.value?.prizes ?? [],
 );
 const prizeCount = computed(
-  () =>
-    detail.value?.prizeCount ??
-    prizes.value.length ??
-    0,
+  () => detail.value?.prizeCount ?? prizes.value.length ?? 0,
 );
-const statusHistory = computed<any[]>(
-  () => [...(detail.value?.statusHistory ?? [])].reverse(),
+const statusHistory = computed<any[]>(() =>
+  [...(detail.value?.statusHistory ?? [])].reverse(),
 );
 const canCancel = computed(() =>
-  ['PENDING', 'PREPARING'].includes(detail.value?.shippingStatus ?? detail.value?.status ?? ''),
+  ['PENDING', 'PREPARING'].includes(
+    detail.value?.shippingStatus ?? detail.value?.status ?? '',
+  ),
 );
 
 /* ==============================
@@ -468,13 +514,13 @@ function handle422(e: any): boolean {
   if (axios.isAxiosError(e) && e.response?.status === 422) {
     const errorCode = e.response.data?.errorCode;
     if (errorCode === 'INVALID_STATUS_TRANSITION') {
-      dialogStore.openInfoDialog({
+      openInfoDialog({
         title: '提示訊息',
         message: '此狀態無法執行該操作',
         iconType: 'warning',
       });
     } else {
-      dialogStore.openInfoDialog({
+      openInfoDialog({
         title: '提示訊息',
         message: e.response.data?.message ?? '操作失敗，請重試',
         iconType: 'warning',
@@ -489,7 +535,7 @@ function handle422(e: any): boolean {
  * Actions - Prepare
  * ============================== */
 const doPrepare = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '準備出貨確認',
     message: '確定要將訂單更新為「準備中」嗎？',
   });
@@ -498,7 +544,7 @@ const doPrepare = async () => {
   actionLoading.value = true;
   try {
     await prepareShipping(String(route.params.orderId));
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '訂單狀態已更新',
       iconType: 'success',
@@ -506,7 +552,7 @@ const doPrepare = async () => {
     await loadDetail();
   } catch (e: any) {
     if (!handle422(e)) {
-      dialogStore.openInfoDialog({
+      openInfoDialog({
         title: '提示訊息',
         message: '狀態更新失敗，請重試',
         iconType: 'warning',
@@ -547,7 +593,7 @@ const submitShip = async () => {
   }
   shipTrackingNoError.value = '';
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '出貨確認',
     message: '確定要送出出貨資訊嗎？',
   });
@@ -560,7 +606,7 @@ const submitShip = async () => {
     if (remark) payload.remark = remark;
 
     await shipOrder(String(route.params.orderId), payload);
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '訂單狀態已更新',
       iconType: 'success',
@@ -569,7 +615,7 @@ const submitShip = async () => {
     await loadDetail();
   } catch (e: any) {
     if (!handle422(e)) {
-      dialogStore.openInfoDialog({
+      openInfoDialog({
         title: '提示訊息',
         message: '出貨失敗，請重試',
         iconType: 'warning',
@@ -584,7 +630,7 @@ const submitShip = async () => {
  * Actions - Complete
  * ============================== */
 const doComplete = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '完成訂單確認',
     message: '確定要將訂單標記為「已完成」嗎？',
   });
@@ -593,7 +639,7 @@ const doComplete = async () => {
   actionLoading.value = true;
   try {
     await completeOrder(String(route.params.orderId));
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '訂單狀態已更新',
       iconType: 'success',
@@ -601,7 +647,7 @@ const doComplete = async () => {
     await loadDetail();
   } catch (e: any) {
     if (!handle422(e)) {
-      dialogStore.openInfoDialog({
+      openInfoDialog({
         title: '提示訊息',
         message: '狀態更新失敗，請重試',
         iconType: 'warning',
@@ -627,7 +673,7 @@ const submitCancel = async () => {
   }
   cancelReasonError.value = '';
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '取消確認',
     message: '確定要取消此訂單嗎？此操作無法復原。',
   });
@@ -636,7 +682,7 @@ const submitCancel = async () => {
   actionLoading.value = true;
   try {
     await cancelOrderWithReason(String(route.params.orderId), reason);
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '訂單已取消',
       iconType: 'success',
@@ -646,7 +692,7 @@ const submitCancel = async () => {
     await loadDetail();
   } catch (e: any) {
     if (!handle422(e)) {
-      dialogStore.openInfoDialog({
+      openInfoDialog({
         title: '提示訊息',
         message: '取消失敗，請重試',
         iconType: 'warning',
@@ -813,11 +859,21 @@ onMounted(loadDetail);
     flex-shrink: 0;
     background: #9ca3af;
 
-    &.od__badge--yellow { background: #fbbf24; }
-    &.od__badge--blue   { background: #3b82f6; }
-    &.od__badge--purple { background: #7c3aed; }
-    &.od__badge--green  { background: #22c55e; }
-    &.od__badge--gray   { background: #9ca3af; }
+    &.od__badge--yellow {
+      background: #fbbf24;
+    }
+    &.od__badge--blue {
+      background: #3b82f6;
+    }
+    &.od__badge--purple {
+      background: #7c3aed;
+    }
+    &.od__badge--green {
+      background: #22c55e;
+    }
+    &.od__badge--gray {
+      background: #9ca3af;
+    }
   }
 
   &__timeline-content {

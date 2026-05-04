@@ -4,9 +4,13 @@
     <FormTitle title="角色管理" />
 
     <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
-      <MButton @click="navigateToAdd">新增</MButton>
+      <MButton @click="navigateToAdd">
+        <font-awesome-icon icon="fa-plus" class="m-r-4" />
+        新增
+      </MButton>
 
       <MButton class="mbtn--red" :disabled="!canDelete" @click="deleteSelected">
+        <font-awesome-icon icon="fa-trash" class="m-r-4" />
         刪除
       </MButton>
     </div>
@@ -30,28 +34,47 @@
         :sort-order="sortOrder"
         @sort="handleSort"
       >
+        <!-- 角色名稱 -->
         <template #cell-name="{ item }">
           <span class="clickable" @click="navigateToEdit(item)">
             {{ item.name || '-' }}
           </span>
         </template>
 
+        <!-- 角色代碼 -->
+        <template #cell-code="{ item }">
+          <span>{{ item.code || '-' }}</span>
+        </template>
+
+        <!-- 描述 -->
+        <template #cell-description="{ item }">
+          <span class="rl__description">
+            {{ item.description || '-' }}
+          </span>
+        </template>
+
+        <!-- 建立時間 -->
         <template #cell-createdAt="{ item }">
-          <DateFormatter v-if="item.createdAt" :date="item.createdAt" />
-          <span v-else>-</span>
+          <DateFormatter :date="item.createdAt" format="YYYY-MM-DD HH:mm:ss" />
         </template>
 
+        <!-- 更新時間 -->
         <template #cell-updatedAt="{ item }">
-          <DateFormatter v-if="item.updatedAt" :date="item.updatedAt" />
-          <span v-else>-</span>
+          <DateFormatter :date="item.updatedAt" format="YYYY-MM-DD HH:mm:ss" />
         </template>
 
+        <!-- 操作 -->
         <template #cell-actions="{ item }">
           <div class="flex gap-x-8">
-            <MButton size="sm" @click="navigateToEdit(item)">編輯</MButton>
-            <MButton size="sm" @click="navigateToPermissions(item)"
-              >權限</MButton
-            >
+            <MButton size="sm" @click="navigateToEdit(item)">
+              <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
+              編輯
+            </MButton>
+
+            <MButton size="sm" @click="navigateToPermissions(item)">
+              <font-awesome-icon icon="fa-key" class="m-r-4" />
+              權限
+            </MButton>
           </div>
         </template>
       </ReportTable>
@@ -66,7 +89,7 @@
           :goToPage="goToPage"
           :pageLimitSize="pageLimitSize"
           :totalItems="list.length"
-          @update:pageLimitSize="pageLimitSize = $event"
+          @update:pageLimitSize="handlePageLimitSizeChange"
         />
       </div>
     </template>
@@ -74,10 +97,7 @@
 </template>
 
 <script setup lang="ts">
-/* ==============================
- * Imports
- * ============================== */
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -94,29 +114,51 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useRoleStore } from '@/stores/role/useRoleStore';
 
 import { getAllRoles, deleteRole } from '@/services/adminRoleService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
-/* ==============================
- * Setup
- * ============================== */
 const router = useRouter();
 const dialogStore = useDialogStore();
+const roleStore = useRoleStore();
 
-/* ==============================
- * Search Hook (local list)
- * ============================== */
+/* --------------------------------------
+ * List
+ * -------------------------------------- */
 const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
   useLocalList: true,
 });
 
-/* ==============================
+/* --------------------------------------
+ * Query
+ * -------------------------------------- */
+const fetchList = async () => {
+  await query(() => getAllRoles());
+
+  selectedIds.value = [];
+  goToPage(1);
+  isSearch.value = true;
+};
+
+const refresh = async () => {
+  await fetchList();
+};
+
+/* --------------------------------------
  * Sorting
- * ============================== */
+ * -------------------------------------- */
 const sortKey = ref('');
 const sortOrder = ref<'asc' | 'desc' | ''>('asc');
 
-const handleSort = ({ key, order }: any) => {
+const handleSort = ({
+  key,
+  order,
+}: {
+  key: string;
+  order: 'asc' | 'desc' | '';
+}) => {
   sortKey.value = key;
   sortOrder.value = order;
   goToPage(1);
@@ -132,15 +174,15 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
 
   return arr;
 });
 
-/* ==============================
+/* --------------------------------------
  * Pagination
- * ============================== */
+ * -------------------------------------- */
 const pageLimitSize = ref(10);
 
 const {
@@ -153,52 +195,65 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
-/* ==============================
- * Table Columns（對齊你的回傳欄位）
- * ============================== */
-const columns = [
-  { field: 'name', label: '角色名稱', width: 200, sortable: true },
-  { field: 'code', label: '角色代碼', width: 180, sortable: true },
-  { field: 'description', label: '描述', width: 320, sortable: true },
-  { field: 'createdAt', label: '建立時間', width: 180, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 180, sortable: true },
-  { field: 'actions', label: '操作', width: 180 },
-];
-
-/* ==============================
- * Selection / Bulk Actions
- * ============================== */
-const selectedIds = ref<string[]>([]);
-const canDelete = computed(() => selectedIds.value.length > 0);
-
-/* ==============================
- * Fetch List
- * ============================== */
-const fetchList = async () => {
-  await query(() => getAllRoles());
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
   goToPage(1);
 };
 
-/* ==============================
- * Delete Selected
- * ============================== */
+/* --------------------------------------
+ * Columns
+ * -------------------------------------- */
+const columns = [
+  { field: 'name', label: '角色名稱', width: 180, sortable: true },
+  { field: 'code', label: '角色代碼', width: 180, sortable: true },
+  { field: 'description', label: '描述', width: 280, sortable: true },
+  { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
+  { field: 'actions', label: '操作', width: 180 },
+];
+
+/* --------------------------------------
+ * Selection
+ * -------------------------------------- */
+const selectedIds = ref<string[]>([]);
+
+watch(
+  selectedIds,
+  (value) => {
+    roleStore.setSelectedIds([...value]);
+  },
+  { deep: true },
+);
+
+const selectedRows = computed(() =>
+  list.value.filter((row: any) => selectedIds.value.includes(row.id)),
+);
+
+const canDelete = computed(() => selectedRows.value.length > 0);
+
+/* --------------------------------------
+ * Delete
+ * -------------------------------------- */
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
-    message: `確定要刪除選中的 ${selectedIds.value.length} 筆角色嗎？（系統預設角色不可刪）`,
+    message: `確定要刪除選中的 ${selectedIds.value.length} 筆角色嗎？（刪除後無法復原）`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteRole(id))),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -208,28 +263,76 @@ const deleteSelected = async () => {
       });
 
       selectedIds.value = [];
-      await fetchList();
+      roleStore.clearSelectedIds();
+
+      await refresh();
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
-/* ==============================
- * Navigation
- * ============================== */
-const navigateToAdd = () => router.push('/home/roles/add');
-const navigateToEdit = (item: any) =>
-  router.push(`/home/roles/edit/${item.id}`);
-const navigateToPermissions = (item: any) =>
-  router.push(`/home/roles/permissions/${item.id}`);
+/* --------------------------------------
+ * Save state / Navigation
+ * -------------------------------------- */
+const saveListState = () => {
+  roleStore.setList([...list.value]);
+  roleStore.setSort(sortKey.value, sortOrder.value);
+  roleStore.setCurrentPage(currentPage.value);
+  roleStore.setPageLimitSize(pageLimitSize.value);
+  roleStore.setSelectedIds([...selectedIds.value]);
+};
 
-/* ==============================
+const navigateToAdd = () => {
+  saveListState();
+  router.push('/home/roles/add');
+};
+
+const navigateToEdit = (item: any) => {
+  saveListState();
+  router.push(`/home/roles/edit/${item.id}`);
+};
+
+const navigateToPermissions = (item: any) => {
+  saveListState();
+  router.push(`/home/roles/${item.id}/permissions`);
+};
+
+/* --------------------------------------
  * Lifecycle
- * ============================== */
+ * -------------------------------------- */
 onMounted(async () => {
+  if (roleStore.list.length > 0 && !roleStore.shouldRefresh) {
+    list.value = [...roleStore.list];
+
+    sortKey.value = roleStore.sortKey || '';
+    sortOrder.value = roleStore.sortOrder || 'asc';
+    pageLimitSize.value = roleStore.pageLimitSize;
+    selectedIds.value = [...roleStore.selectedIds];
+
+    await nextTick();
+    goToPage(roleStore.currentPage);
+
+    isSearch.value = true;
+    roleStore.resetAll();
+    return;
+  }
+
   await fetchList();
-  isSearch.value = true;
+  roleStore.resetAll();
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.rl {
+  &__description {
+    display: inline-block;
+    max-width: 260px;
+    overflow: hidden;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+</style>

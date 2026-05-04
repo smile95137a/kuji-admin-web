@@ -1,82 +1,60 @@
+<!-- src/views/adminUser/AdminUserList.vue -->
 <template>
   <MCard>
-    <form @submit.prevent="onSubmit">
-      <p class="form__text form__text--title">帳號列表</p>
+    <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
+      <FormTitle title="帳號管理" />
 
-      <div class="flex flex-wrap">
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="關鍵字（Email / 顯示名稱）"
-            v-model="keyword"
-            :error="errors.keyword"
-            placeholder="輸入關鍵字"
-          />
-        </div>
-
-        <div class="w-25 w-md-50 w-sm-100 p-6">
-          <FormSelect
-            label="狀態"
-            v-model="status"
-            :options="statusOptions"
-            :error="errors.status"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-
-        <div class="w-25 w-md-50 w-sm-100 p-6">
-          <FormSelect
-            label="店家"
-            v-model="storeId"
-            :options="storeOptions"
-            :error="errors.storeId"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-
-        <div class="w-25 w-md-50 w-sm-100 p-6">
-          <FormSelect
-            label="角色"
-            v-model="roleCode"
-            :options="roleCodeOptions"
-            :error="errors.roleCode"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-      </div>
+      <AdminUserSearchForm
+        :status-options="statusOptions"
+        :store-options="storeOptions"
+        :role-code-options="roleCodeOptions"
+      />
 
       <div class="flex justify-center m-y-8 gap-x-12 flex-wrap">
-        <MButton type="submit">查詢</MButton>
-        <MButton type="button" class="mbtn--gray" @click="resetFilters"
-          >清除</MButton
-        >
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
+
+        <MButton type="button" class="mbtn--gray" @click="resetFilters">
+          <font-awesome-icon icon="fa-rotate-left" class="m-r-4" />
+          清除
+        </MButton>
       </div>
-    </form>
+    </Form>
   </MCard>
 
   <div class="m-t-12">
     <MCard>
       <div class="flex justify-end gap-x-12 flex-wrap">
-        <MButton @click="navigateToAddOwner">新增店家負責人</MButton>
-        <MButton @click="navigateToAddEditor">新增店家編輯</MButton>
+        <MButton @click="navigateToAddOwner">
+          <font-awesome-icon icon="fa-user-plus" class="m-r-4" />
+          新增店家負責人
+        </MButton>
 
-        <MButton :disabled="!canActivate" @click="doActivateSelected"
-          >啟用</MButton
-        >
-        <MButton :disabled="!canDeactivate" @click="doDeactivateSelected"
-          >停用</MButton
-        >
+        <MButton @click="navigateToAddEditor">
+          <font-awesome-icon icon="fa-user-pen" class="m-r-4" />
+          新增店家編輯
+        </MButton>
+
+        <MButton :disabled="!canActivate" @click="doActivateSelected">
+          <font-awesome-icon icon="fa-circle-check" class="m-r-4" />
+          啟用
+        </MButton>
+
+        <MButton :disabled="!canDeactivate" @click="doDeactivateSelected">
+          <font-awesome-icon icon="fa-ban" class="m-r-4" />
+          停用
+        </MButton>
+
         <MButton
           class="mbtn--red"
           :disabled="!canDelete"
           @click="doDeleteSelected"
-          >刪除</MButton
         >
+          <font-awesome-icon icon="fa-trash" class="m-r-4" />
+          刪除
+        </MButton>
       </div>
 
       <template v-if="!hasData">
@@ -98,48 +76,67 @@
           :sort-order="sortOrder"
           @sort="handleSort"
         >
+          <!-- Email / 帳號 -->
           <template #cell-email="{ item }">
             <span class="clickable" @click="navigateToDetail(item)">
               {{ item.email || item.username || '-' }}
             </span>
           </template>
 
+          <!-- 顯示名稱 -->
+          <template #cell-displayName="{ item }">
+            <span>{{ item.displayName || '-' }}</span>
+          </template>
+
+          <!-- 狀態 -->
           <template #cell-status="{ item }">
-            <span :class="statusBadgeClass(item)">{{ statusText(item) }}</span>
+            <span :class="statusBadgeClass(item)">
+              {{ statusText(item) }}
+            </span>
           </template>
 
+          <!-- 角色 -->
           <template #cell-roles="{ item }">
-            <span>{{ roleText(item) }}</span>
+            <span class="aul__text-ellipsis">
+              {{ roleText(item) }}
+            </span>
           </template>
 
+          <!-- 店家 -->
           <template #cell-stores="{ item }">
-            <span>{{ storeText(item) }}</span>
+            <span class="aul__text-ellipsis">
+              {{ storeText(item) }}
+            </span>
           </template>
 
+          <!-- 最後登入 -->
           <template #cell-lastLoginAt="{ item }">
             <DateFormatter
-              v-if="item.lastLoginAt"
               :date="item.lastLoginAt"
               format="YYYY-MM-DD HH:mm:ss"
             />
-            <span v-else>-</span>
           </template>
 
+          <!-- 建立時間 -->
           <template #cell-createdAt="{ item }">
             <DateFormatter
-              v-if="item.createdAt"
               :date="item.createdAt"
               format="YYYY-MM-DD HH:mm:ss"
             />
-            <span v-else>-</span>
           </template>
 
+          <!-- 操作 -->
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-8">
-              <MButton size="sm" @click="navigateToDetail(item)">詳情</MButton>
-              <MButton size="sm" @click="doResetPassword(item)"
-                >重設密碼</MButton
-              >
+            <div class="flex gap-x-8 flex-wrap">
+              <MButton size="sm" @click="navigateToDetail(item)">
+                <font-awesome-icon icon="fa-circle-info" class="m-r-4" />
+                詳情
+              </MButton>
+
+              <MButton size="sm" @click="doResetPassword(item)">
+                <font-awesome-icon icon="fa-key" class="m-r-4" />
+                重設密碼
+              </MButton>
             </div>
           </template>
         </ReportTable>
@@ -153,8 +150,8 @@
             :previousPage="previousPage"
             :goToPage="goToPage"
             :pageLimitSize="pageLimitSize"
-            :totalItems="filteredList.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+            :totalItems="list.length"
+            @update:pageLimitSize="handlePageLimitSizeChange"
           />
         </div>
       </template>
@@ -163,9 +160,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useForm } from 'vee-validate';
+import { Form, FormContext } from 'vee-validate';
 import * as yup from 'yup';
 
 import { usePagination } from '@/hook/usePagination';
@@ -177,15 +174,16 @@ import MButton from '@/components/common/MButton.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
-import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
+import FormTitle from '@/components/common/FormTitle.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
+
+import AdminUserSearchForm from '@/components/adminUser/AdminUserSearchForm.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore, useAuthStore } from '@/stores';
+import { useAdminUserStore } from '@/stores/adminUser/useAdminUserStore';
 
 import {
-  getAllAdminUsers,
   queryAdminUsers,
   activateAdminUser,
   deactivateAdminUser,
@@ -194,6 +192,8 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions } from '@/services/adminStoreService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 interface SelectOption {
   label: string;
@@ -204,41 +204,42 @@ interface SelectOption {
 const router = useRouter();
 const dialogStore = useDialogStore();
 const authStore = useAuthStore();
-const currentUserId = computed(() => authStore.user?.id ?? authStore.user?.userId ?? '');
+const adminUserStore = useAdminUserStore();
 
-/* list hook */
-const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
-  useLocalList: true,
+const currentUserId = computed(
+  () => authStore.user?.id ?? authStore.user?.userId ?? '',
+);
+
+/* --------------------------------------
+ * Form
+ * -------------------------------------- */
+const formRef = ref<FormContext | null>(null);
+
+const initValues = ref({
+  keyword: '',
+  status: '',
+  storeId: '',
+  roleCode: '',
 });
 
-/* store options */
-const storeOptions = ref<SelectOption[]>([]);
-
-const mapEnumOptionsToSelect = (arr: any[] = []): SelectOption[] =>
-  arr.map((x) => ({
-    label: x?.label ?? '',
-    value: x?.value ?? '',
-    ...(x?.description ? { description: x.description } : {}),
-  }));
-
-const loadStoreOptions = async () => {
-  await executeApi<any[]>({
-    fn: async () => getStoreOptions({ activeOnly: true }),
-    onSuccess: (data) => {
-      storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : []
-      );
-    },
-  });
-};
-
-/* search schema */
 const schema = yup.object({
   keyword: yup.string().nullable(),
   status: yup.string().nullable(),
   storeId: yup.string().nullable(),
   roleCode: yup.string().nullable(),
 });
+
+/* --------------------------------------
+ * Search Hook
+ * -------------------------------------- */
+const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
+  useLocalList: true,
+});
+
+/* --------------------------------------
+ * Options
+ * -------------------------------------- */
+const storeOptions = ref<SelectOption[]>([]);
 
 const statusOptions = ref<SelectOption[]>([
   { label: '啟用', value: 'ACTIVE' },
@@ -252,41 +253,48 @@ const roleCodeOptions = ref<SelectOption[]>([
   { label: '店家編輯', value: 'ROLE_STORE_EDITOR' },
 ]);
 
-const { errors, handleSubmit, setValues, defineField } = useForm({
-  validationSchema: schema,
-  initialValues: {
-    keyword: '',
-    status: '',
-    storeId: '',
-    roleCode: '',
-  },
-});
+const mapEnumOptionsToSelect = (arr: any[] = []): SelectOption[] =>
+  arr.map((item) => ({
+    label: item?.label ?? item?.storeName ?? item?.name ?? '',
+    value: item?.value ?? item?.id ?? '',
+    ...(item?.description ? { description: item.description } : {}),
+  }));
 
-const [keyword] = defineField('keyword');
-const [status] = defineField('status');
-const [storeId] = defineField('storeId');
-const [roleCode] = defineField('roleCode');
+const loadStoreOptions = async () => {
+  await executeApi<any[]>({
+    fn: async () => getStoreOptions({ activeOnly: true }),
+    onSuccess: (res: any) => {
+      const data = res?.data ?? res ?? [];
+      const arr = Array.isArray(data) ? data : [];
 
-const resetFilters = async () => {
-  setValues({ keyword: '', status: '', storeId: '', roleCode: '' });
-  await onSubmit();
+      storeOptions.value = mapEnumOptionsToSelect(arr);
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+  });
 };
 
-/* helpers */
-const statusText = (u: any) => {
-  const s = u?.status;
-  if (!s) return '-';
-  if (s === 'ACTIVE') return '啟用';
-  if (s === 'INACTIVE') return '停用';
-  if (s === 'PENDING') return '待審核';
-  return String(s);
+/* --------------------------------------
+ * Helpers
+ * -------------------------------------- */
+const statusText = (user: any) => {
+  const status = user?.status;
+
+  if (status === 'ACTIVE') return '啟用';
+  if (status === 'INACTIVE') return '停用';
+  if (status === 'PENDING') return '待審核';
+
+  return status || '-';
 };
 
-const statusBadgeClass = (u: any) => {
-  const s = u?.status;
-  if (s === 'ACTIVE') return 'badge badge--green';
-  if (s === 'INACTIVE') return 'badge badge--gray';
-  if (s === 'PENDING') return 'badge badge--orange';
+const statusBadgeClass = (user: any) => {
+  const status = user?.status;
+
+  if (status === 'ACTIVE') return 'badge badge--green';
+  if (status === 'INACTIVE') return 'badge badge--gray';
+  if (status === 'PENDING') return 'badge badge--orange';
+
   return 'badge badge--gray';
 };
 
@@ -296,59 +304,77 @@ const ROLE_LABEL: Record<string, string> = {
   ROLE_STORE_EDITOR: '店家編輯',
 };
 
-const roleText = (u: any) => {
-  const roles = u?.roles;
+const roleText = (user: any) => {
+  const roles = user?.roles;
+
   if (!Array.isArray(roles) || roles.length === 0) return '-';
+
   return roles
-    .map((r: any) => {
-      const code = typeof r === 'string' ? r : (r?.code ?? r?.name ?? '');
+    .map((role: any) => {
+      const code =
+        typeof role === 'string' ? role : (role?.code ?? role?.name ?? '');
+
       return ROLE_LABEL[code] || code;
     })
     .filter(Boolean)
     .join(', ');
 };
 
-const storeText = (u: any) => {
-  const stores = u?.stores;
+const storeText = (user: any) => {
+  const stores = user?.stores;
+
   if (!Array.isArray(stores) || stores.length === 0) return '-';
+
   return stores
-    .map((s: any) => {
-      const name = s?.storeName || s?.id || '';
-      const roleType = s?.roleType ? `(${s.roleType})` : '';
+    .map((store: any) => {
+      const name = store?.storeName || store?.name || store?.id || '';
+      const roleType = store?.roleType ? `(${store.roleType})` : '';
+
       return `${name}${roleType}`;
     })
     .filter(Boolean)
     .join(', ');
 };
 
-/* filtered list — now handled server-side via queryAdminUsers */
-const filteredList = computed(() => list.value ?? []);
-
-/* sorting */
+/* --------------------------------------
+ * Sorting
+ * -------------------------------------- */
 const sortKey = ref('');
 const sortOrder = ref<'asc' | 'desc' | ''>('asc');
 
-const handleSort = ({ key, order }: any) => {
+const handleSort = ({
+  key,
+  order,
+}: {
+  key: string;
+  order: 'asc' | 'desc' | '';
+}) => {
   sortKey.value = key;
   sortOrder.value = order;
   goToPage(1);
 };
 
 const sortedList = computed(() => {
-  if (!sortKey.value || !sortOrder.value) return filteredList.value;
-  const arr = [...filteredList.value];
+  if (!sortKey.value || !sortOrder.value) return list.value;
+
+  const arr = [...list.value];
+
   arr.sort((a: any, b: any) =>
     compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
+
   return arr;
 });
 
-/* pagination */
+/* --------------------------------------
+ * Pagination
+ * -------------------------------------- */
 const pageLimitSize = ref(10);
+
 const {
   totalPages,
   currentPageItems,
@@ -359,7 +385,14 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
-/* columns */
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
+
+/* --------------------------------------
+ * Columns
+ * -------------------------------------- */
 const columns = [
   { field: 'email', label: 'Email/帳號', width: 220, sortable: true },
   { field: 'displayName', label: '顯示名稱', width: 160, sortable: true },
@@ -368,52 +401,110 @@ const columns = [
   { field: 'status', label: '狀態', width: 110, sortable: true },
   { field: 'lastLoginAt', label: '最後登入', width: 170, sortable: true },
   { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
-  { field: 'actions', label: '操作', width: 220 },
+  { field: 'actions', label: '操作', width: 240 },
 ];
 
-/* load list */
-const fetchList = async () => {
-  const condition = {
-    keyword: keyword.value?.trim() || undefined,
-    status: status.value?.trim() || undefined,
-    storeId: storeId.value?.trim() || undefined,
-    roleCode: roleCode.value?.trim() || undefined,
-  };
-  await query(() => queryAdminUsers({ condition }));
-  goToPage(1);
+/* --------------------------------------
+ * Query
+ * -------------------------------------- */
+const normalizeCondition = (values: any) => {
+  const condition = { ...(values ?? {}) };
+
+  Object.keys(condition).forEach((key) => {
+    if (
+      condition[key] === '' ||
+      condition[key] === null ||
+      condition[key] === undefined
+    ) {
+      delete condition[key];
+    }
+  });
+
+  return condition;
 };
 
-const onSubmit = handleSubmit(async () => {
-  await fetchList();
-  isSearch.value = true;
-});
+const onSubmit = async (values: any) => {
+  const condition = {
+    keyword: values.keyword ?? '',
+    status: values.status ?? '',
+    storeId: values.storeId ?? '',
+    roleCode: values.roleCode ?? '',
+  };
 
-/* selection & bulk actions */
+  const cleanCondition = normalizeCondition(condition);
+
+  await query(async () => {
+    const res = await queryAdminUsers({ condition: cleanCondition });
+    const data = (res as any)?.data ?? res;
+
+    if (Array.isArray(data)) return data;
+    if (Array.isArray((data as any)?.list)) return (data as any).list;
+    if (Array.isArray((res as any)?.list)) return (res as any).list;
+
+    return [];
+  });
+
+  adminUserStore.setSearchCondition(condition);
+  selectedIds.value = [];
+  goToPage(1);
+  isSearch.value = true;
+};
+
+const resetFilters = async () => {
+  const values = {
+    keyword: '',
+    status: '',
+    storeId: '',
+    roleCode: '',
+  };
+
+  formRef.value?.setValues(values);
+  await onSubmit(values);
+};
+
+const refresh = async () => {
+  const values = formRef.value?.values || initValues.value;
+  await onSubmit(values);
+};
+
+/* --------------------------------------
+ * Selection & Bulk actions
+ * -------------------------------------- */
 const selectedIds = ref<string[]>([]);
+
+watch(
+  selectedIds,
+  (value) => {
+    adminUserStore.setSelectedIds([...value]);
+  },
+  { deep: true },
+);
+
 const selectedRows = computed(() =>
-  (list.value || []).filter((x: any) => selectedIds.value.includes(x.id))
+  list.value.filter((user: any) => selectedIds.value.includes(user.id)),
 );
 
 const canActivate = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((u: any) => u?.status === 'INACTIVE')
+    selectedRows.value.every((user: any) => user?.status === 'INACTIVE'),
 );
 
 const canDeactivate = computed(
   () =>
     selectedRows.value.length > 0 &&
     selectedRows.value.every(
-      (u: any) =>
-        u?.status === 'ACTIVE' && String(u?.id) !== String(currentUserId.value)
-    )
+      (user: any) =>
+        user?.status === 'ACTIVE' &&
+        String(user?.id) !== String(currentUserId.value),
+    ),
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
 
 const doActivateSelected = async () => {
   if (!canActivate.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '只有「停用(INACTIVE)」的帳號才能啟用。',
       iconType: 'warning',
@@ -421,20 +512,23 @@ const doActivateSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '啟用確認',
-    message: '確定要啟用選中的帳號嗎？',
+    message: `確定要啟用選中的 ${selectedIds.value.length} 筆帳號嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => activateAdminUser(id))),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -444,18 +538,22 @@ const doActivateSelected = async () => {
       });
 
       selectedIds.value = [];
-      await fetchList();
+      adminUserStore.clearSelectedIds();
+      await refresh();
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
 const doDeactivateSelected = async () => {
   const selfIncluded = selectedRows.value.some(
-    (u: any) => String(u?.id) === String(currentUserId.value)
+    (user: any) => String(user?.id) === String(currentUserId.value),
   );
+
   if (selfIncluded) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '不可停用自己的帳號。',
       iconType: 'warning',
@@ -464,7 +562,7 @@ const doDeactivateSelected = async () => {
   }
 
   if (!canDeactivate.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '只有「啟用(ACTIVE)」的帳號才能停用。',
       iconType: 'warning',
@@ -472,22 +570,25 @@ const doDeactivateSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '停用確認',
-    message: '確定要停用選中的帳號嗎？',
+    message: `確定要停用選中的 ${selectedIds.value.length} 筆帳號嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) => deactivateAdminUser(id))
+        selectedIds.value.map((id) => deactivateAdminUser(id)),
       ),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -497,29 +598,35 @@ const doDeactivateSelected = async () => {
       });
 
       selectedIds.value = [];
-      await fetchList();
+      adminUserStore.clearSelectedIds();
+      await refresh();
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
 const doDeleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆帳號嗎？（後端為軟刪除＝停用）`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteAdminUser(id))),
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -529,46 +636,122 @@ const doDeleteSelected = async () => {
       });
 
       selectedIds.value = [];
-      await fetchList();
+      adminUserStore.clearSelectedIds();
+      await refresh();
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
 const doResetPassword = async (item: any) => {
   const userId = item?.id;
+
   if (!userId) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '重設密碼確認',
     message: '確定要重設此帳號密碼嗎？',
   });
+
   if (!ok) return;
 
   await executeApi<{ newPassword: string }>({
     fn: async () => resetAdminUserPassword(userId),
-    onSuccess: async (data) => {
-      await dialogStore.openInfoDialog({
+    onSuccess: async (res: any) => {
+      const data = res?.data ?? res;
+
+      await openInfoDialog({
         title: '新密碼',
         message: `新密碼：${data?.newPassword || '-'}`,
         iconType: 'success',
       });
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
-/* navigation */
-const navigateToDetail = (item: any) =>
-  router.push(`/home/admin-users/${item.id}`);
-const navigateToAddOwner = () => router.push('/home/admin-users/add-owner');
-const navigateToAddEditor = () => router.push('/home/admin-users/add-editor');
+/* --------------------------------------
+ * Save state / Navigation
+ * -------------------------------------- */
+const saveListState = () => {
+  adminUserStore.setList([...list.value]);
+  adminUserStore.setSearchCondition(formRef.value?.values || initValues.value);
+  adminUserStore.setSort(sortKey.value, sortOrder.value);
+  adminUserStore.setCurrentPage(currentPage.value);
+  adminUserStore.setPageLimitSize(pageLimitSize.value);
+  adminUserStore.setSelectedIds([...selectedIds.value]);
+};
 
+const navigateToDetail = (item: any) => {
+  if (!item?.id) return;
+
+  saveListState();
+  router.push(`/home/admin-users/${item.id}`);
+};
+
+const navigateToAddOwner = () => {
+  saveListState();
+  router.push('/home/admin-users/add-owner');
+};
+
+const navigateToAddEditor = () => {
+  saveListState();
+  router.push('/home/admin-users/add-editor');
+};
+
+/* --------------------------------------
+ * Lifecycle
+ * -------------------------------------- */
 onMounted(async () => {
   await loadStoreOptions();
-  await fetchList();
-  isSearch.value = true;
+
+  if (adminUserStore.list.length > 0 && !adminUserStore.shouldRefresh) {
+    list.value = [...adminUserStore.list];
+    initValues.value = { ...adminUserStore.searchCondition };
+
+    await nextTick();
+    formRef.value?.setValues(adminUserStore.searchCondition);
+
+    sortKey.value = adminUserStore.sortKey || '';
+    sortOrder.value = adminUserStore.sortOrder || 'asc';
+    pageLimitSize.value = adminUserStore.pageLimitSize;
+    selectedIds.value = [...adminUserStore.selectedIds];
+
+    await nextTick();
+    goToPage(adminUserStore.currentPage);
+
+    isSearch.value = true;
+    adminUserStore.resetAll();
+    return;
+  }
+
+  const condition = adminUserStore.shouldRefresh
+    ? { ...adminUserStore.searchCondition }
+    : { ...initValues.value };
+
+  initValues.value = { ...condition };
+
+  await nextTick();
+  formRef.value?.setValues(condition);
+
+  await onSubmit(condition);
+  adminUserStore.resetAll();
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.aul {
+  &__text-ellipsis {
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+</style>

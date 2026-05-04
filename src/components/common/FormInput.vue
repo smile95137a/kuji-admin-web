@@ -3,16 +3,15 @@
   <div class="form-input" :class="sizeClass">
     <!-- 標題 -->
     <label
-      v-if="!hideLabel"
+      v-if="showLabel"
       class="form-input__label"
       :for="id"
       :class="{ 'form-input__label--required': required }"
     >
       {{ label || '\u00A0' }}
-      <span v-if="required" class="form-input__asterisk">*</span>
     </label>
 
-    <!-- 控制列 -->
+    <!-- 控制列：input + addonRight -->
     <div class="form-input__control">
       <!-- 外框 -->
       <div
@@ -23,13 +22,13 @@
           'is-disabled': disabled,
           'is-readonly': readonly,
           'is-success': success,
+          'has-addon-left': !!$slots.addonLeft,
+          'has-clear': showClearButton,
+          'has-toggle': showToggle,
         }"
       >
         <!-- 左側 addon -->
-        <div
-          v-if="$slots.addonLeft"
-          class="form-input__addon form-input__addon--left"
-        >
+        <div v-if="$slots.addonLeft" class="form-input__addon-left">
           <slot name="addonLeft" />
         </div>
 
@@ -54,7 +53,6 @@
           @blur="onBlur"
         />
 
-        <!-- ✅ 檔案輸入框 -->
         <input
           v-else
           ref="inputEl"
@@ -73,13 +71,7 @@
 
         <!-- 清除按鈕 -->
         <button
-          v-if="
-            clearable &&
-            !disabled &&
-            !readonly &&
-            resolvedType !== 'file' &&
-            (modelValue ?? '') !== ''
-          "
+          v-if="showClearButton"
           type="button"
           class="form-input__clear"
           aria-label="清除"
@@ -101,22 +93,16 @@
             class="form-input__toggle-icon"
           />
         </button>
-
-        <!-- 右側 addon -->
-        <div
-          v-if="$slots.addonRight"
-          class="form-input__addon form-input__addon--right"
-        >
-          <slot name="addonRight" />
-        </div>
       </div>
+
+      <!-- 右側 addon：獨立於 input 外框，會有 gap -->
+      <slot name="addonRight" />
     </div>
 
     <!-- 錯誤訊息 / 輔助文字 -->
     <span class="form-input__error" v-if="error">{{ error }}</span>
     <span class="form-input__help" v-else-if="help">{{ help }}</span>
 
-    <!-- ✅ 顯示檔案名稱 -->
     <div
       v-if="resolvedType === 'file' && fileName"
       class="form-input__file-name"
@@ -133,7 +119,7 @@ type Size = 'sm' | 'md' | 'lg';
 
 const props = withDefaults(
   defineProps<{
-    modelValue?: string | number | null;
+    modelValue?: any;
     label?: string;
     id?: string;
     name?: string;
@@ -152,18 +138,30 @@ const props = withDefaults(
     minlength?: string | number;
     autocomplete?: string;
     autofocus?: boolean;
-
-    hideLabel?: boolean;
+    showLabel?: boolean;
   }>(),
   {
+    modelValue: '',
+    label: '',
+    id: undefined,
+    name: undefined,
     type: 'text',
+    placeholder: '',
+    error: '',
+    help: '',
+    required: false,
+    disabled: false,
+    readonly: false,
+    success: false,
     size: 'md',
     clearable: false,
     togglePassword: false,
+    maxlength: undefined,
+    minlength: undefined,
     autocomplete: 'off',
     autofocus: false,
-    hideLabel: false,
-  }
+    showLabel: true,
+  },
 );
 
 const emit = defineEmits<{
@@ -171,29 +169,37 @@ const emit = defineEmits<{
   (e: 'focus', ev: FocusEvent): void;
   (e: 'blur', ev: FocusEvent): void;
   (e: 'clear'): void;
-  (e: 'change', ev: Event): void; // ✅ 新增 file input 專用事件
+  (e: 'change', ev: Event): void;
 }>();
 
 const inputEl = ref<HTMLInputElement | null>(null);
 const isFocus = ref(false);
 const isReveal = ref(false);
-const fileName = ref<string>(''); // ✅ 用來顯示選擇的檔名
+const fileName = ref<string>('');
 
 const sizeClass = computed(() => {
-  return props.size === 'sm'
-    ? 'form-input--sm'
-    : props.size === 'lg'
-    ? 'form-input--lg'
-    : '';
+  if (props.size === 'sm') return 'form-input--sm';
+  if (props.size === 'lg') return 'form-input--lg';
+  return '';
 });
 
 const showToggle = computed(
-  () => props.togglePassword && props.type === 'password'
+  () => props.togglePassword && props.type === 'password',
 );
 
 const resolvedType = computed(() => {
   if (showToggle.value) return isReveal.value ? 'text' : 'password';
   return props.type;
+});
+
+const showClearButton = computed(() => {
+  return (
+    props.clearable &&
+    !props.disabled &&
+    !props.readonly &&
+    resolvedType.value !== 'file' &&
+    (props.modelValue ?? '') !== ''
+  );
 });
 
 function onInput(e: Event) {
@@ -220,8 +226,9 @@ function onClear() {
 function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
+
   fileName.value = file?.name || '';
-  emit('change', e); // ✅ 回傳整個 event 給父層
+  emit('change', e);
 }
 
 onMounted(() => {
@@ -230,11 +237,3 @@ onMounted(() => {
   }
 });
 </script>
-
-<style scoped>
-.form-input__file-name {
-  margin-top: 4px;
-  font-size: 0.875rem;
-  color: #555;
-}
-</style>

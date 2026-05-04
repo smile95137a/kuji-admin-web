@@ -41,7 +41,11 @@
         <div class="w-50 w-md-100 p-6">
           <FormInput
             label="金幣餘額"
-            :modelValue="detail?.goldCoins !== undefined && detail?.goldCoins !== null ? String(detail.goldCoins) : '-'"
+            :modelValue="
+              detail?.goldCoins !== undefined && detail?.goldCoins !== null
+                ? String(detail.goldCoins)
+                : '-'
+            "
             disabled
           />
         </div>
@@ -49,7 +53,11 @@
         <div class="w-50 w-md-100 p-6">
           <FormInput
             label="紅利餘額"
-            :modelValue="detail?.bonusCoins !== undefined && detail?.bonusCoins !== null ? String(detail.bonusCoins) : '-'"
+            :modelValue="
+              detail?.bonusCoins !== undefined && detail?.bonusCoins !== null
+                ? String(detail.bonusCoins)
+                : '-'
+            "
             disabled
           />
         </div>
@@ -301,14 +309,22 @@
         <div v-if="walletLoading" class="m-t-8">載入中...</div>
         <div v-else-if="wallet" class="flex flex-wrap m-t-8">
           <div class="w-50 w-md-100 p-6">
-            <FormInput label="點數餘額" :modelValue="String(wallet.balance ?? wallet.coinBalance ?? '-')" disabled />
+            <FormInput
+              label="點數餘額"
+              :modelValue="String(wallet.balance ?? wallet.coinBalance ?? '-')"
+              disabled
+            />
           </div>
           <div class="w-50 w-md-100 p-6">
-            <FormInput label="更新時間" :modelValue="formatDateTime(wallet.updatedAt)" disabled />
+            <FormInput
+              label="更新時間"
+              :modelValue="formatDateTime(wallet.updatedAt)"
+              disabled
+            />
           </div>
         </div>
         <div v-else class="m-t-8">
-          <p class="form__text" style="opacity:0.6">無錢包資訊</p>
+          <p class="form__text" style="opacity: 0.6">無錢包資訊</p>
         </div>
       </div>
 
@@ -344,7 +360,17 @@
             :min="1"
             placeholder="例如：100"
           />
-          <p v-if="adjustAmountError" class="form__text" style="color:var(--color-red, red); font-size:12px; margin-top:4px;">{{ adjustAmountError }}</p>
+          <p
+            v-if="adjustAmountError"
+            class="form__text"
+            style="
+              color: var(--color-red, red);
+              font-size: 12px;
+              margin-top: 4px;
+            "
+          >
+            {{ adjustAmountError }}
+          </p>
         </div>
         <div class="w-100 p-6">
           <FormInput
@@ -352,7 +378,17 @@
             v-model="adjustRemark"
             placeholder="請填寫調整原因"
           />
-          <p v-if="adjustRemarkError" class="form__text" style="color:var(--color-red, red); font-size:12px; margin-top:4px;">{{ adjustRemarkError }}</p>
+          <p
+            v-if="adjustRemarkError"
+            class="form__text"
+            style="
+              color: var(--color-red, red);
+              font-size: 12px;
+              margin-top: 4px;
+            "
+          >
+            {{ adjustRemarkError }}
+          </p>
         </div>
       </div>
 
@@ -385,7 +421,9 @@
             <span>{{ formatDateTime(item.loginTime) }}</span>
           </template>
           <template #cell-status="{ item }">
-            <span :style="item.status === 'SUCCESS' ? 'color:green' : 'color:red'">
+            <span
+              :style="item.status === 'SUCCESS' ? 'color:green' : 'color:red'"
+            >
               {{ item.status }}
             </span>
           </template>
@@ -395,7 +433,7 @@
         </ReportTable>
       </template>
       <template v-else-if="loginHistoryLoaded">
-        <p class="form__text m-t-8" style="opacity:0.6">無登入記錄</p>
+        <p class="form__text m-t-8" style="opacity: 0.6">無登入記錄</p>
       </template>
     </MCard>
   </div>
@@ -416,13 +454,19 @@
       </div>
       <div class="flex justify-center m-t-8 gap-x-12">
         <MButton type="button" @click="loadPrizeBox">查詢賞品盒</MButton>
-        <MButton type="button" variant="secondary" @click="resetPrizeBox">清除</MButton>
+        <MButton type="button" variant="secondary" @click="resetPrizeBox"
+          >清除</MButton
+        >
       </div>
 
       <template v-if="prizeBoxList.length > 0">
         <ReportTable
           class="m-t-12"
-          :columns="prizeBoxMode === 'summary' ? prizeBoxSummaryColumns : prizeBoxDetailColumns"
+          :columns="
+            prizeBoxMode === 'summary'
+              ? prizeBoxSummaryColumns
+              : prizeBoxDetailColumns
+          "
           :items="prizeBoxList"
           :row-key="prizeBoxMode === 'summary' ? 'storeId' : 'id'"
           :useWidthClass="true"
@@ -436,7 +480,7 @@
         </ReportTable>
       </template>
       <template v-else-if="prizeBoxSearched">
-        <p class="form__text m-t-8" style="opacity:0.6">無賞品盒資料</p>
+        <p class="form__text m-t-8" style="opacity: 0.6">無賞品盒資料</p>
       </template>
     </MCard>
   </div>
@@ -468,14 +512,14 @@ import {
   coinAdjust,
 } from '@/services/adminFrontendUserService';
 
-import {
-  getUserWallet,
-} from '@/services/adminWalletService';
+import { getUserWallet } from '@/services/adminWalletService';
 
 import {
   getPrizeBoxByUserId,
   getPrizeBoxSummaryByStore,
 } from '@/services/adminPrizeBoxService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 interface SelectOption {
   label: string;
@@ -497,8 +541,10 @@ const detail = ref<any>(null);
 const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
 
 /* 角色判斷 */
-const isAdmin = computed(() =>
-  Array.isArray(authStore.user?.roles) && authStore.user.roles.includes('ROLE_ADMIN')
+const isAdmin = computed(
+  () =>
+    Array.isArray(authStore.user?.roles) &&
+    authStore.user.roles.includes('ROLE_ADMIN'),
 );
 
 /* 帳號狀態 */
@@ -726,20 +772,16 @@ const loadDetail = async () => {
 
 /* 管理員操作按鈕 enabled（不屬於 update req，但保留） */
 const canActivate = computed(
-  () =>
-    detail.value?.status &&
-    detail.value.status !== 'ACTIVE',
+  () => detail.value?.status && detail.value.status !== 'ACTIVE',
 );
 const canDeactivate = computed(() => detail.value?.status === 'ACTIVE');
 const canSuspend = computed(
-  () =>
-    detail.value?.status &&
-    detail.value.status !== 'SUSPENDED',
+  () => detail.value?.status && detail.value.status !== 'SUSPENDED',
 );
 
 /* submit (update) */
 const onSubmit = handleSubmit(async (values) => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '儲存確認',
     message: '確定要儲存會員資料嗎？',
   });
@@ -787,7 +829,7 @@ const onSubmit = handleSubmit(async (values) => {
   await executeApi({
     fn: async () => updateFrontendUser(id.value, payload),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '儲存成功',
         iconType: 'success',
@@ -800,7 +842,7 @@ const onSubmit = handleSubmit(async (values) => {
 
 /* actions（管理員操作） */
 const activateOne = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '啟用確認',
     message: '確定要啟用此會員嗎？',
   });
@@ -809,7 +851,7 @@ const activateOne = async () => {
   await executeApi({
     fn: async () => activateFrontendUser(id.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '已啟用',
         iconType: 'success',
@@ -821,7 +863,7 @@ const activateOne = async () => {
 };
 
 const deactivateOne = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '停用確認',
     message: '確定要停用此會員嗎？',
   });
@@ -830,7 +872,7 @@ const deactivateOne = async () => {
   await executeApi({
     fn: async () => deactivateFrontendUser(id.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '已停用',
         iconType: 'success',
@@ -842,7 +884,7 @@ const deactivateOne = async () => {
 };
 
 const suspendOne = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '暫停確認',
     message: '確定要暫停此會員嗎？',
   });
@@ -851,7 +893,7 @@ const suspendOne = async () => {
   await executeApi({
     fn: async () => suspendFrontendUser(id.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '已暫停',
         iconType: 'success',
@@ -863,7 +905,7 @@ const suspendOne = async () => {
 };
 
 const unlockOne = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '解鎖確認',
     message: '確定要解除此會員的帳號鎖定嗎？解鎖後會員可立即嘗試登入。',
   });
@@ -872,7 +914,7 @@ const unlockOne = async () => {
   await executeApi({
     fn: async () => unlockFrontendUser(id.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '帳號鎖定已解除',
         iconType: 'success',
@@ -998,7 +1040,7 @@ const submitCoinAdjust = async () => {
   const coinLabel = adjustCoinType.value === 'GOLD' ? '金幣' : '紅利';
   const dirLabel = adjustDirection.value === 'ADD' ? '增加' : '扣除';
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '確認調整',
     message: `確定要對此會員${dirLabel} ${amount} ${coinLabel}？\n調整後預期餘額：${expectedNew} ${coinLabel}`,
   });
@@ -1013,8 +1055,9 @@ const submitCoinAdjust = async () => {
         remark: adjustRemark.value.trim(),
       }),
     onSuccess: async (res: any) => {
-      const newBalance = res?.data?.newBalance ?? res?.data?.balance ?? expectedNew;
-      await dialogStore.openInfoDialog({
+      const newBalance =
+        res?.data?.newBalance ?? res?.data?.balance ?? expectedNew;
+      await openInfoDialog({
         title: '提示訊息',
         message: `調整成功！新餘額：${newBalance} ${coinLabel}`,
         iconType: 'success',

@@ -1,67 +1,67 @@
-/* ===========================
-   Global Brand Tokens
-   =========================== */
-
-/* Brand: iPhone Orange */
-$brand: #ff9500;
-$brand-hover: #ff7a00;
-$brand-dark: #e56f00;
-
-/* Light variations */
-$brand-light: #ffe8cc; // 最淡橘（表格 striping）
-$brand-light-hover: #ffd8a6;
-
-/* Neutral */
-$ink-900: #1f2937;
-$ink-800: #374151;
-$ink-700: #4b5563;
-$muted: #6b7280;
-$border-light: #e5e7eb;
-$bg-light: #f9fafb;
-
-/* State */
-$danger: #ef4444;
-
-/* Shadows */
-$shadow-orange: rgba(255, 149, 0, 0.08);
+// src/assets/styles/components/_reportTable.scss
+@use 'sass:color';
+@use '../base/tokens' as *;
 
 .report-table {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: #fff;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  background: $bg-light;
   border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px $shadow-orange;
+  overflow: visible;
+  box-shadow: 0 1px 3px rgba($ink-900, 0.08);
+  font-size: 1.3rem;
 
+  /**
+   * X 軸不要在 table 裡面出現。
+   * 交給 sidebar-layout__body 去 overflow-x。
+   */
   &__head {
     flex-shrink: 0;
-    overflow-y: auto;
-    border-bottom: 1px solid $border-light;
+    overflow-x: visible;
+    overflow-y: hidden;
+    border-bottom: 1px solid color.mix($border-light, #fff, 80%);
   }
 
   &__body {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    min-height: 0;
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+
+  &__footer {
+    flex-shrink: 0;
+    overflow-x: visible;
+    overflow-y: hidden;
+    border-top: 1px solid color.mix($border-light, #fff, 80%);
   }
 
   table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     table-layout: fixed;
-    background: #fff;
+    background: $bg-light;
   }
 
   &__cell {
-    padding: 10px 12px;
+    padding: 8px 10px;
     text-align: left;
-    border-bottom: 1px solid #ececec;
-    border-right: 1px solid #f3f3f3;
+    border-bottom: 1px solid color.mix($border-light, #fff, 72%);
+    border-right: 1px solid color.mix($border-light, #fff, 60%);
     overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
     word-break: break-word;
+    overflow-wrap: anywhere;
     color: $ink-900;
+    vertical-align: middle;
+    box-sizing: border-box;
+    line-height: 1.45;
 
     &:last-child {
       border-right: none;
@@ -70,12 +70,44 @@ $shadow-orange: rgba(255, 149, 0, 0.08);
     &--right {
       text-align: right;
     }
+
+    &--sticky-left {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      background: inherit;
+    }
+
+    &--sticky-left-body {
+      z-index: 3;
+    }
   }
 
   &__cell-inner {
-    min-height: 20px;
-    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 18px;
+    display: block;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+
+  &__header-inner {
+    width: 100%;
+    min-width: 0;
+    display: inline-flex;
     align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
   }
 
   @for $i from 1 through 500 {
@@ -86,9 +118,6 @@ $shadow-orange: rgba(255, 149, 0, 0.08);
     }
   }
 
-  /* ===============================
-   * 橘色表頭
-   * =============================== */
   thead {
     background: linear-gradient(180deg, $brand, $brand-dark);
     color: #fff;
@@ -98,12 +127,22 @@ $shadow-orange: rgba(255, 149, 0, 0.08);
       top: 0;
       z-index: 2;
       font-weight: 600;
-      padding: 10px 12px;
-      border-bottom: 1px solid $brand-dark;
+      border-bottom: 1px solid color.adjust($brand-dark, $lightness: -4%);
+      padding: 8px 10px;
+      color: #fff;
+      box-sizing: border-box;
+      overflow: hidden;
+      white-space: normal;
+      text-overflow: unset;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: middle;
+      line-height: 1.35;
 
       &:first-child {
         border-top-left-radius: 8px;
       }
+
       &:last-child {
         border-top-right-radius: 8px;
         border-right: none;
@@ -111,17 +150,18 @@ $shadow-orange: rgba(255, 149, 0, 0.08);
     }
   }
 
-  /* ===============================
-   * bordered
-   * =============================== */
   &--bordered {
     border: 1px solid $border-light;
-    box-shadow: 0 2px 6px $shadow-orange;
+    box-shadow: 0 2px 6px rgba($ink-900, 0.05);
+
+    table {
+      border: none;
+    }
 
     td,
     th {
-      border-bottom: 1px solid #ececec;
-      border-right: 1px solid #f0f0f0;
+      border-bottom: 1px solid color.mix($border-light, #fff, 72%);
+      border-right: 1px solid color.mix($border-light, #fff, 60%);
     }
 
     tbody tr:last-child td {
@@ -129,65 +169,249 @@ $shadow-orange: rgba(255, 149, 0, 0.08);
     }
   }
 
-  /* ===============================
-   * striped
-   * =============================== */
   &--striped {
     tbody tr:nth-child(odd) td {
-      background-color: $brand-light; // very light orange
+      background-color: color.mix($brand-light, #fff, 62%);
     }
 
     tbody tr:nth-child(even) td {
-      background-color: #ffffff;
+      background-color: $bg-light;
     }
 
     tbody tr:hover td {
-      background-color: $brand-light-hover; // hover 橘
-      transition: background-color 0.2s ease;
+      background-color: $brand-light-hover;
+      transition: background-color 0.2s ease-in-out;
     }
   }
 
   &--bordered.report-table--striped {
     tbody tr:hover td {
-      border-color: $brand-light-hover;
+      border-color: color.mix($brand, $border-light, 28%);
     }
   }
 
-  /* ===============================
-   * scrollbar
-   * =============================== */
-  &__body::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &__body::-webkit-scrollbar-thumb {
-    background-color: rgba($brand, 0.4);
-    border-radius: 4px;
-  }
-
-  &__body::-webkit-scrollbar-thumb:hover {
-    background-color: rgba($brand, 0.65);
-  }
-
-  &__body::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-
-  /* ===============================
-   * 排序箭頭
-   * =============================== */
-  &__sort-indicator {
+  &__sort-indicator,
+  &__sort-icon {
+    flex-shrink: 0;
     margin-left: 6px;
     font-size: 12px;
+    vertical-align: middle;
     cursor: pointer;
+    user-select: none;
+    color: currentColor;
+    transition: color 0.2s ease-in-out;
 
-    &.is-inactive {
-      color: $brand-light-hover;
+    &:hover {
+      color: $brand-light;
+    }
+  }
+
+  /**
+   * fixed-min：欄位照 column width 撐開。
+   * 不在 table 內部出現 X 軸。
+   */
+  &--fixed-min {
+    .report-table__head,
+    .report-table__body,
+    .report-table__footer {
+      overflow-x: visible;
     }
 
-    &.is-active {
-      color: #fff;
-      font-weight: 600;
+    table {
+      width: max-content;
+      min-width: 100%;
+      table-layout: fixed;
+    }
+
+    .report-table__cell {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+      text-overflow: unset;
+      vertical-align: middle;
+    }
+
+    .report-table__cell-inner {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      white-space: normal;
+      text-overflow: unset;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.45;
+    }
+
+    .report-table__header-inner {
+      overflow: hidden;
+      white-space: normal;
+      text-overflow: unset;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
+    }
+  }
+}
+
+/* ======================================================
+ * 單行省略模式
+ * 如果某些頁面不想換行，可以另外加：
+ *
+ * <ReportTable
+ *   class="report-table--nowrap"
+ *   ...
+ * />
+ * ====================================================== */
+.report-table--nowrap {
+  .report-table__cell {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-break: normal;
+    overflow-wrap: normal;
+    vertical-align: middle;
+  }
+
+  .report-table__cell-inner {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 18px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  .report-table__header-inner {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  thead {
+    th {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      word-break: normal;
+      overflow-wrap: normal;
+      vertical-align: middle;
+    }
+  }
+
+  &.report-table--fixed-min {
+    .report-table__cell {
+      white-space: nowrap;
+      word-break: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+
+    .report-table__cell-inner {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+
+    .report-table__header-inner {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+  }
+}
+
+/* ======================================================
+ * 保留舊 class：report-table--wrap
+ * ====================================================== */
+.report-table--wrap {
+  .report-table__cell {
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+  }
+
+  .report-table__cell-inner {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 18px;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+
+  .report-table__header-inner {
+    width: 100%;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
+
+  thead {
+    th {
+      overflow: hidden;
+      white-space: normal;
+      text-overflow: unset;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: middle;
+    }
+  }
+
+  &.report-table--fixed-min {
+    .report-table__cell {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+      text-overflow: unset;
+      vertical-align: middle;
+    }
+
+    .report-table__cell-inner {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      white-space: normal;
+      text-overflow: unset;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.45;
+    }
+
+    .report-table__header-inner {
+      overflow: hidden;
+      white-space: normal;
+      text-overflow: unset;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
     }
   }
 }

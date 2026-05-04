@@ -10,6 +10,7 @@ import FormInput from '@/components/common/FormInput.vue';
 
 import { useDialogStore } from '@/stores';
 import { createStore } from '@/services/adminStoreService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
 const dialogStore = useDialogStore();
@@ -21,10 +22,7 @@ const includeOwner = ref(false);
 
 const schema = yup.object({
   storeName: yup.string().required('店家名稱為必填'),
-  shortDescription: yup
-    .string()
-    .max(100, '簡短描述最多 100 字')
-    .optional(),
+  shortDescription: yup.string().max(100, '簡短描述最多 100 字').optional(),
   phone: yup.string().optional(),
   email: yup
     .string()
@@ -44,11 +42,13 @@ const { handleSubmit, isSubmitting } = useForm({
   validateOnMount: false,
 });
 
-const { value: storeName, errorMessage: storeNameError } = useField<string>('storeName');
+const { value: storeName, errorMessage: storeNameError } =
+  useField<string>('storeName');
 const { value: shortDescription } = useField<string>('shortDescription');
 const { value: phone } = useField<string>('phone');
 const { value: email } = useField<string>('email');
-const { value: ownerUsername, errorMessage: ownerUsernameError } = useField<string>('ownerUsername');
+const { value: ownerUsername, errorMessage: ownerUsernameError } =
+  useField<string>('ownerUsername');
 const { value: ownerPassword } = useField<string>('ownerPassword');
 
 /* ==============================
@@ -72,21 +72,21 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     const res = await createStore(req);
     if (res?.success !== false) {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '店家已成功建立',
         iconType: 'success',
       });
       router.push({ name: 'StoreList' });
     } else {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: res?.message ?? '建立失敗，請重試',
         iconType: 'warning',
       });
     }
   } catch (e: any) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: e?.response?.data?.message ?? '建立失敗，請聯絡系統管理員',
       iconType: 'warning',
@@ -98,7 +98,12 @@ const onSubmit = handleSubmit(async (values) => {
 <template>
   <MCard>
     <div class="flex align-center gap-x-12 m-b-16">
-      <MButton variant="secondary" size="sm" @click="router.push({ name: 'StoreList' })">← 返回</MButton>
+      <MButton
+        variant="secondary"
+        size="sm"
+        @click="router.push({ name: 'StoreList' })"
+        >← 返回</MButton
+      >
       <p class="form__text form__text--title" style="margin: 0">新增店家</p>
     </div>
 
@@ -125,7 +130,9 @@ const onSubmit = handleSubmit(async (values) => {
               />
               <span
                 class="sc__char-count"
-                :class="{ 'sc__char-count--over': (shortDescription?.length ?? 0) > 100 }"
+                :class="{
+                  'sc__char-count--over': (shortDescription?.length ?? 0) > 100,
+                }"
               >
                 {{ shortDescription?.length ?? 0 }} / 100
               </span>
@@ -158,7 +165,11 @@ const onSubmit = handleSubmit(async (values) => {
             v-model="includeOwner"
             class="sc__checkbox"
           />
-          <label for="includeOwner" class="sc__section-title" style="cursor: pointer; margin: 0">
+          <label
+            for="includeOwner"
+            class="sc__section-title"
+            style="cursor: pointer; margin: 0"
+          >
             同步建立負責人帳號（可選）
           </label>
         </div>

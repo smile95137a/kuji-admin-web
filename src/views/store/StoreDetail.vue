@@ -1,10 +1,7 @@
 <!-- src/views/store/StoreDetail.vue -->
 <template>
   <!-- Disabled warning banner -->
-  <div
-    v-if="detail && isDisabled"
-    class="sd__disabled-banner"
-  >
+  <div v-if="detail && isDisabled" class="sd__disabled-banner">
     ⚠️ 此店家已停用。重新啟用後，商品與廣告需手動重新上架。
   </div>
 
@@ -12,7 +9,9 @@
     <!-- Top: back + actions -->
     <div class="flex align-center justify-between gap-x-12 m-b-16 flex-wrap">
       <div class="flex align-center gap-x-12">
-        <MButton variant="secondary" size="sm" @click="goBack">← 返回列表</MButton>
+        <MButton variant="secondary" size="sm" @click="goBack"
+          >← 返回列表</MButton
+        >
         <p class="form__text form__text--title" style="margin: 0">店家詳情</p>
       </div>
       <div class="flex gap-x-8" v-if="detail">
@@ -55,10 +54,7 @@
             alt="Logo"
             class="sd__logo"
           />
-          <div
-            v-else
-            class="sd__logo sd__logo--placeholder"
-          >
+          <div v-else class="sd__logo sd__logo--placeholder">
             {{ (detail.name || '?').charAt(0) }}
           </div>
           <div>
@@ -100,7 +96,10 @@
         </div>
 
         <!-- Social links -->
-        <div class="sd__social" v-if="detail.facebookUrl || detail.instagramUrl">
+        <div
+          class="sd__social"
+          v-if="detail.facebookUrl || detail.instagramUrl"
+        >
           <a
             v-if="detail.facebookUrl"
             :href="detail.facebookUrl"
@@ -145,10 +144,7 @@
           </div>
           <div class="sd__kv">
             <span class="sd__k">Email</span>
-            <span
-              class="sd__v clickable"
-              @click="navigateToOwner"
-            >
+            <span class="sd__v clickable" @click="navigateToOwner">
               {{ detail.owner.email || '-' }}
             </span>
           </div>
@@ -199,10 +195,8 @@ import StoreDisableModal from './StoreDisableModal.vue';
 import StoreEnableModal from './StoreEnableModal.vue';
 
 import { useDialogStore, useAuthStore } from '@/stores';
-import {
-  getStoreById,
-  updateStoreStatus,
-} from '@/services/adminStoreService';
+import { getStoreById, updateStoreStatus } from '@/services/adminStoreService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Router / Auth
@@ -261,7 +255,10 @@ function statusBadgeClass(s: string): string {
  * ============================== */
 const loadDetail = async () => {
   const id = String(route.params.id ?? '');
-  if (!id) { loadError.value = '無效的店家 ID'; return; }
+  if (!id) {
+    loadError.value = '無效的店家 ID';
+    return;
+  }
 
   loading.value = true;
   loadError.value = '';
@@ -271,9 +268,11 @@ const loadDetail = async () => {
   } catch (e: any) {
     const status = e?.response?.status;
     loadError.value =
-      status === 403 ? '無權限存取此店家' :
-      status === 404 ? '店家不存在' :
-      '載入失敗，請重試';
+      status === 403
+        ? '無權限存取此店家'
+        : status === 404
+          ? '店家不存在'
+          : '載入失敗，請重試';
   } finally {
     loading.value = false;
   }
@@ -294,7 +293,10 @@ const navigateToOwner = () => {
 };
 
 const goToProducts = () =>
-  router.push({ path: '/home/lottery-with-prizes', query: { storeId: route.params.id } });
+  router.push({
+    path: '/home/lottery-with-prizes',
+    query: { storeId: route.params.id },
+  });
 
 /* ==============================
  * Disable / Enable
@@ -302,22 +304,26 @@ const goToProducts = () =>
 const disableModalOpen = ref(false);
 const enableModalOpen = ref(false);
 
-const openDisable = () => { disableModalOpen.value = true; };
-const openEnable = () => { enableModalOpen.value = true; };
+const openDisable = () => {
+  disableModalOpen.value = true;
+};
+const openEnable = () => {
+  enableModalOpen.value = true;
+};
 
 const submitDisable = async () => {
   actionLoading.value = true;
   try {
     await updateStoreStatus(String(route.params.id), 'INACTIVE');
     detail.value.status = 'DISABLED';
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '店家已停用',
       iconType: 'success',
     });
     disableModalOpen.value = false;
   } catch {
-    dialogStore.openInfoDialog({
+    openInfoDialog({
       title: '提示訊息',
       message: '停用失敗，請重試',
       iconType: 'warning',
@@ -332,14 +338,14 @@ const submitEnable = async () => {
   try {
     await updateStoreStatus(String(route.params.id), 'ACTIVE');
     detail.value.status = 'ENABLED';
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '店家已啟用，請提醒管理員手動重新上架商品',
       iconType: 'success',
     });
     enableModalOpen.value = false;
   } catch {
-    dialogStore.openInfoDialog({
+    openInfoDialog({
       title: '提示訊息',
       message: '啟用失敗，請重試',
       iconType: 'warning',
@@ -364,7 +370,9 @@ onMounted(loadDetail);
     color: #6b7280;
   }
 
-  &__error { color: #ef4444; }
+  &__error {
+    color: #ef4444;
+  }
 
   &__disabled-banner {
     background: #fff7ed;
@@ -422,8 +430,14 @@ onMounted(loadDetail);
     font-size: 12px;
     font-weight: 600;
 
-    &--green { background: #dcfce7; color: #14532d; }
-    &--gray  { background: #f3f4f6; color: #6b7280; }
+    &--green {
+      background: #dcfce7;
+      color: #14532d;
+    }
+    &--gray {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
   }
 
   &__section {
@@ -458,7 +472,9 @@ onMounted(loadDetail);
     grid-template-columns: 80px 1fr;
     gap: 8px;
 
-    &--full { grid-column: 1 / -1; }
+    &--full {
+      grid-column: 1 / -1;
+    }
   }
 
   &__k {
@@ -487,7 +503,9 @@ onMounted(loadDetail);
     align-items: center;
     gap: 4px;
 
-    &:hover { text-decoration: underline; }
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   &__hours-grid {

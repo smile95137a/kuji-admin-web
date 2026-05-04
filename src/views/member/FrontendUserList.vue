@@ -95,7 +95,10 @@
 
           <template #cell-lastLoginAt="{ item }">
             <span v-if="item.lastLoginAt">
-              <DateFormatter :date="item.lastLoginAt" format="YYYY-MM-DD HH:mm:ss" />
+              <DateFormatter
+                :date="item.lastLoginAt"
+                format="YYYY-MM-DD HH:mm:ss"
+              />
             </span>
             <span v-else>從未登入</span>
           </template>
@@ -151,6 +154,8 @@ import {
   deactivateFrontendUser,
   suspendFrontendUser,
 } from '@/services/adminFrontendUserService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Types
@@ -220,27 +225,27 @@ const statusText = (status?: string) =>
   status === 'ACTIVE'
     ? '啟用'
     : status === 'INACTIVE'
-    ? '停用'
-    : status === 'DEACTIVATED'
-    ? '停用'
-    : status === 'SUSPENDED'
-    ? '暫停'
-    : status === 'LOCKED'
-    ? '鎖定'
-    : '-';
+      ? '停用'
+      : status === 'DEACTIVATED'
+        ? '停用'
+        : status === 'SUSPENDED'
+          ? '暫停'
+          : status === 'LOCKED'
+            ? '鎖定'
+            : '-';
 
 const providerText = (p?: string) =>
   p === 'LOCAL'
     ? '本地'
     : p === 'GOOGLE'
-    ? 'Google'
-    : p === 'FACEBOOK'
-    ? 'Facebook'
-    : p === 'LINE'
-    ? 'LINE'
-    : p
-    ? String(p)
-    : '-';
+      ? 'Google'
+      : p === 'FACEBOOK'
+        ? 'Facebook'
+        : p === 'LINE'
+          ? 'LINE'
+          : p
+            ? String(p)
+            : '-';
 
 /* ==============================
  * Sorting
@@ -263,7 +268,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -333,25 +338,24 @@ const onSubmit = async (values: any) => {
 const selectedIds = ref<string[]>([]);
 
 const selectedRows = computed(() =>
-  list.value.filter((row: any) => selectedIds.value.includes(row.id))
+  list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
-const canActivateRow = (r: any) =>
-  r?.status && r.status !== 'ACTIVE';
+const canActivateRow = (r: any) => r?.status && r.status !== 'ACTIVE';
 const canDeactivateRow = (r: any) => r?.status === 'ACTIVE';
-const canSuspendRow = (r: any) =>
-  r?.status && r.status !== 'SUSPENDED';
+const canSuspendRow = (r: any) => r?.status && r.status !== 'SUSPENDED';
 
 const canActivate = computed(
   () =>
-    selectedRows.value.length > 0 && selectedRows.value.every(canActivateRow)
+    selectedRows.value.length > 0 && selectedRows.value.every(canActivateRow),
 );
 const canDeactivate = computed(
   () =>
-    selectedRows.value.length > 0 && selectedRows.value.every(canDeactivateRow)
+    selectedRows.value.length > 0 && selectedRows.value.every(canDeactivateRow),
 );
 const canSuspend = computed(
-  () => selectedRows.value.length > 0 && selectedRows.value.every(canSuspendRow)
+  () =>
+    selectedRows.value.length > 0 && selectedRows.value.every(canSuspendRow),
 );
 
 const refresh = async () => {
@@ -362,7 +366,7 @@ const refresh = async () => {
 
 const activateSelected = async () => {
   if (!canActivate.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '選中的會員需為非 ACTIVE 才能啟用。',
       iconType: 'warning',
@@ -370,7 +374,7 @@ const activateSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '啟用確認',
     message: `確定要啟用選中的 ${selectedIds.value.length} 位會員嗎？`,
   });
@@ -379,13 +383,13 @@ const activateSelected = async () => {
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) => activateFrontendUser(id))
+        selectedIds.value.map((id) => activateFrontendUser(id)),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -402,7 +406,7 @@ const activateSelected = async () => {
 
 const deactivateSelected = async () => {
   if (!canDeactivate.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '只有 ACTIVE 的會員才能停用。',
       iconType: 'warning',
@@ -410,7 +414,7 @@ const deactivateSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '停用確認',
     message: `確定要停用選中的 ${selectedIds.value.length} 位會員嗎？`,
   });
@@ -419,13 +423,13 @@ const deactivateSelected = async () => {
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) => deactivateFrontendUser(id))
+        selectedIds.value.map((id) => deactivateFrontendUser(id)),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -442,7 +446,7 @@ const deactivateSelected = async () => {
 
 const suspendSelected = async () => {
   if (!canSuspend.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '選中的會員需為非 SUSPENDED 才能暫停。',
       iconType: 'warning',
@@ -450,7 +454,7 @@ const suspendSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '暫停確認',
     message: `確定要暫停選中的 ${selectedIds.value.length} 位會員嗎？`,
   });
@@ -459,13 +463,13 @@ const suspendSelected = async () => {
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        selectedIds.value.map((id) => suspendFrontendUser(id))
+        selectedIds.value.map((id) => suspendFrontendUser(id)),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0

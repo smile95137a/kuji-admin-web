@@ -1,31 +1,90 @@
 @use '../../shared/mixins' as *;
+
 $root-block-name: '.dialog';
-$root-block-style: '.downDialog';
 
 #{$root-block-name} {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: 99999999;
+
   $p: &;
   $p__main: #{$p}__main;
 
+  &--searchMember {
+    #{$p__main} {
+      width: calc(100% - 36px);
+      max-width: 1080px;
+      max-height: 86%;
+      min-height: 520px;
+      overflow: hidden;
+      border-radius: 18px;
+      background: #fff;
+
+      @media (max-width: 767px) {
+        max-width: calc(100% - 24px);
+        max-height: 90%;
+        min-height: 420px;
+      }
+    }
+  }
+
+  // 新增：獎品新增 / 編輯 Dialog
+  // 新增：獎品新增 / 編輯 Dialog
+  &--prizeForm {
+    #{$p__main} {
+      width: calc(100% - 36px);
+      max-width: 1080px;
+
+      // 重點：不要 height: auto，給明確高度，裡面的 body 才能 overflow-y:auto
+      height: min(88vh, 760px);
+      max-height: calc(100vh - 48px);
+      min-height: 520px;
+
+      overflow: hidden;
+      border-radius: 18px;
+      background: #fff;
+
+      // 讓 prize-form-dialog 可以吃滿高度
+      display: flex;
+      flex-direction: column;
+
+      @media (max-width: 767px) {
+        width: calc(100% - 24px);
+        max-width: calc(100% - 24px);
+        height: calc(100vh - 24px);
+        max-height: calc(100vh - 24px);
+        min-height: 420px;
+      }
+    }
+  }
+
   &--confirmDialog {
     #{$p__main} {
-      height: 200px;
-      max-width: 320px;
-      min-height: auto;
+      height: auto;
+      width: auto;
+      min-width: 320px;
+      min-height: 200px;
       border-radius: 12px;
       overflow: hidden;
+
+      @media (max-width: 767px) {
+        max-width: calc(100% - 36px);
+      }
     }
   }
 
   &--infoDialog {
     #{$p__main} {
-      height: 200px;
-      max-width: 320px;
-      min-height: auto;
+      height: auto;
+      width: auto;
+      min-width: 320px;
+      min-height: 200px;
       border-radius: 12px;
       overflow: hidden;
+
+      @media (max-width: 767px) {
+        max-width: calc(100% - 36px);
+      }
     }
   }
 

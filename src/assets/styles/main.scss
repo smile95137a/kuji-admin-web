@@ -20,11 +20,18 @@
 @use 'components/form-textarea' as *;
 @use 'components/form-checkbox' as *;
 @use 'components/form-radio' as *;
+@use 'components/form-check-tag-group' as *;
+@use 'components/form-radio-tag-group' as *;
 @use 'components/mbtn' as *;
 @use 'components/tab' as *;
 @use 'components/report-table' as *;
 @use 'components/breadcrumbs' as *;
-
+@use 'components/image-crop-dialog' as *;
+/* Lottery components */
+@use 'components/lottery/tab-lottery-basic' as *;
+@use 'components/lottery/tab-lottery-price' as *;
+@use 'components/lottery/tab-lottery-prizes' as *;
+@use 'components/lottery/prize-form-dialog' as *;
 /* 版面 Layouts */
 @use 'layout/sidebarLayout' as *;
 
@@ -37,7 +44,7 @@
 @use 'components/dialog/confirm-dialog' as *;
 @use 'components/dialog/info-dialog' as *;
 @use 'components/dialog/search-company-dialog' as *;
-@use 'components/dialog/search-fn-option-dialog' as *;
+@use 'components/dialog/search-member-dialog' as *;
 @use 'components/dialog/reject-reason-dialog' as *;
 @use 'components/dialog/add-biller-code-id-list-dialog' as *;
 @use 'components/dialog/add-ip-list-dialog' as *;
@@ -51,7 +58,9 @@
 
 /* --- @use 區塊結束 --- */
 
-/* 全局 rem 設定 */
+/* --------- 全局設定 (rem 為單位) --------- */
+
+/* 62.5% of 16px = 10px → 1rem = 10px */
 html {
   font-size: 62.5%;
 }
@@ -64,19 +73,26 @@ body {
   font-size: inherit;
 }
 
-/* clickable（橘色） */
+.error-text {
+  color: tokens.$danger !important;
+}
+
 .clickable {
   cursor: pointer;
   color: tokens.$brand;
   text-decoration: underline;
+  text-underline-offset: 2px;
 
   &:hover {
+    color: tokens.$brand-hover;
+  }
+
+  &:active {
     color: tokens.$brand-dark;
   }
 }
 
-/* 已下載（維持紅色） */
 .is-downloaded,
 .is-downloaded * {
-  color: #e60012 !important;
+  color: tokens.$danger !important;
 }

@@ -75,13 +75,15 @@
           <FormSelect
             label="指定狀態"
             v-model="designationStatus"
-            :options="[{ label: '待指定（PENDING）', value: 'PENDING' }, { label: '已指定（DESIGNATED）', value: 'DESIGNATED' }]"
+            :options="[
+              { label: '待指定（PENDING）', value: 'PENDING' },
+              { label: '已指定（DESIGNATED）', value: 'DESIGNATED' },
+            ]"
             :showAll="true"
             allLabel="全部"
             :allValue="''"
           />
         </div>
-
       </div>
 
       <div class="flex justify-center m-y-8">
@@ -144,7 +146,9 @@
           </template>
 
           <template #cell-status="{ item }">
-            <span :class="statusBadgeClass(item.status)">{{ statusText(item.status) }}</span>
+            <span :class="statusBadgeClass(item.status)">{{
+              statusText(item.status)
+            }}</span>
           </template>
 
           <!-- T019 — designationStatus badge -->
@@ -152,7 +156,8 @@
             <span
               v-if="item.gameMode === 'SCRATCH_STORE'"
               :class="designationStatusBadgeClass(item.designationStatus)"
-            >{{ designationStatusText(item.designationStatus) }}</span>
+              >{{ designationStatusText(item.designationStatus) }}</span
+            >
             <span v-else>-</span>
           </template>
 
@@ -162,48 +167,95 @@
               <MButton
                 v-if="item.status === 'DRAFT'"
                 size="sm"
-                @click="changeStatus(item, 'CONFIGURED', `確定要將「${item.title}」標記為完成配置？`)"
-              >完成配置</MButton>
+                @click="
+                  changeStatus(
+                    item,
+                    'CONFIGURED',
+                    `確定要將「${item.title}」標記為完成配置？`,
+                  )
+                "
+                >完成配置</MButton
+              >
 
               <!-- CONFIGURED → 開始抽獎 / 取消 -->
               <template v-if="item.status === 'CONFIGURED'">
                 <!-- T017 — disable 開始抽獎 if SCRATCH_STORE + PENDING -->
                 <MButton
                   size="sm"
-                  :disabled="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'"
-                  :title="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING' ? '請先完成大獎號碼指定才能開始抽獎' : ''"
-                  @click="changeStatus(item, 'ACTIVE', `確定要開始「${item.title}」的抽獎？`)"
-                >開始抽獎</MButton>
+                  :disabled="
+                    item.gameMode === 'SCRATCH_STORE' &&
+                    item.designationStatus === 'PENDING'
+                  "
+                  :title="
+                    item.gameMode === 'SCRATCH_STORE' &&
+                    item.designationStatus === 'PENDING'
+                      ? '請先完成大獎號碼指定才能開始抽獎'
+                      : ''
+                  "
+                  @click="
+                    changeStatus(
+                      item,
+                      'ACTIVE',
+                      `確定要開始「${item.title}」的抽獎？`,
+                    )
+                  "
+                  >開始抽獎</MButton
+                >
                 <MButton
                   size="sm"
                   class="mbtn--gray"
-                  @click="changeStatus(item, 'CANCELLED', `確定要取消「${item.title}」？`)"
-                >取消</MButton>
+                  @click="
+                    changeStatus(
+                      item,
+                      'CANCELLED',
+                      `確定要取消「${item.title}」？`,
+                    )
+                  "
+                  >取消</MButton
+                >
               </template>
 
               <!-- T018 — 指定大獎號碼 button for SCRATCH_STORE + PENDING -->
               <MButton
-                v-if="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'"
+                v-if="
+                  item.gameMode === 'SCRATCH_STORE' &&
+                  item.designationStatus === 'PENDING'
+                "
                 size="sm"
                 class="mbtn--gray"
                 @click="openDesignateModal(item)"
-              >指定大獎號碼</MButton>
+                >指定大獎號碼</MButton
+              >
 
               <!-- ACTIVE → 結束抽獎 -->
               <MButton
                 v-if="item.status === 'ACTIVE'"
                 size="sm"
                 class="mbtn--gray"
-                @click="changeStatus(item, 'ENDED', `確定要結束「${item.title}」的抽獎？`)"
-              >結束抽獎</MButton>
+                @click="
+                  changeStatus(
+                    item,
+                    'ENDED',
+                    `確定要結束「${item.title}」的抽獎？`,
+                  )
+                "
+                >結束抽獎</MButton
+              >
 
               <!-- non-ACTIVE → 刪除 -->
               <MButton
                 v-if="item.status !== 'ACTIVE'"
                 size="sm"
                 class="mbtn--red"
-                @click="changeStatus(item, 'CANCELLED', `確定要取消/刪除「${item.title}」？`)"
-              >刪除</MButton>
+                @click="
+                  changeStatus(
+                    item,
+                    'CANCELLED',
+                    `確定要取消/刪除「${item.title}」？`,
+                  )
+                "
+                >刪除</MButton
+              >
             </div>
           </template>
 
@@ -281,6 +333,8 @@ import {
 } from '@/services/adminLotteryWithPrizesService';
 
 import DesignatePrizeModal from '@/components/lottery-with-prizes/DesignatePrizeModal.vue';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 /* ==============================
  * Router / Store
@@ -436,17 +490,25 @@ const designationStatusBadgeClass = (s?: string) => {
 
 /* T016 — DesignatePrizeModal state */
 const showDesignateModal = ref(false);
-const designateTarget = ref<{ id: string; title: string; maxDraws: number } | null>(null);
+const designateTarget = ref<{
+  id: string;
+  title: string;
+  maxDraws: number;
+} | null>(null);
 
 const openDesignateModal = (item: any) => {
-  designateTarget.value = { id: item.id, title: item.title, maxDraws: item.maxDraws ?? 1 };
+  designateTarget.value = {
+    id: item.id,
+    title: item.title,
+    maxDraws: item.maxDraws ?? 1,
+  };
   showDesignateModal.value = true;
 };
 
 /* T018 — after successful designation */
 const onDesignateSuccess = async () => {
   showDesignateModal.value = false;
-  await dialogStore.openInfoDialog({
+  await openInfoDialog({
     title: '提示訊息',
     message: '指定大獎號碼成功',
     iconType: 'success',
@@ -545,7 +607,7 @@ const changeStatus = async (
   newStatus: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED',
   confirmMsg: string,
 ) => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '狀態確認',
     message: confirmMsg,
   });
@@ -554,7 +616,7 @@ const changeStatus = async (
   await executeApi({
     fn: async () => changeLotteryWithPrizesStatus(item.id, newStatus),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '狀態更新成功',
         iconType: 'success',
@@ -569,7 +631,7 @@ const changeStatus = async (
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆商品嗎？（刪除後無法復原）`,
   });
@@ -583,13 +645,16 @@ const deleteSelected = async () => {
         ),
       ),
     onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x: any) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (x: any) => x.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
-        message: failCount > 0
-          ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
-          : `刪除完成：成功 ${okCount}`,
+        message:
+          failCount > 0
+            ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
+            : `刪除完成：成功 ${okCount}`,
         iconType: failCount > 0 ? 'warning' : 'success',
       });
       await refresh();

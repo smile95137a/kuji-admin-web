@@ -1,7 +1,24 @@
 @use 'sass:color';
-@use '@/assets/styles/base/tokens' as *;
+@use '../base/tokens' as *;
 
-/* sr-only：通用隱藏 class */
+/* ===== Checkbox 專用色 ===== */
+$checkbox-border-hover: color.mix($brand, $form-border, 18%);
+$checkbox-border-active: color.mix($brand, $form-border, 38%);
+$checkbox-focus-ring: color.change($brand, $alpha: 0.24);
+$checkbox-brand-focus: color.scale($brand, $lightness: -4%);
+$checkbox-disabled-hover-bg: color.mix($border-light, #fff, 70%);
+
+/* ===== 尺寸（只影響方框，不影響文字） ===== */
+$checkbox-sm: 1em;
+$checkbox-md: 1.125em;
+$checkbox-lg: 1.25em;
+
+/* ===== 字體大小 ===== */
+/* 先保留你目前 rem 字級，避免直接吃 token 的 10px 後畫面變小 */
+$checkbox-font-xs: 1.2rem;
+$checkbox-font-md: 1.4rem;
+
+/* ===== sr-only（獨立） ===== */
 .sr-only {
   position: absolute !important;
   white-space: nowrap !important;
@@ -15,48 +32,55 @@
   margin: -1px !important;
 }
 
-/* ==========================================================================
-   mcheckbox：iPhone Orange Token Theme
-   ========================================================================== */
+/* ===== Checkbox ===== */
 .mcheckbox {
   display: inline-flex;
   flex-direction: column;
   gap: 0.25rem;
-  color: $form-text;
   line-height: 1.5;
+  font-size: $checkbox-font-md;
+  color: $form-text;
 
   &--disabled {
     opacity: 0.55;
     pointer-events: none;
   }
 
-  &--error .mcheckbox__label .mcheckbox__box {
-    border-color: $danger;
+  &--error {
+    .mcheckbox__box {
+      border-color: $danger;
+    }
+
+    .mcheckbox__error {
+      color: $danger;
+    }
   }
 }
 
+/* ---------- Label ---------- */
 .mcheckbox__label {
   display: inline-flex;
   align-items: center;
-  cursor: pointer;
   gap: 0.5em;
+  cursor: pointer;
   font-weight: 500;
   user-select: none;
 }
 
 .mcheckbox__text {
   display: inline-block;
+  font-size: $checkbox-font-md;
 }
 
-/* ===== 自訂核取方框（未勾選） ===== */
+/* ---------- 方框 ---------- */
 .mcheckbox__box {
   display: inline-block;
-  width: 1.125em;
-  height: 1.125em;
-  min-width: 1.125em;
-  min-height: 1.125em;
+  width: $checkbox-md;
+  height: $checkbox-md;
+  min-width: $checkbox-md;
+  min-height: $checkbox-md;
 
-  background-color: $bg-light;
+  background-color: $form-bg;
   background-repeat: no-repeat;
   background-position: center;
   background-origin: padding-box;
@@ -69,96 +93,91 @@
   outline-offset: -2px;
 
   transition: all 120ms ease-in-out;
-  transform: scale(1);
+  transform: scale3d(1, 1, 1);
 }
 
-/* ===== 尺寸 ===== */
+/* ---------- 尺寸 ---------- */
 .mcheckbox--sm .mcheckbox__box {
-  width: 1em;
-  height: 1em;
+  width: $checkbox-sm;
+  height: $checkbox-sm;
+  min-width: $checkbox-sm;
+  min-height: $checkbox-sm;
 }
+
 .mcheckbox--lg .mcheckbox__box {
-  width: 1.25em;
-  height: 1.25em;
+  width: $checkbox-lg;
+  height: $checkbox-lg;
+  min-width: $checkbox-lg;
+  min-height: $checkbox-lg;
 }
 
-/* ===== Hover ===== */
+/* ---------- Hover ---------- */
 .mcheckbox__input:not(:disabled) + .mcheckbox__label:hover .mcheckbox__box {
-  background-color: color.mix(
-    $form-border,
-    #fff,
-    60%
-  ); // brand-style hover grey
+  background-color: color.mix($brand-light, #fff, 45%);
+  border-color: $checkbox-border-hover;
 }
 
-/* ===== Active（Press） ===== */
+/* ---------- Active ---------- */
 .mcheckbox__input:not(:disabled):active + .mcheckbox__label .mcheckbox__box {
-  background-color: color.mix($form-border, #000, 20%);
-  transform: scale(0.95);
+  background-color: $checkbox-border-active;
+  transform: scale3d(0.95, 0.95, 1);
 }
 
-/* ===== Focus（未勾選） ===== */
+/* ---------- Focus（未勾選） ---------- */
 .mcheckbox__input:focus + .mcheckbox__label .mcheckbox__box {
-  background-color: color.mix($form-border, #fff, 50%);
-  outline-color: $brand-light !important;
+  background-color: color.mix($brand-light, #fff, 36%);
+  border-color: $checkbox-brand-focus;
+  outline-color: $checkbox-focus-ring !important;
   outline-offset: 0 !important;
-  border-color: $brand;
 }
 
-/* ==========================================================================
-   Checked 狀態
-   ==========================================================================
-*/
+/* ---------- Checked ---------- */
 .mcheckbox__input:checked + .mcheckbox__label .mcheckbox__box {
   background-color: $brand;
-  border-color: $brand;
+  border-color: transparent;
   background-size: 75%;
-  transform: scale(1);
-
-  /* 白色勾勾（SVG） */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Cpath fill='%23fff' d='M15.854 3.146l-1.5-1.5c-.195-.195-.512-.195-.707 0L5.5 9.793 2.354 6.646c-.195-.195-.512-.195-.707 0L.146 8.146c-.195.195-.195.512 0 .707l5 5a.5.5 0 00.708 0L15.854 3.854c.195-.195.195-.512 0-.708z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M15.854 3.146l-1.5-1.5a.5.5 0 00-.707 0L5.5 9.793 2.354 6.646a.5.5 0 00-.708 0l-1.5 1.5a.5.5 0 000 .708l5 5a.5.5 0 00.708 0l10-10a.5.5 0 000-.708z'/%3E%3C/svg%3E");
 }
 
-/* ===== Checked + hover ===== */
+/* Checked + hover */
 .mcheckbox__input:checked + .mcheckbox__label:hover .mcheckbox__box {
+  background-color: $brand-hover;
+}
+
+/* Checked + active */
+.mcheckbox__input:checked:active + .mcheckbox__label .mcheckbox__box {
   background-color: $brand-dark;
 }
 
-/* ===== Checked + active ===== */
-.mcheckbox__input:checked:active + .mcheckbox__label .mcheckbox__box {
-  background-color: color.mix($brand, #000, 20%);
-}
-
-/* ===== Checked + focus ===== */
+/* Checked + focus */
 .mcheckbox__input:checked:focus + .mcheckbox__label .mcheckbox__box {
-  background-color: $brand;
-  border-color: $brand;
-  outline-color: $brand-light !important;
+  background-color: $checkbox-brand-focus;
+  outline-color: $checkbox-focus-ring !important;
   outline-offset: 0 !important;
 }
 
-/* ==========================================================================
-   Indeterminate（半選）
-   ========================================================================== */
+/* ---------- Indeterminate ---------- */
 .mcheckbox__input:indeterminate + .mcheckbox__label .mcheckbox__box {
-  background-color: $brand-light;
-  border-color: $brand;
+  background-color: color.mix($brand-light, #fff, 40%);
+  border-color: $checkbox-brand-focus;
   background-size: 60%;
-
-  /* 中橫線（使用 brand-dark） */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='2'%3E%3Crect width='14' height='2' rx='1' fill='%23ff7a00'/%3E%3C/svg%3E");
+  background-image:
+    linear-gradient(
+      color.mix($brand-light, #fff, 40%),
+      color.mix($brand-light, #fff, 40%)
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='2' viewBox='0 0 14 2'%3E%3Crect width='14' height='2' rx='1' ry='1' fill='%23ff9500'/%3E%3C/svg%3E");
 }
 
-/* ==========================================================================
-   文案（hint / error）
-   ========================================================================== */
+/* ---------- 輔助文字 ---------- */
 .mcheckbox__hint {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: $checkbox-font-xs;
   color: $form-muted;
 }
+
 .mcheckbox__error {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: $checkbox-font-xs;
   color: $danger;
 }

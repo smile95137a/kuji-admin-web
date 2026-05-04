@@ -8,9 +8,10 @@
 
       <div class="flex justify-center m-y-8 gap-x-12 flex-wrap">
         <MButton type="submit">查詢</MButton>
-        <MButton type="button" variant="secondary" @click="resetAll"
-          >清除</MButton
-        >
+
+        <MButton type="button" variant="secondary" @click="resetAll">
+          清除
+        </MButton>
       </div>
     </Form>
   </MCard>
@@ -65,7 +66,7 @@
             :goToPage="goToPage"
             :pageLimitSize="pageLimitSize"
             :totalItems="list.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+            @update:pageLimitSize="handlePageLimitSizeChange"
           />
         </div>
       </template>
@@ -93,18 +94,12 @@ import FormTitle from '@/components/common/FormTitle.vue';
 
 import AdminPrizeBoxSearchForm from '@/components/prizeBox/AdminPrizeBoxSearchForm.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
-
 import {
   getPrizeBoxByUserId,
   getPrizeBoxSummaryByStore,
 } from '@/services/adminPrizeBoxService';
-
-/* ==============================
- * Store
- * ============================== */
-const dialogStore = useDialogStore();
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Form
@@ -113,13 +108,13 @@ const formRef = ref<FormContext | null>(null);
 
 const initValues = ref<any>({
   userId: '',
-  mode: 'summary', // summary | detail
+  mode: 'summary',
 });
 
 /* ==============================
  * Search Hook
  * ============================== */
-const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
+const { list, hasData, isSearch, noDataMessage } = useSearchPage({
   useLocalList: true,
 });
 
@@ -127,16 +122,16 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
  * Mode
  * ============================== */
 const mode = computed<'summary' | 'detail'>(() => {
-  const v = String(formRef.value?.values?.mode || initValues.value.mode);
-  return (v === 'detail' ? 'detail' : 'summary') as any;
+  const value = String(formRef.value?.values?.mode || initValues.value.mode);
+  return value === 'detail' ? 'detail' : 'summary';
 });
 
 /* ==============================
  * Utils
  * ============================== */
-const formatDateTime = (v?: string) => {
-  if (!v) return '-';
-  return String(v).replace('T', ' ');
+const formatDateTime = (value?: string) => {
+  if (!value) return '-';
+  return String(value).replace('T', ' ');
 };
 
 /* ==============================
@@ -155,13 +150,15 @@ const sortedList = computed(() => {
   if (!sortKey.value || !sortOrder.value) return list.value;
 
   const arr = [...list.value];
+
   arr.sort((a: any, b: any) =>
     compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
+
   return arr;
 });
 
@@ -180,28 +177,32 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
+
 /* ==============================
- * Table config（依 mode 動態）
+ * Table config
  * ============================== */
 const rowKey = computed(() => (mode.value === 'summary' ? 'storeId' : 'id'));
 
 const columns = computed(() => {
   if (mode.value === 'summary') {
     return [
-      { field: 'storeName', label: '店家', width: 220, sortable: true },
-      { field: 'storeId', label: 'Store ID', width: 260, sortable: true },
-      { field: 'quantity', label: '數量', width: 100, sortable: true },
-      { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
+      { field: 'storeName', label: '店家', width: 60, sortable: true },
+      { field: 'storeId', label: 'Store ID', width: 60, sortable: true },
+      { field: 'quantity', label: '數量', width: 60, sortable: true },
+      { field: 'updatedAt', label: '更新時間', width: 60, sortable: true },
     ];
   }
 
-  // detail
   return [
-    { field: 'prizeName', label: '獎品/商品', width: 260, sortable: true },
-    { field: 'storeName', label: '店家', width: 200, sortable: true },
-    { field: 'quantity', label: '數量', width: 100, sortable: true },
-    { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
-    { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
+    { field: 'prizeName', label: '獎品/商品', width: 60, sortable: true },
+    { field: 'storeName', label: '店家', width: 60, sortable: true },
+    { field: 'quantity', label: '數量', width: 60, sortable: true },
+    { field: 'createdAt', label: '建立時間', width: 60, sortable: true },
+    { field: 'updatedAt', label: '更新時間', width: 60, sortable: true },
   ];
 });
 
@@ -210,12 +211,12 @@ const columns = computed(() => {
  * ============================== */
 const onSubmit = async (values: any) => {
   const userId = String(values?.userId || '').trim();
-  const m = String(values?.mode || 'summary');
+  const currentMode = String(values?.mode || 'summary');
 
   if (!userId) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
-      message: '請輸入 userId',
+      message: '請先選擇會員',
       iconType: 'warning',
     });
     return;
@@ -223,19 +224,19 @@ const onSubmit = async (values: any) => {
 
   await executeApi({
     fn: async () => {
-      return m === 'detail'
+      return currentMode === 'detail'
         ? getPrizeBoxByUserId(userId)
         : getPrizeBoxSummaryByStore(userId);
     },
     onSuccess: async (res: any) => {
-      // 你專案的 ApiResponse 可能是 { success, data }，也可能直接是 array
       const data = res?.data ?? res ?? [];
+
       list.value = Array.isArray(data) ? data : [];
       isSearch.value = true;
       goToPage(1);
 
       if (list.value.length === 0) {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: '提示訊息',
           message: '查無資料',
           iconType: 'warning',
@@ -247,11 +248,18 @@ const onSubmit = async (values: any) => {
 };
 
 const resetAll = () => {
-  formRef.value?.resetForm?.();
+  formRef.value?.resetForm?.({
+    values: {
+      userId: '',
+      mode: 'summary',
+    },
+  });
+
   list.value = [];
   isSearch.value = false;
   sortKey.value = '';
   sortOrder.value = 'asc';
+  pageLimitSize.value = 10;
   goToPage(1);
 };
 </script>

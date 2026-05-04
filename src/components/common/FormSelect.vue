@@ -2,13 +2,12 @@
   <div class="form-select">
     <!-- 標題 -->
     <label
-      v-if="!hideLabel"
+      v-if="showLabel"
       class="form-select__label"
       :for="id"
       :class="{ 'form-select__label--required': required }"
     >
       {{ label || '\u00A0' }}
-      <span v-if="required" class="form-select__asterisk">*</span>
     </label>
 
     <!-- 控制區：select + addon -->
@@ -43,7 +42,7 @@
 <script setup lang="ts">
 interface SelectOption {
   value: any;
-  label: string;
+  label: any;
 }
 const props = withDefaults(
   defineProps<{
@@ -60,12 +59,11 @@ const props = withDefaults(
 
     id?: string;
     name?: string;
-
-    hideLabel?: boolean;
+    showLabel?: boolean;
   }>(),
   {
-    hideLabel: false,
-  }
+    showLabel: true,
+  },
 );
 
 const emit = defineEmits<{

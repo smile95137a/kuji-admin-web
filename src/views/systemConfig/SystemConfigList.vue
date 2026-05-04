@@ -5,6 +5,8 @@ import { useDialogStore } from '@/stores';
 
 import MCard from '@/components/common/MCard.vue';
 import SystemConfigTable from '@/components/systemConfig/SystemConfigTable.vue';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const dialogStore = useDialogStore();
 
@@ -26,7 +28,7 @@ onMounted(async () => {
     await fetchConfigs();
     if (groups.value.length > 0) activeGroup.value = groups.value[0];
   } catch {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '載入系統設定失敗',
       iconType: 'warning',
@@ -35,7 +37,7 @@ onMounted(async () => {
 });
 
 const handleSave = async (id: string, value: string) => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '確認修改',
     message: '確定要儲存此設定值嗎？',
   });
@@ -44,13 +46,13 @@ const handleSave = async (id: string, value: string) => {
   try {
     await updateConfig(id, value);
     cancelEdit();
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '設定已更新',
       iconType: 'success',
     });
   } catch {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '儲存失敗，請重試',
       iconType: 'warning',
@@ -77,7 +79,10 @@ const handleSave = async (id: string, value: string) => {
           :key="group"
           class="scl__tab"
           :class="{ 'scl__tab--active': activeGroup === group }"
-          @click="activeGroup = group; cancelEdit()"
+          @click="
+            activeGroup = group;
+            cancelEdit();
+          "
         >
           {{ group }}
         </button>
@@ -124,12 +129,16 @@ const handleSave = async (id: string, value: string) => {
     cursor: pointer;
     border-radius: 6px 6px 0 0;
     color: #6b7280;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
     position: relative;
     bottom: -2px;
     border-bottom: 2px solid transparent;
 
-    &:hover { background: #f3f4f6; }
+    &:hover {
+      background: #f3f4f6;
+    }
 
     &--active {
       color: #6366f1;

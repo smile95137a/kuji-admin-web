@@ -214,6 +214,8 @@ import {
   getRechargePlanById,
   deleteRechargePlan,
 } from '@/services/adminRechargePlanService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* Setup */
 const route = useRoute();
@@ -426,7 +428,7 @@ const fillMockData = async () => {
 const onSubmit = handleSubmit(async (values) => {
   if (isDetail.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: mode.value === 'add' ? '新增確認' : '儲存確認',
     message:
       mode.value === 'add' ? '確定要新增儲值方案嗎？' : '確定要儲存修改嗎？',
@@ -458,7 +460,7 @@ const onSubmit = handleSubmit(async (values) => {
       return createRechargePlan(payload);
     },
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: mode.value === 'add' ? '新增成功' : '儲存成功',
         iconType: 'success',
@@ -480,7 +482,7 @@ const doDelete = async () => {
   if (!id.value) return;
 
   const planName = String((detail.value as any)?.name || id.value);
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除儲值方案「${planName}」？（刪除後無法復原）`,
   });
@@ -489,7 +491,7 @@ const doDelete = async () => {
   await executeApi({
     fn: async () => deleteRechargePlan(id.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '刪除成功',
         iconType: 'success',

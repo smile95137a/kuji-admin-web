@@ -107,7 +107,9 @@
                 class="referral__copyBtn"
                 title="複製推薦碼"
                 @click.stop="copyCode(item.code)"
-              >📋</button>
+              >
+                📋
+              </button>
             </div>
           </template>
 
@@ -213,6 +215,8 @@ import {
   deleteReferralCode,
   getReferralCodeRecords,
 } from '@/services/adminReferralCodeService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Router / Store
@@ -304,7 +308,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -372,19 +376,19 @@ const onSubmit = async (values: any) => {
 const selectedIds = ref<string[]>([]);
 
 const selectedRows = computed(() =>
-  list.value.filter((row: any) => selectedIds.value.includes(row.id))
+  list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
 const canEnable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.enabled === false)
+    selectedRows.value.every((r: any) => r.enabled === false),
 );
 
 const canDisable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.enabled === true)
+    selectedRows.value.every((r: any) => r.enabled === true),
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
@@ -396,7 +400,7 @@ const refresh = async () => {
 
 const enableSelected = async () => {
   if (!canEnable.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '只有「停用」的推薦碼才能啟用。',
       iconType: 'warning',
@@ -404,7 +408,7 @@ const enableSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '啟用確認',
     message: `確定要啟用選中的 ${selectedIds.value.length} 筆推薦碼嗎？`,
   });
@@ -414,14 +418,14 @@ const enableSelected = async () => {
     fn: async () =>
       Promise.allSettled(
         selectedRows.value.map((row: any) =>
-          updateReferralCode(row.id, { enabled: true })
-        )
+          updateReferralCode(row.id, { enabled: true }),
+        ),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -438,7 +442,7 @@ const enableSelected = async () => {
 
 const disableSelected = async () => {
   if (!canDisable.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '只有「啟用」的推薦碼才能停用。',
       iconType: 'warning',
@@ -446,7 +450,7 @@ const disableSelected = async () => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '停用確認',
     message: `確定要停用選中的 ${selectedIds.value.length} 筆推薦碼嗎？`,
   });
@@ -456,14 +460,14 @@ const disableSelected = async () => {
     fn: async () =>
       Promise.allSettled(
         selectedRows.value.map((row: any) =>
-          updateReferralCode(row.id, { enabled: false })
-        )
+          updateReferralCode(row.id, { enabled: false }),
+        ),
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -481,7 +485,7 @@ const disableSelected = async () => {
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆推薦碼嗎？（刪除後無法復原）`,
   });
@@ -494,7 +498,7 @@ const deleteSelected = async () => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -530,7 +534,9 @@ const copyCode = async (code: string) => {
     copyToast.value = '複製失敗，請手動複製';
   }
   if (copyToastTimer.value) clearTimeout(copyToastTimer.value);
-  copyToastTimer.value = setTimeout(() => { copyToast.value = ''; }, 2000);
+  copyToastTimer.value = setTimeout(() => {
+    copyToast.value = '';
+  }, 2000);
 };
 
 /* ==============================
@@ -573,7 +579,9 @@ onMounted(async () => {
   opacity: 0.6;
   transition: opacity 0.15s;
 }
-.referral__copyBtn:hover { opacity: 1; }
+.referral__copyBtn:hover {
+  opacity: 1;
+}
 .referral__toast {
   position: fixed;
   bottom: 24px;

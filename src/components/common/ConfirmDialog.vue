@@ -1,51 +1,51 @@
+<!-- src/components/common/ConfirmDialog.vue -->
 <template>
   <Dialog
-    :isOpen="isOpen"
-    :customClass="['dialog--confirmDialog', customClass].join(' ')"
-    @close="handleClose"
+    :isOpen="true"
+    :customClass="
+      ['dialog--confirmDialog', customClass].filter(Boolean).join(' ')
+    "
+    @close="handleDialogClose"
   >
     <div class="confirmDialog">
       <div class="confirmDialog__header">
-        <div
-          class="confirmDialog__header-title"
-          v-if="confirmDialogOptions?.title"
-        >
+        <div v-if="title" class="confirmDialog__header-title">
           <p class="confirmDialog__text">
-            {{ confirmDialogOptions?.title }}
+            {{ title }}
           </p>
         </div>
-        <div class="confirmDialog__close" @click="handleClose(false)">
+
+        <div class="confirmDialog__close" @click="handleCancel">
           <font-awesome-icon icon="xmark" size="lg" />
         </div>
       </div>
 
       <div class="confirmDialog__main">
         <div class="confirmDialog__main-content">
-          <div class="confirmDialog__main-content-icon">
-            <font-awesome-icon icon="question" size="xl" />
+          <div v-if="shouldShowIcon" class="confirmDialog__main-content-icon">
+            <font-awesome-icon :icon="resolvedIcon" :size="resolvedIconSize" />
           </div>
 
           <div class="confirmDialog__main-content-msg">
-            <span
-              class="confirmDialog__text"
-              v-html="confirmDialogOptions?.message"
-            ></span>
+            <span class="confirmDialog__text" v-html="resolvedMessage"></span>
           </div>
         </div>
+
         <div class="confirmDialog__main-btns">
           <button
             type="button"
             class="confirmDialog__main-btn confirmDialog__main-btn--confirm"
             @click="handleConfirm"
           >
-            確定
+            {{ confirmText }}
           </button>
+
           <button
             type="button"
             class="confirmDialog__main-btn confirmDialog__main-btn--cancel"
-            @click="handleClose(false)"
+            @click="handleCancel"
           >
-            取消
+            {{ cancelText }}
           </button>
         </div>
       </div>
@@ -54,22 +54,99 @@
 </template>
 
 <script setup lang="ts">
-import Dialog from './Dialog.vue';
 import { computed } from 'vue';
-import { useDialogStore } from '@/stores/dialogStore';
+import Dialog from './Dialog.vue';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faCheck,
+  faExclamation,
+  faQuestion,
+} from '@fortawesome/free-solid-svg-icons';
 
-const dialogStore = useDialogStore();
+type IconType = 'question' | 'success' | 'warning';
+type IconSize =
+  | 'xs'
+  | 'sm'
+  | 'lg'
+  | 'xl'
+  | '2xl'
+  | '3xl'
+  | '4xl'
+  | '5xl'
+  | '6xl'
+  | '7xl'
+  | '8xl'
+  | '9xl'
+  | '10xl';
 
-const isOpen = computed(() => dialogStore.isConfirmDialogOpen);
-const customClass = computed(() => dialogStore.customClass);
-const confirmDialogOptions = computed(() => dialogStore.confirmDialogOptions);
+type DialogData = Record<string, string | number | boolean | null | undefined>;
 
-const handleClose = (result: boolean) => {
-  dialogStore.closeConfirmDialog(result);
+interface Props {
+  title?: string;
+  message?: string;
+  confirmText?: string;
+  cancelText?: string;
+  data?: DialogData;
+  customClass?: string;
+  iconType?: IconType | false;
+  iconSize?: IconSize;
+  onConfirm?: () => void | Promise<void>;
+  onCancel?: () => void | Promise<void>;
+  onClose?: () => void | Promise<void>;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  title: '',
+  message: '',
+  confirmText: '確定',
+  cancelText: '取消',
+  customClass: '',
+  iconType: 'question',
+  iconSize: 'xl',
+});
+
+const ICON_MAP: Record<IconType, IconDefinition> = {
+  question: faQuestion,
+  success: faCheck,
+  warning: faExclamation,
 };
 
-const handleConfirm = () => {
-  dialogStore.closeConfirmDialog(true);
+const resolvedIcon = computed<IconDefinition>(() => {
+  if (props.iconType === false) {
+    return ICON_MAP.question;
+  }
+  return ICON_MAP[props.iconType] ?? ICON_MAP.question;
+});
+
+const resolvedIconSize = computed<IconSize>(() => props.iconSize);
+
+const shouldShowIcon = computed(() => props.iconType !== false);
+
+/**
+ * 支援把 message 中的 {{key}} 用 data[key] 取代
+ * 例如：
+ * message: '是否刪除 {{name}}？'
+ * data: { name: '測試資料' }
+ */
+const resolvedMessage = computed(() => {
+  if (!props.message) return '';
+
+  return props.message.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    const value = props.data?.[key];
+    return value == null ? '' : String(value);
+  });
+});
+
+const handleConfirm = async () => {
+  await props.onConfirm?.();
+};
+
+const handleCancel = async () => {
+  await props.onCancel?.();
+};
+
+const handleDialogClose = async () => {
+  await props.onClose?.();
 };
 </script>
 

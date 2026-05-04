@@ -1,62 +1,73 @@
-/* components/_mbtn.scss */
-@use 'sass:color';
-@use '@/assets/styles/base/tokens' as *;
+/* ==========================================================================
+   components/_mbtn.scss
+   與 Form Typography 共用字級 token
+   ========================================================================== */
 
+@use 'sass:color';
+@use '../base/tokens' as *;
+
+/* ===== 字體大小 ===== */
+/* 先保留 rem 字級，避免直接吃 token 的 10px 後畫面變小 */
+$btn-font-xs: 1.2rem;
+$btn-font-md: 1.4rem;
+
+/* ===== Button ===== */
 .mbtn {
   min-width: 40px;
   padding: 6px 8px;
+  border: 0;
   border-radius: $form-radius;
 
-  color: #fff;
-  font-size: $font-xs;
-  letter-spacing: 3px;
-
-  transition: background-color 0.2s ease, opacity 0.2s ease,
-    transform 0.05s ease;
-
-  /* ===== Brand 主色 ===== */
   background: $brand;
+  color: #fff;
 
+  font-size: $btn-font-xs;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    opacity 0.3s ease,
+    transform 0.12s ease;
+
+  /* Hover */
   &:hover {
     background: $brand-hover;
+    opacity: 0.95;
   }
 
   &:active {
     background: $brand-dark;
-    transform: translateY(0.5px);
+    transform: scale(0.96);
   }
 
-  /* ===== Disabled ===== */
-  &:disabled,
-  &.is-disabled {
-    // 統一用 token 去混色，不要硬寫 #f4b97a
-    background: color.mix($brand, #fff, 55%); // 淡橘
-    color: color.mix(#fff, $muted, 35%);
+  /* Disabled（原生 disabled） */
+  &:disabled {
+    background-color: color.mix($border-light, #fff, 70%);
+    color: $form-muted;
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: 1;
     pointer-events: none;
     transform: none;
   }
 
-  /* ===== Red button ===== */
+  /* ===== Red Variant ===== */
   &--red {
     background: $danger;
 
     &:hover {
-      background: color.mix($danger, #000, 10%);
+      background: color.adjust($danger, $lightness: -6%);
     }
 
     &:active {
-      background: color.mix($danger, #000, 18%);
-      transform: translateY(0.5px);
+      background: color.adjust($danger, $lightness: -12%);
     }
 
-    &:disabled,
-    &.is-disabled {
-      background: $danger-light;
-      color: $muted;
-      opacity: 0.9;
-      transform: none;
+    &:disabled {
+      background-color: color.mix($danger-light, #fff, 40%);
+      color: color.mix($danger, #fff, 35%);
     }
   }
 }

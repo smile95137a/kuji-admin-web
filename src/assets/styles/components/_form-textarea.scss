@@ -1,64 +1,46 @@
 @use 'sass:color';
-@use '@/assets/styles/base/tokens' as *;
+@use '../base/tokens' as *;
 
-/* ===========================
-   Form Textarea Component
-   =========================== */
+// ===== 字體大小 =====
+// 如果你希望沿用 token 裡的 $font-xs / $font-md，可以刪掉這兩行。
+// 這裡先保留 1.2rem / 1.4rem，避免畫面字級突然變小。
+$textarea-font-xs: 1.2rem;
+$textarea-font-md: 1.4rem;
 
+// ==================== FormTextarea ====================
 .form-textarea {
   display: flex;
   flex-direction: column;
   gap: 3px;
   width: 100%;
-
-  &--sm {
-    .form-textarea__field {
-      font-size: $font-sm;
-      min-height: 96px;
-      padding: 8px 10px;
-    }
-    .form-textarea__label {
-      font-size: $font-sm;
-    }
-  }
-
-  &--lg {
-    .form-textarea__field {
-      font-size: $font-lg;
-      min-height: 200px;
-      padding: 12px 14px;
-    }
-    .form-textarea__label {
-      font-size: $font-lg;
-    }
-  }
 }
 
-/* ===== 標籤 ===== */
+// ===== 標籤 =====
 .form-textarea__label {
   color: $form-text;
-  font-size: $font-md;
+  font-size: $textarea-font-md;
   font-weight: 500;
+  line-height: 1.3;
 
   &--required {
     color: $danger;
 
     .form-textarea__asterisk {
-      color: $danger;
       margin-left: 2px;
-      font-size: $font-sm;
+      font-size: $textarea-font-xs;
+      color: $danger;
     }
   }
 }
 
-/* ===== 控制列 ===== */
+// ===== 控制列 =====
 .form-textarea__control {
   display: flex;
   align-items: flex-start;
   gap: 6px;
 }
 
-/* ===== 外框 ===== */
+// ===== 外框 =====
 .form-textarea__field-wrap {
   position: relative;
   flex: 1;
@@ -66,7 +48,10 @@
   border: 1px solid $form-border;
   border-radius: $form-radius;
   background: $form-bg;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
 
   &:hover {
     border-color: color.mix($brand, $form-border, 30%);
@@ -79,7 +64,7 @@
 
   &.is-error {
     border-color: $danger;
-    background: $danger-light;
+    background: color.mix($danger-light, #fff, 18%);
 
     &.is-focus {
       box-shadow: 0 0 0 2px #{color.change($danger, $alpha: 0.2)};
@@ -91,7 +76,7 @@
   }
 
   &.is-disabled {
-    background: #f3f4f6;
+    background: color.mix($border-light, #fff, 28%);
     cursor: not-allowed;
 
     .form-textarea__field {
@@ -101,7 +86,7 @@
   }
 
   &.is-readonly {
-    background: #fafafa;
+    background: color.mix($border-light, #fff, 16%);
 
     .form-textarea__field {
       background: transparent;
@@ -110,19 +95,21 @@
   }
 }
 
-/* ===== Textarea ===== */
+// ===== Textarea 本體 =====
 .form-textarea__field {
   flex: 1 1 auto;
   width: 100%;
+  min-height: $form-textarea-min-h;
   padding: $form-textarea-padding;
+
   border: 0;
   background: transparent;
-  color: $form-text;
-  font-size: $font-md;
-  line-height: 1.5;
   outline: none;
   resize: none;
-  min-height: $form-textarea-min-h;
+
+  font-size: $textarea-font-md;
+  line-height: 1.5;
+  color: $form-text;
 
   &::placeholder {
     color: $form-muted;
@@ -130,19 +117,21 @@
   }
 }
 
-/* ===== addon ===== */
+// ===== addon（slot）=====
 .form-textarea__addon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: flex-start;
+
   padding: 6px 8px;
+  font-size: $textarea-font-md;
+  color: $brand;
+  background: color.mix($brand-light, #fff, 18%);
+  user-select: none;
+
   border-left: 1px solid $form-border;
   border-right: 1px solid $form-border;
-  background: #f9fafb;
-  color: $brand;
-  font-size: $font-md;
-  user-select: none;
-  align-self: flex-start;
 
   &--left {
     border-left: 0;
@@ -155,16 +144,15 @@
   }
 }
 
-/* ===== 錯誤 ===== */
+// ===== 錯誤 / 輔助文字 =====
 .form-textarea__error {
-  font-size: $font-xs;
-  color: $danger;
   margin-top: 2px;
+  font-size: $textarea-font-xs;
+  color: $danger;
 }
 
-/* ===== 輔助文字 ===== */
 .form-textarea__help {
-  font-size: $font-xs;
-  color: $form-muted;
   margin-top: 2px;
+  font-size: $textarea-font-xs;
+  color: $form-muted;
 }

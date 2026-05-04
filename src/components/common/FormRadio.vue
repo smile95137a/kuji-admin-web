@@ -7,7 +7,7 @@ type Size = 'sm' | 'md' | 'lg';
 const props = withDefaults(
   defineProps<{
     /** v-model 綁定的值 */
-    modelValue: string | number | boolean | null;
+    modelValue: any;
     /** 此 radio 的實際值（被選中時會回傳） */
     value: string | number | boolean;
     /** 顯示在 label 的文字（也可用 slot 覆蓋） */
@@ -30,7 +30,7 @@ const props = withDefaults(
     required: false,
     disabled: false,
     error: null,
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -47,7 +47,7 @@ const computedId = computed(() => props.id || localId.value);
 const isChecked = computed(() => props.modelValue === props.value);
 
 const describedById = computed(() =>
-  props.error ? `${computedId.value}-error` : undefined
+  props.error ? `${computedId.value}-error` : undefined,
 );
 
 function onChange(e: Event) {
@@ -85,6 +85,7 @@ function toggleBySpace() {
       :value="value"
       :checked="isChecked"
       :disabled="disabled"
+      :required="required"
       :aria-invalid="!!error || undefined"
       :aria-describedby="describedById"
       @change="onChange"

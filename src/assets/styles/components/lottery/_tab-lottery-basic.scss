@@ -1,0 +1,532 @@
+@use 'sass:color';
+@use '../../base/tokens' as *;
+
+.tab-lottery-basic {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    gap: 18px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  &__left,
+  &__right {
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__right {
+    position: sticky;
+    top: 12px;
+  }
+
+  &__section {
+    width: 100%;
+    min-width: 0;
+
+    & + & {
+      margin-top: 18px;
+    }
+  }
+
+  &__section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  &__section-title {
+    margin: 0;
+    padding-left: 10px;
+    border-left: 4px solid $brand;
+    color: $form-text;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__card,
+  &__copy-card,
+  &__image-card {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 14px;
+    background: $form-bg;
+  }
+
+  &__card--mode,
+  &__copy-block {
+    background: color.mix($brand-light, #fff, 10%);
+  }
+
+  &__card--schedule {
+    padding: 14px 8px;
+  }
+
+  &__summary-pill {
+    flex-shrink: 0;
+    max-width: 45%;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: $brand-light;
+    color: $brand-dark;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__mode-field {
+    min-width: 0;
+  }
+
+  &__mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  &__setting-panel {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid color.mix($brand-light, $form-border, 56%);
+    border-radius: 12px;
+    background: color.mix($brand-light, #fff, 18%);
+
+    &--full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &__setting-head {
+    margin-bottom: 10px;
+  }
+
+  &__setting-title {
+    margin: 0;
+    color: $brand-dark;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__inline-field {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed $form-border;
+  }
+
+  &__status-panel {
+    padding: 0 6px 14px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed $form-border;
+  }
+
+  &__schedule-layout {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  &__copy-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  &__copy-block {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid color.mix($form-border, #fff, 62%);
+    border-radius: 12px;
+  }
+
+  &__field-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.4;
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  &__remark-head {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  &__preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  &__preset-btn {
+    min-height: 28px;
+    max-width: 100%;
+    padding: 0 10px;
+    border: 1px solid $form-border;
+    border-radius: 999px;
+    background: $form-bg;
+    color: $form-muted;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: normal;
+    word-break: break-word;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.1s ease;
+
+    &:hover {
+      border-color: $brand;
+      background: $brand-light;
+      color: $brand-dark;
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  &__description-textarea,
+  &__remark-textarea {
+    flex: 1;
+    height: 100%;
+
+    :deep(.form-textarea__control),
+    :deep(.form-textarea__field-wrap),
+    :deep(.form-textarea__field) {
+      height: 100%;
+      min-height: 300px;
+    }
+  }
+
+  &__tag-panel {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed $form-border;
+  }
+
+  &__editor-card {
+    :deep(.ck-editor__editable_inline) {
+      min-height: 420px;
+    }
+  }
+
+  &__info-box {
+    padding: 10px 14px;
+    border-left: 4px solid $brand;
+    border-radius: $form-radius;
+    background: color.mix($brand-light, #fff, 35%);
+    color: $brand-dark;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__image-panel {
+    padding: 0;
+  }
+
+  &__image-card {
+    & + & {
+      margin-top: 12px;
+    }
+  }
+
+  &__image-title {
+    margin: 0 0 10px;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+
+    span {
+      color: $form-muted;
+      font-size: 12px;
+      font-weight: 400;
+    }
+  }
+
+  &__main-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 240px;
+  }
+
+  &__main-upload {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+    max-width: 240px;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border: 1px dashed $form-border;
+    border-radius: 14px;
+    background: color.mix($form-border, #fff, 28%);
+    cursor: pointer;
+    padding: 0;
+    line-height: 0;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      transform 0.12s ease;
+
+    &:hover:not(:disabled) {
+      border-color: $brand;
+      background: $brand-light;
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.995);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    &--empty {
+      align-items: center;
+      justify-content: center;
+      line-height: normal;
+    }
+  }
+
+  &__main-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  &__empty-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    color: $form-muted;
+    text-align: center;
+
+    svg {
+      color: $brand;
+      font-size: 26px;
+      opacity: 0.85;
+    }
+
+    span {
+      color: $form-text;
+      font-size: 13px;
+      font-weight: 700;
+    }
+  }
+
+  &__main-remove,
+  &__gallery-remove {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 999px;
+    background: $danger;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba($ink-900, 0.18);
+    transition:
+      background-color 0.12s ease,
+      transform 0.12s ease,
+      opacity 0.12s ease;
+
+    &:hover {
+      background: color.adjust($danger, $lightness: -6%);
+      transform: scale(1.06);
+    }
+
+    &:active {
+      background: color.adjust($danger, $lightness: -12%);
+      transform: scale(0.96);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+
+  &__main-remove {
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+  }
+
+  &__gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  &__gallery-add,
+  &__gallery-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 74px;
+    height: 74px;
+    border-radius: 10px;
+  }
+
+  &__gallery-add {
+    flex-direction: column;
+    gap: 4px;
+    border: 1px dashed $form-border;
+    background: color.mix($form-border, #fff, 28%);
+    color: $form-muted;
+    cursor: pointer;
+    font-size: 12px;
+
+    svg {
+      color: $brand;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: $brand;
+      background: $brand-light;
+      color: $brand-dark;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__gallery-img {
+    display: block;
+    width: 74px;
+    height: 74px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 10px;
+    object-fit: cover;
+  }
+
+  &__gallery-remove {
+    top: -7px;
+    right: -7px;
+    width: 22px;
+    height: 22px;
+  }
+
+  &__hidden-input {
+    display: none;
+  }
+
+  @media (max-width: 1180px) {
+    &__layout {
+      grid-template-columns: 1fr;
+    }
+
+    &__right {
+      position: static;
+    }
+
+    &__image-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+
+      .tab-lottery-basic__section-head {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+
+  @media (max-width: 960px) {
+    &__mode-grid,
+    &__copy-grid,
+    &__image-panel {
+      grid-template-columns: 1fr;
+    }
+
+    &__summary-pill {
+      max-width: 100%;
+      text-align: left;
+    }
+
+    &__section-head {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 576px) {
+    &__card,
+    &__copy-card,
+    &__image-card {
+      padding: 12px;
+    }
+
+    &__main-wrap,
+    &__main-upload {
+      max-width: 100%;
+    }
+  }
+}
+
+.soft-expand-enter-active,
+.soft-expand-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    max-height 0.22s ease;
+  overflow: hidden;
+}
+
+.soft-expand-enter-from,
+.soft-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+  max-height: 0;
+}
+
+.soft-expand-enter-to,
+.soft-expand-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 320px;
+}

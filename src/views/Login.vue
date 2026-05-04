@@ -1,28 +1,37 @@
+<!-- src/views/login/Login.vue -->
 <template>
   <div class="login">
-    <div class="login__main">
+    <div class="login__bg-circle login__bg-circle--one" />
+    <div class="login__bg-circle login__bg-circle--two" />
+
+    <main class="login__main">
       <div class="login__container">
         <LoginAside />
+
         <section class="login__card">
           <LoginCardHeader />
+
           <div class="login__forms">
-            <form @submit.prevent="onSubmit">
+            <form class="login-form" @submit.prevent="onSubmit">
               <LoginForm />
             </form>
           </div>
         </section>
       </div>
-    </div>
+    </main>
   </div>
 </template>
+
 <script setup lang="ts">
 import LoginAside from '@/components/login/LoginAside.vue';
 import LoginForm from '@/components/login/LoginForm.vue';
 import LoginCardHeader from '@/components/login/LoginCardHeader.vue';
+
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
-import { useAuthStore } from '@/stores';
 import { useRouter } from 'vue-router';
+
+import { useAuthStore } from '@/stores';
 import { adminLogin } from '@/services/adminAuthService';
 import { executeApi } from '@/utils/executeApiUtils';
 
@@ -66,14 +75,19 @@ const onSubmit = handleSubmit(async (values) => {
 
       if (forceChangePassword) {
         router.push('/first-login/change-password');
-      } else {
-        router.push('/home');
+        return;
       }
+
+      router.push('/home');
     },
 
-    onFail: async (_data: any) => {
+    onFail: async () => {
       setFieldError('password', '登入失敗，請確認帳號密碼');
     },
+
+    showSuccessDialog: false,
+    showFailDialog: false,
+    showCatchDialog: true,
   });
 });
 </script>

@@ -103,7 +103,7 @@ const props = withDefaults(
     size: 'md',
     indeterminate: false,
     labelPlacement: 'right',
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -117,7 +117,7 @@ const inputEl = ref<HTMLInputElement | null>(null);
 const uid = Math.random().toString(36).slice(2, 9);
 const computedId = computed(() => props.id ?? `mcheckbox-${uid}`);
 const describedById = computed(() =>
-  props.hint || props.error ? `${computedId.value}-desc` : undefined
+  props.hint || props.error ? `${computedId.value}-desc` : undefined,
 );
 
 /** 判斷是否為陣列綁定（群組） */

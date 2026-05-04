@@ -1,0 +1,203 @@
+@use 'sass:color';
+@use '../../base/tokens' as *;
+
+.tab-lottery-price {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+
+  &__section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    & + & {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba($ink-900, 0.08);
+    }
+  }
+
+  &__section-title {
+    margin: 0 6px 12px;
+    padding-left: 10px;
+    border-left: 4px solid $brand;
+    color: $form-text;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__payment-box {
+    padding: 12px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 12px;
+    background: color.mix($brand-light, #fff, 10%);
+  }
+
+  &__setting-card,
+  &__feature-card {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 14px;
+    background: $form-bg;
+  }
+
+  &__setting-main,
+  &__feature-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__setting-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__setting-desc {
+    margin: 3px 0 0;
+    color: $form-muted;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  &__setting-control,
+  &__feature-control {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid color.mix($form-border, #fff, 62%);
+  }
+
+  &__status-pill {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background: color.mix($border-light, #fff, 28%);
+    color: $form-muted;
+    font-size: 12px;
+    font-weight: 700;
+
+    &--active {
+      background: $brand-light;
+      color: $brand-dark;
+    }
+  }
+
+  &__feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 0 6px;
+
+    @media (max-width: 960px) {
+      grid-template-columns: 1fr;
+      padding: 0;
+    }
+  }
+
+  &__feature-expand {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed $form-border;
+  }
+
+  &__quick-panel {
+    padding: 12px;
+    border-radius: 12px;
+    background: color.mix($brand-light, #fff, 12%);
+    border: 1px solid color.mix($form-border, #fff, 72%);
+  }
+
+  &__quick-head {
+    margin-bottom: 10px;
+  }
+
+  &__quick-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__quick-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__quick-btn {
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid $form-border;
+    border-radius: 999px;
+    background: $form-bg;
+    color: $form-muted;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
+
+    &:hover {
+      border-color: $brand;
+      background: $brand-light;
+      color: $brand-dark;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &--active {
+      border-color: $brand;
+      background: $brand;
+      color: #fff;
+      box-shadow: 0 3px 8px rgba($brand, 0.18);
+    }
+  }
+
+  &__multi-input {
+    margin-top: 12px;
+  }
+}
+
+/* 柔和展開動畫 */
+.soft-expand-enter-active,
+.soft-expand-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    max-height 0.22s ease;
+  overflow: hidden;
+}
+
+.soft-expand-enter-from,
+.soft-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+  max-height: 0;
+}
+
+.soft-expand-enter-to,
+.soft-expand-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 360px;
+}

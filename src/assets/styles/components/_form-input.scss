@@ -1,53 +1,114 @@
 @use 'sass:color';
-@use '@/assets/styles/base/tokens' as *;
+@use '../base/tokens' as *;
 
-/* ===========================
-   Form Input Component
-   =========================== */
+// ===== FormInput 專用色 =====
+$form-placeholder: color.mix($form-muted, #fff, 70%);
+$form-border-light: color.mix($form-border, #fff, 72%);
+$form-bg-soft: color.mix($brand-light, #fff, 14%);
+$form-disabled-bg: color.mix($border-light, #fff, 28%);
 
+// token 目前沒有 success，這裡用 brand 延伸一組成功狀態
+$form-success: $brand;
+$form-success-bg: color.mix($brand-light, #fff, 28%);
+
+// ===== 字體大小 =====
+// 先保留你目前 rem 字級，避免直接吃 token 的 10px 後畫面變小
+$input-font-xs: 1.2rem;
+$input-font-md: 1.4rem;
+$input-font-lg: 1.5rem;
+
+// ===== 容器 =====
 .form-input {
   display: flex;
   flex-direction: column;
   gap: 3px;
   width: 100%;
-}
 
-/* ===== 標籤 ===== */
-.form-input__label {
-  color: $form-text;
-  font-size: $font-md;
-  font-weight: 500;
+  &--sm {
+    .form-input__field-wrap {
+      height: $form-h-sm;
+    }
 
-  &--required {
-    color: $danger;
+    .form-input__field {
+      font-size: $input-font-xs;
+      padding: 0 8px;
+    }
 
-    .form-input__asterisk {
-      margin-left: 2px;
-      font-size: $font-xs;
+    .form-input__addon {
+      height: $form-h-sm;
+      min-width: $form-h-sm;
+      padding: 0 7px;
+      font-size: $input-font-xs;
+    }
+
+    .form-input__clear,
+    .form-input__toggle {
+      width: 28px;
+    }
+  }
+
+  &--lg {
+    .form-input__field-wrap {
+      height: $form-h-lg;
+    }
+
+    .form-input__field {
+      font-size: $input-font-lg;
+      padding: 0 12px;
+    }
+
+    .form-input__addon {
+      height: $form-h-lg;
+      min-width: $form-h-lg;
+      padding: 0 10px;
+      font-size: $input-font-lg;
+    }
+
+    .form-input__clear,
+    .form-input__toggle {
+      width: 38px;
     }
   }
 }
 
-/* ===== 控制列 ===== */
+// ===== 標籤 =====
+.form-input__label {
+  color: $form-text;
+  font-size: $input-font-md;
+  font-weight: 500;
+  line-height: 1.3;
+
+  &--required {
+    color: $danger;
+  }
+}
+
+// ===== 控制列：參考 FormSelect，中間會有 gap =====
 .form-input__control {
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
 }
 
-/* ===== 欄位外框 ===== */
+// ===== 欄位外框 =====
 .form-input__field-wrap {
-  flex: 1;
-  height: $form-h-md;
+  position: relative;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  height: $form-h-md;
+
   border: 1px solid $form-border;
   border-radius: $form-radius;
   background: $form-bg;
+
   transition:
     border-color 120ms ease,
-    box-shadow 120ms ease;
-  position: relative;
+    box-shadow 120ms ease,
+    background-color 120ms ease,
+    opacity 120ms ease;
 
   &:hover {
     border-color: color.mix($brand, $form-border, 30%);
@@ -55,31 +116,47 @@
 
   &.is-focus {
     border-color: $brand;
-    box-shadow: 0 0 0 2px #{color.change($brand, $alpha: 0.2)};
+    box-shadow: 0 0 0 2px color.change($brand, $alpha: 0.2);
   }
 
   &.is-error {
     border-color: $danger;
-    background: $danger-light;
+    background: color.mix($danger-light, #fff, 18%);
+
+    &.is-focus {
+      box-shadow: 0 0 0 2px color.change($danger, $alpha: 0.2);
+    }
+  }
+
+  &.is-success {
+    border-color: $form-success;
+    background: $form-success-bg;
+
+    &.is-focus {
+      box-shadow: 0 0 0 2px color.change($form-success, $alpha: 0.16);
+    }
   }
 
   &.is-disabled {
-    background: #f9fafb;
-    border-color: #e5e7eb;
-    opacity: 0.7;
+    background: $form-disabled-bg;
+    border-color: $form-border-light;
+    cursor: not-allowed;
+    opacity: 0.72;
 
-    .form-input__field {
-      color: #9ca3af;
+    .form-input__field,
+    .form-input__clear,
+    .form-input__toggle {
       cursor: not-allowed;
+      color: $form-placeholder;
     }
   }
 
   &.is-readonly {
-    background: #f9fafb;
-    border-color: #d1d5db;
+    background: $form-bg-soft;
+    border-color: $form-border;
 
     .form-input__field {
-      color: #6b7280;
+      color: $form-muted;
       cursor: default;
     }
   }
@@ -89,45 +166,128 @@
     border-color: $form-border;
     box-shadow: none;
   }
-
-  // 密碼切換 icon
-  .form-input__toggle {
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .form-input__field {
-  }
 }
 
-/* ===== input ===== */
+// ===== input =====
 .form-input__field {
-  width: 100%;
   flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
   padding: 0 10px;
+
   border: 0;
+  border-radius: $form-radius;
   background: transparent;
+
   color: $form-text;
-  font-size: $font-md;
+  font-size: $input-font-md;
+  outline: none;
 
   &::placeholder {
+    color: $form-placeholder;
+  }
+
+  &:disabled {
+    color: $form-placeholder;
+    cursor: not-allowed;
+  }
+
+  &:read-only {
     color: $form-muted;
+    cursor: default;
+  }
+
+  &[type='file'] {
+    display: flex;
+    align-items: center;
+    padding-top: 4px;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+    }
   }
 }
 
-/* ===== 清除按鈕 ===== */
-.form-input__clear {
-  background: transparent;
-  cursor: pointer;
-  color: $form-muted;
-  font-size: 16px;
+// ===== addon：參考 FormSelect，獨立按鈕，不黏 input =====
+.form-input__addon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: $form-h-md;
+  min-width: $form-h-md;
   padding: 0 8px;
-  transition: color 0.2s;
+
+  border: 1px solid $form-border;
+  border-radius: $form-radius;
+  background: $form-bg-soft;
+
+  color: $brand;
+  font-size: $input-font-md;
+  line-height: 1;
+  white-space: nowrap;
+
+  cursor: default;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+
+  &.clickable,
+  .clickable {
+    cursor: pointer;
+  }
+
+  &:has(.clickable):hover,
+  &.clickable:hover {
+    background: $brand-light;
+    border-color: $brand;
+    color: $brand-dark;
+  }
+
+  &:has(.clickable):active,
+  &.clickable:active {
+    transform: scale(0.95);
+  }
+
+  svg,
+  i {
+    font-size: $input-font-md;
+    line-height: 1;
+    pointer-events: none;
+  }
+}
+
+// ===== 清除按鈕 =====
+.form-input__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+  width: 34px;
+  height: 100%;
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: $form-muted;
+  cursor: pointer;
+  font-size: 1.8rem;
+  line-height: 1;
+
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    transform 120ms ease;
 
   &:hover {
     color: $brand;
+    background: color.change($brand, $alpha: 0.06);
   }
 
   &:active {
@@ -135,61 +295,67 @@
   }
 }
 
-/* ===== 密碼切換 ===== */
+// ===== 密碼切換按鈕 =====
 .form-input__toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  flex: 0 0 auto;
   width: 36px;
-  color: $form-muted;
+  height: 100%;
+  padding: 0;
+
+  border: 0;
   background: transparent;
+
+  color: $form-muted;
   cursor: pointer;
 
-  .form-input__toggle-icon {
-    font-size: 15px;
-  }
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    transform 120ms ease;
 
   &:hover {
     color: $brand;
+    background: color.change($brand, $alpha: 0.06);
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  .form-input__toggle-icon {
+    font-size: 1.5rem;
   }
 }
 
-/* ===== Addon ===== */
-.form-input__addon {
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  color: $form-muted;
-
-  &--left {
-    border-right: 1px solid $form-border;
-  }
-
-  &--right {
-    border-left: 1px solid $form-border;
-  }
-}
-
-/* ===== 錯誤 ===== */
+// ===== 錯誤文字 =====
 .form-input__error {
+  margin-top: 2px;
   color: $danger;
-  font-size: $font-xs;
+  font-size: $input-font-xs;
+  line-height: 1.25;
 }
 
-/* ===== 輔助文字 ===== */
+// ===== 輔助文字 =====
 .form-input__help {
+  margin-top: 2px;
   color: $form-muted;
-  font-size: $font-xs;
+  font-size: $input-font-xs;
+  line-height: 1.25;
 }
 
-/* ===== 檔案名稱 ===== */
+// ===== 檔案名稱顯示 =====
 .form-input__file-name {
-  font-size: 0.875rem;
-  color: #555;
   margin-top: 4px;
+  color: $form-muted;
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
-/* ===== Captcha ===== */
+// ===== Captcha Group =====
 .form-input__captcha-group {
   display: flex;
   align-items: flex-end;
@@ -198,9 +364,17 @@
 
   .form-input {
     flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 }
 
+// ===== Captcha Addon =====
 .captcha-addon {
   display: flex;
   align-items: center;
@@ -209,27 +383,43 @@
   &__img {
     width: 100px;
     height: 38px;
-    border-radius: 6px;
     border: 1px solid $form-border;
-    background: #fff;
+    border-radius: $form-radius;
+    background: $form-bg;
     object-fit: contain;
-    box-shadow: 0 1px 3px $shadow-brand; // ← 使用 token
+    box-shadow: 0 1px 3px rgba($ink-900, 0.12);
   }
 
   &__refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
     width: 34px;
     height: 34px;
-    border-radius: 50%;
+
     border: 1px solid $form-border;
-    background: #f9fafb;
+    border-radius: 50%;
+    background: $form-bg-soft;
+
     color: $form-muted;
     cursor: pointer;
-    transition: all 0.2s ease;
+
+    transition:
+      color 120ms ease,
+      border-color 120ms ease,
+      background-color 120ms ease,
+      transform 120ms ease;
+
+    i,
+    svg {
+      font-size: 1.4rem;
+    }
 
     &:hover {
       background: $brand-light;
-      border-color: $brand;
       color: $brand-dark;
+      border-color: $brand;
     }
 
     &:active {

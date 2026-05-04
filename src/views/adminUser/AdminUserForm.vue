@@ -6,12 +6,21 @@
 
       <!-- Step indicator for add-owner -->
       <div v-if="mode === 'add-owner' && !isDetail" class="adminUser__steps">
-        <div class="adminUser__step" :class="{ 'adminUser__step--active': currentStep === 1, 'adminUser__step--done': currentStep > 1 }">
+        <div
+          class="adminUser__step"
+          :class="{
+            'adminUser__step--active': currentStep === 1,
+            'adminUser__step--done': currentStep > 1,
+          }"
+        >
           <span class="adminUser__stepNum">1</span>
           <span>帳號資訊</span>
         </div>
         <div class="adminUser__stepDivider">→</div>
-        <div class="adminUser__step" :class="{ 'adminUser__step--active': currentStep === 2 }">
+        <div
+          class="adminUser__step"
+          :class="{ 'adminUser__step--active': currentStep === 2 }"
+        >
           <span class="adminUser__stepNum">2</span>
           <span>店家資訊</span>
         </div>
@@ -20,64 +29,81 @@
       <div class="flex flex-wrap">
         <!-- ===================== 帳號資訊 (Step 1 for add-owner; always for others) ===================== -->
         <template v-if="currentStep === 1 || mode !== 'add-owner' || isDetail">
-        <div class="w-100 p-6">
-          <p class="form__text form__text--red">帳號資訊</p>
-        </div>
-
-        <!-- Email -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="Email（登入帳號）"
-            v-model="email"
-            :error="errors.email"
-            placeholder="store@example.com"
-            :disabled="isDetail"
-          />
-        </div>
-
-        <!-- 顯示名稱 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="顯示名稱"
-            v-model="displayName"
-            :error="errors.displayName"
-            placeholder="王小明 / 小編A"
-            :disabled="isDetail"
-          />
-        </div>
-
-        <!-- 電話 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="聯絡電話（可選）"
-            v-model="phone"
-            :error="errors.phone"
-            placeholder="0912345678"
-            :disabled="isDetail"
-          />
-        </div>
-
-        <!-- 備註 -->
-        <div class="w-50 w-md-100 p-6" v-if="!isDetail">
-          <FormInput
-            label="備註（可選）"
-            v-model="remark"
-            :error="errors.remark"
-            placeholder="可留空"
-          />
-        </div>
-
-        <!-- ===================== add-editor: 店家 checkbox 列表 ===================== -->
-        <div class="w-100 w-md-100 p-6" v-if="mode === 'add-editor' && !isDetail">
-          <p class="form__text">關聯店家（可多選，至少一間）<span class="form__text--red"> *</span></p>
-          <div class="adminUser__storeCheckboxList">
-            <label v-for="store in storeOptions" :key="store.value" class="adminUser__storeCheckbox">
-              <input type="checkbox" :value="store.value" v-model="storeIds" />
-              <span>{{ store.label }}</span>
-            </label>
+          <div class="w-100 p-6">
+            <p class="form__text form__text--red">帳號資訊</p>
           </div>
-          <p class="error-text m-t-4" v-if="errors.storeIds">{{ errors.storeIds }}</p>
-        </div>
+
+          <!-- Email -->
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="Email（登入帳號）"
+              v-model="email"
+              :error="errors.email"
+              placeholder="store@example.com"
+              :disabled="isDetail"
+            />
+          </div>
+
+          <!-- 顯示名稱 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="顯示名稱"
+              v-model="displayName"
+              :error="errors.displayName"
+              placeholder="王小明 / 小編A"
+              :disabled="isDetail"
+            />
+          </div>
+
+          <!-- 電話 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="聯絡電話（可選）"
+              v-model="phone"
+              :error="errors.phone"
+              placeholder="0912345678"
+              :disabled="isDetail"
+            />
+          </div>
+
+          <!-- 備註 -->
+          <div class="w-50 w-md-100 p-6" v-if="!isDetail">
+            <FormInput
+              label="備註（可選）"
+              v-model="remark"
+              :error="errors.remark"
+              placeholder="可留空"
+            />
+          </div>
+
+          <!-- ===================== add-editor: 店家 checkbox 列表 ===================== -->
+          <div
+            class="w-100 w-md-100 p-6"
+            v-if="mode === 'add-editor' && !isDetail"
+          >
+            <p class="form__text">
+              關聯店家（可多選，至少一間）<span class="form__text--red">
+                *</span
+              >
+            </p>
+            <div class="adminUser__storeCheckboxList">
+              <label
+                v-for="store in storeOptions"
+                :key="store.value"
+                class="adminUser__storeCheckbox"
+              >
+                <input
+                  type="checkbox"
+                  :value="store.value"
+                  v-model="storeIds"
+                />
+                <span>{{ store.label }}</span>
+              </label>
+            </div>
+            <p class="error-text m-t-4" v-if="errors.storeIds">
+              {{ errors.storeIds }}
+            </p>
+          </div>
         </template>
 
         <!-- ===================== add-owner: 店家資訊 (Step 2) ===================== -->
@@ -253,9 +279,16 @@
           </MButton>
 
           <template v-if="mode === 'add-owner'">
-            <MButton v-if="currentStep === 1" type="button" @click="currentStep = 2">下一步</MButton>
+            <MButton
+              v-if="currentStep === 1"
+              type="button"
+              @click="currentStep = 2"
+              >下一步</MButton
+            >
             <template v-if="currentStep === 2">
-              <MButton type="button" class="mbtn--gray" @click="currentStep = 1">上一步</MButton>
+              <MButton type="button" class="mbtn--gray" @click="currentStep = 1"
+                >上一步</MButton
+              >
               <MButton type="submit">建立負責人</MButton>
             </template>
           </template>
@@ -306,6 +339,8 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions } from '@/services/adminStoreService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 interface SelectOption {
   label: string;
@@ -348,7 +383,7 @@ const loadStoreOptions = async () => {
     fn: async () => getStoreOptions({ activeOnly: true }),
     onSuccess: (data) => {
       storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : []
+        Array.isArray(data) ? data : [],
       );
     },
   });
@@ -598,7 +633,7 @@ const fillMockData = async () => {
     });
   }
 
-  await dialogStore.openInfoDialog({
+  await openInfoDialog({
     title: '提示訊息',
     message: '已帶入測試資料',
     iconType: 'success',
@@ -634,7 +669,7 @@ const onSubmit = handleSubmit(async (values) => {
           lineId: values.lineId || null,
         }),
       onSuccess: async () => {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: '提示訊息',
           message: '建立店家負責人成功',
           iconType: 'success',
@@ -655,7 +690,7 @@ const onSubmit = handleSubmit(async (values) => {
         remark: values.remark || null,
       }),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '建立店家編輯成功',
         iconType: 'success',
@@ -669,7 +704,7 @@ const onSubmit = handleSubmit(async (values) => {
 const doActivate = async () => {
   if (!userId.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '啟用確認',
     message: '確定要啟用此帳號嗎？',
   });
@@ -678,7 +713,7 @@ const doActivate = async () => {
   await executeApi({
     fn: async () => activateAdminUser(userId.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '啟用成功',
         iconType: 'success',
@@ -691,7 +726,7 @@ const doActivate = async () => {
 const doDeactivate = async () => {
   if (!userId.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '停用確認',
     message: '確定要停用此帳號嗎？',
   });
@@ -700,7 +735,7 @@ const doDeactivate = async () => {
   await executeApi({
     fn: async () => deactivateAdminUser(userId.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '停用成功',
         iconType: 'success',
@@ -713,7 +748,7 @@ const doDeactivate = async () => {
 const doResetPassword = async () => {
   if (!userId.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '重設密碼確認',
     message: '確定要重設此帳號密碼嗎？',
   });
@@ -722,7 +757,7 @@ const doResetPassword = async () => {
   await executeApi<{ newPassword: string }>({
     fn: async () => resetAdminUserPassword(userId.value),
     onSuccess: async (data) => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '新密碼',
         message: `新密碼：${data?.newPassword || '-'}`,
         iconType: 'success',
@@ -735,7 +770,7 @@ const doResetPassword = async () => {
 const doDelete = async () => {
   if (!userId.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: '確定要刪除此帳號嗎？（後端為軟刪除＝停用）',
   });
@@ -744,7 +779,7 @@ const doDelete = async () => {
   await executeApi({
     fn: async () => deleteAdminUser(userId.value),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '刪除成功',
         iconType: 'success',

@@ -36,7 +36,7 @@
 
 - [ ] T005 [P] `src/components/lottery-with-prizes/DesignatePrizeModal.vue`：處理 `maxDraws === 1` 特殊情境——在 `watch(show)` 或 `onMounted` 中，當 `maxDraws === 1` 時自動設 `prizeNumber.value = 1` 並顯示提示文字「僅有 1 個籤號，已自動選取第 1 號」（用 `v-if="maxDraws === 1"` 顯示在輸入框上方）
 
-- [ ] T006 `src/components/lottery-with-prizes/DesignatePrizeModal.vue`：import `useDialogStore`、`executeApi`、`designatePrize`；新增 `submitting` ref；確認按鈕 click handler 先呼叫 `dialogStore.openConfirmDialog({ title: '確認指定', message: \`確定將第 \${prizeNumber.value} 號指定為大獎？指定後系統將自動將其餘籤號設為銘謝惠顧，且此操作不可撤銷。\` })`；若確認成功則執行 `executeApi({ fn: () => designatePrize(lotteryId, { designatedPrizeNumber: prizeNumber.value! }), onSuccess: () => emit('success'), showSuccessDialog: false })`；`executeApi` 若失敗則保持 Modal 開啟並將後端錯誤訊息顯示於 `inputError`
+- [ ] T006 `src/components/lottery-with-prizes/DesignatePrizeModal.vue`：import `useDialogStore`、`executeApi`、`designatePrize`；新增 `submitting` ref；確認按鈕 click handler 先呼叫 `openConfirmDialog({ title: '確認指定', message: \`確定將第 \${prizeNumber.value} 號指定為大獎？指定後系統將自動將其餘籤號設為銘謝惠顧，且此操作不可撤銷。\` })`；若確認成功則執行 `executeApi({ fn: () => designatePrize(lotteryId, { designatedPrizeNumber: prizeNumber.value! }), onSuccess: () => emit('success'), showSuccessDialog: false })`；`executeApi`若失敗則保持 Modal 開啟並將後端錯誤訊息顯示於`inputError`
 
 **Checkpoint**: DesignatePrizeModal 可獨立 import 與渲染，確認按鈕流程邏輯完整
 
@@ -66,7 +66,7 @@
 
 - [ ] T014 [US1] `src/views/lotteryPrize/LotteryPrizeList.vue`：新增 `hasGrandPrize` computed：`list.value.some((p: any) => p.isGrandPrize === true)`；修改「新增獎項」MButton 加上 `:disabled="isScratch && hasGrandPrize"` 與 `:title="isScratch && hasGrandPrize ? '刮刮樂商品只允許一個大獎，請先刪除現有大獎再重新設定' : ''"`
 
-- [ ] T015 [US1] `src/views/lotteryPrize/LotteryPrizeList.vue`：在操作按鈕區新增「完成配置」按鈕，條件 `v-if="isScratch && lotteryStatus === 'DRAFT'"` + `:disabled="!hasGrandPrize"` + `title="請先設定大獎才能完成配置"`；按鈕 click 呼叫 `executeApi({ fn: () => changeLotteryWithPrizesStatus(lotteryId.value, 'CONFIGURED'), onSuccess: () => { dialogStore.openInfoDialog({...}); router.push('/home/lottery-with-prizes'); }, showSuccessDialog: false })`
+- [ ] T015 [US1] `src/views/lotteryPrize/LotteryPrizeList.vue`：在操作按鈕區新增「完成配置」按鈕，條件 `v-if="isScratch && lotteryStatus === 'DRAFT'"` + `:disabled="!hasGrandPrize"` + `title="請先設定大獎才能完成配置"`；按鈕 click 呼叫 `executeApi({ fn: () => changeLotteryWithPrizesStatus(lotteryId.value, 'CONFIGURED'), onSuccess: () => { openInfoDialog({...}); router.push('/home/lottery-with-prizes'); }, showSuccessDialog: false })`
 
 **Checkpoint**: US1 全部驗收情境通過；一番賞/扭蛋商品的獎品管理頁不受影響
 
@@ -84,7 +84,7 @@
 
 - [ ] T017 [P] [US3] `src/views/lottery-with-prizes/AdminLotteryWithPrizesList.vue`：在 `#cell-actions` template 的「開始抽獎」`MButton`（`item.status === 'CONFIGURED'`）加上 `:disabled="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'"` 與 `:title="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING' ? '請先完成大獎號碼指定才能上架' : ''"`
 
-- [ ] T018 [US2] `src/views/lottery-with-prizes/AdminLotteryWithPrizesList.vue`：在 `#cell-actions` template 中，在「完成配置」MButton 之後新增：`<MButton v-if="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'" size="sm" @click="openDesignateModal(item)">指定大獎號碼</MButton>`；在 template 末尾（`</template>` 前）新增 `<DesignatePrizeModal :show="showDesignateModal" :lotteryId="designateTarget?.id ?? ''" :lotteryName="designateTarget?.title ?? ''" :maxDraws="designateTarget?.maxDraws ?? 1" @close="showDesignateModal = false" @success="onDesignateSuccess" />`；新增 `onDesignateSuccess()` 函式：`showDesignateModal.value = false; designateTarget.value = null; await dialogStore.openInfoDialog({ title: '提示訊息', message: '大獎號碼指定成功', iconType: 'success' }); await refresh();`（確認 `useDialogStore` 已在此檔案 import；若未 import 則加入）
+- [ ] T018 [US2] `src/views/lottery-with-prizes/AdminLotteryWithPrizesList.vue`：在 `#cell-actions` template 中，在「完成配置」MButton 之後新增：`<MButton v-if="item.gameMode === 'SCRATCH_STORE' && item.designationStatus === 'PENDING'" size="sm" @click="openDesignateModal(item)">指定大獎號碼</MButton>`；在 template 末尾（`</template>` 前）新增 `<DesignatePrizeModal :show="showDesignateModal" :lotteryId="designateTarget?.id ?? ''" :lotteryName="designateTarget?.title ?? ''" :maxDraws="designateTarget?.maxDraws ?? 1" @close="showDesignateModal = false" @success="onDesignateSuccess" />`；新增 `onDesignateSuccess()` 函式：`showDesignateModal.value = false; designateTarget.value = null; await openInfoDialog({ title: '提示訊息', message: '大獎號碼指定成功', iconType: 'success' }); await refresh();`（確認 `useDialogStore` 已在此檔案 import；若未 import 則加入）
 
 **Checkpoint**: US2 + US3 全部驗收情境通過；非刮刮樂商品操作不受影響
 
@@ -104,7 +104,7 @@
 
 - [ ] T021 [US4] `src/views/lottery-with-prizes/AdminLotteryWithPrizesForm.vue`：在 `loadDetail` 的 `setValues(...)` 後，新增讀取並儲存 `designationStatus` 的邏輯：在 script 頂部新增 `const lotteryDesignationStatus = ref<string | null>(null)`，在 `loadDetail` 中新增 `lotteryDesignationStatus.value = data?.designationStatus ?? null`；取得目前 `gameMode` 欄位值（透過 `const [gameMode] = defineField('gameMode')` 取得 ref，直接使用 `gameMode.value`）；在商品資訊 MCard 底部（送出按鈕前）新增三種提示條（`v-if="isEdit"`）：①SCRATCH_STORE+PENDING→`<div style="padding:12px;background:#fff7e6;border-left:4px solid #faad14;border-radius:4px;">⚠ 尚未指定大獎號碼，SCRATCH_STORE 商品上架前必須完成指定。</div>` ②SCRATCH_STORE+COMPLETED→`<div style="padding:12px;background:#f6ffed;border-left:4px solid #52c41a;border-radius:4px;">✔ 大獎號碼已指定完成，可上架。</div>` ③SCRATCH_PLAYER→`<div style="padding:12px;background:#e6f7ff;border-left:4px solid #1890ff;border-radius:4px;">ℹ 大獎號碼將由第一位開套玩家在遊戲中指定，商品可直接上架。</div>`
 
-- [ ] T021b [US3] `src/views/lottery-with-prizes/AdminLotteryWithPrizesForm.vue`：在 `onSubmit` 的表單驗證通過後、API 呼叫前，加入上架保護檢查：`const statusValue = (values as any).status; if (statusValue === 'ON_SHELF' && gameMode.value === 'SCRATCH_STORE' && lotteryDesignationStatus.value === 'PENDING') { await dialogStore.openInfoDialog({ title: '無法上架', message: '請先完成大獎號碼指定才能上架', iconType: 'warning' }); return; }`（依賴 T021 已定義的 `lotteryDesignationStatus` ref 與 `gameMode` ref；確認 `dialogStore` 已 import）
+- [ ] T021b [US3] `src/views/lottery-with-prizes/AdminLotteryWithPrizesForm.vue`：在 `onSubmit` 的表單驗證通過後、API 呼叫前，加入上架保護檢查：`const statusValue = (values as any).status; if (statusValue === 'ON_SHELF' && gameMode.value === 'SCRATCH_STORE' && lotteryDesignationStatus.value === 'PENDING') { await openInfoDialog({ title: '無法上架', message: '請先完成大獎號碼指定才能上架', iconType: 'warning' }); return; }`（依賴 T021 已定義的 `lotteryDesignationStatus` ref 與 `gameMode` ref；確認 `dialogStore` 已 import）
 
 - [ ] T022 [US4] `src/views/lottery-with-prizes/AdminLotteryWithPrizesForm.vue`：在 SCRATCH_STORE+PENDING 提示條中加入「前往指定」按鈕：import `DesignatePrizeModal`；新增 `showDesignateModal` ref（`ref(false)`）；按鈕 `@click="showDesignateModal = true"`；在 template 尾部（isEdit 條件內）新增 `<DesignatePrizeModal :show="showDesignateModal" :lotteryId="id ?? ''" :lotteryName="title ?? ''" :maxDraws="Number(maxDraws ?? 1)" @close="showDesignateModal = false" @success="onDesignateSuccess" />`；新增 `onDesignateSuccess()` 函式：`showDesignateModal.value = false; await loadDetail();`（讓 `lotteryDesignationStatus` 重新從 API 刷新）；`title` 與 `maxDraws` 使用現有 `defineField` refs（`const [title] = defineField('title')`、`const [maxDraws] = defineField('maxDraws')`）直接存取
 
@@ -161,7 +161,7 @@ Phase 2（T004、T005 可平行）
 Phase 3（T007、T008 可平行先取得各頁 gameMode，其後各頁任務相互獨立）  
 Phase 4（T016、T017 可平行，T018 依賴兩者）  
 Phase 5（T019、T020 可平行）  
-Phase 6（T024、T025 可平行）  
+Phase 6（T024、T025 可平行）
 
 ---
 

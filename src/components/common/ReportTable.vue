@@ -1,17 +1,31 @@
+<!-- src/components/common/ReportTable.vue -->
 <template>
   <div
     class="report-table m-t-12"
     :class="{
       'report-table--bordered': bordered,
       'report-table--striped': striped,
+      'report-table--fixed-min': widthMode === 'fixed-min',
     }"
   >
-    <!-- 表頭（可固定） -->
-    <div class="report-table__head" v-if="stickyHeader">
-      <table>
+    <div
+      ref="headRef"
+      class="report-table__head"
+      v-if="stickyHeader"
+      @scroll="handleHeadScroll"
+    >
+      <table :style="tableInlineStyle">
+        <colgroup>
+          <col v-if="selectable" :style="colInlineStyle(selectColWidth)" />
+          <col
+            v-for="col in normalizedColumns"
+            :key="`head-col-${col.field}`"
+            :style="colInlineStyle(col.width)"
+          />
+        </colgroup>
+
         <thead>
           <tr>
-            <!-- 選擇欄（可固定在左） -->
             <th
               v-if="selectable"
               :class="[
@@ -27,6 +41,7 @@
                   <FormCheckbox
                     :model-value="isAllCurrentRowsSelected"
                     :indeterminate="someCurrentRowsSelected"
+                    :disabled="enabledCurrentRows.length === 0"
                     @change="toggleSelectAllCurrentRows"
                     aria-label="全選目前頁"
                     size="md"
@@ -50,7 +65,6 @@
                   {{ col.label }}
                 </slot>
 
-                <!-- 預設排序圖示（未排序時也顯示） -->
                 <span
                   v-if="col.sortable"
                   class="report-table__sort-icon"
@@ -77,16 +91,26 @@
       </table>
     </div>
 
-    <!-- 表身（可固定左側選取欄） -->
-    <div class="report-table__body">
-      <table>
+    <div ref="bodyRef" class="report-table__body" @scroll="handleBodyScroll">
+      <table :style="tableInlineStyle">
+        <colgroup>
+          <col v-if="selectable" :style="colInlineStyle(selectColWidth)" />
+          <col
+            v-for="col in normalizedColumns"
+            :key="`body-col-${col.field}`"
+            :style="colInlineStyle(col.width)"
+          />
+        </colgroup>
+
         <tbody>
           <tr
             v-for="(item, index) in items"
             :key="rowKeyValue(item)"
-            :class="[rowClassFn ? rowClassFn(item) : '']"
+            :class="[
+              rowClassFn ? rowClassFn(item) : '',
+              isRowDisabled(item) ? 'is-disabled' : '',
+            ]"
           >
-            <!-- 選擇欄 -->
             <td
               v-if="selectable"
               :class="[
@@ -101,15 +125,19 @@
                 name="selection-cell"
                 :item="item"
                 :mode="selectionTypeSafe"
+                :disabled="isRowDisabled(item)"
               >
-                <!-- selection-cell slot 內 -->
                 <template v-if="selectionTypeSafe === 'checkbox'">
                   <FormCheckbox
                     v-if="!item.isPlaceholder"
-                    v-model="computedSelected"
+                    :model-value="selectedSet.has(rowKeyValue(item))"
                     :value="rowKeyValue(item)"
+                    :disabled="isRowDisabled(item)"
                     aria-label="選取此列"
                     size="md"
+                    @change="
+                      (checked: boolean) => toggleRowCheckbox(item, checked)
+                    "
                   />
                 </template>
 
@@ -118,6 +146,7 @@
                     name="report-table-radio"
                     :model-value="selectedId"
                     :value="rowKeyValue(item)"
+                    :disabled="isRowDisabled(item)"
                     size="md"
                     @update:model-value="toggleRowRadio"
                   />
@@ -125,7 +154,6 @@
               </slot>
             </td>
 
-            <!-- 一般欄位 -->
             <td
               v-for="col in normalizedColumns"
               :key="col.field"
@@ -156,12 +184,24 @@
       </table>
     </div>
 
-    <!-- 表尾（可固定） -->
-    <div v-if="stickyFooter" class="report-table__footer">
-      <table>
+    <div
+      v-if="stickyFooter"
+      ref="footerRef"
+      class="report-table__footer"
+      @scroll="handleFooterScroll"
+    >
+      <table :style="tableInlineStyle">
+        <colgroup>
+          <col v-if="selectable" :style="colInlineStyle(selectColWidth)" />
+          <col
+            v-for="col in normalizedColumns"
+            :key="`foot-col-${col.field}`"
+            :style="colInlineStyle(col.width)"
+          />
+        </colgroup>
+
         <tbody>
           <tr>
-            <!-- 選擇欄（表尾也對齊寬度 & 可固定左） -->
             <td
               v-if="selectable"
               :class="[
@@ -173,7 +213,6 @@
               <slot name="footer-selection"></slot>
             </td>
 
-            <!-- 逐欄的表尾（提供 slot 自訂，如：小計/合計） -->
             <td
               v-for="col in normalizedColumns"
               :key="col.field"
@@ -189,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, withDefaults, defineProps, defineEmits } from 'vue';
+import { computed, ref } from 'vue';
 import { cellWidth } from '@/utils/ReportTableCellWidthClasses';
 import FormCheckbox from '@/components/common/FormCheckbox.vue';
 import FormRadio from '@/components/common/FormRadio.vue';
@@ -210,24 +249,7 @@ type Column = {
 };
 
 type SelectionType = 'checkbox' | 'radio' | 'custom';
-const computedSelected = computed<string[]>({
-  get: () => props.selected || [],
-  set: (val) => emit('update:selected', val),
-});
-const someCurrentRowsSelected = computed(() => {
-  if (
-    !props.selectable ||
-    selectionTypeSafe.value !== 'checkbox' ||
-    !props.showSelectAll ||
-    props.items.length === 0
-  )
-    return false;
-
-  const currentIds = props.items.map((it) => rowKeyValue(it));
-  const set = selectedSet.value;
-  const hit = currentIds.filter((id) => set.has(id)).length;
-  return hit > 0 && hit < currentIds.length;
-});
+type WidthMode = 'fit' | 'fixed-min';
 
 const props = withDefaults(
   defineProps<{
@@ -248,12 +270,14 @@ const props = withDefaults(
     useWidthClass?: boolean;
     selectColWidth?: WidthSpec;
     rowClassFn?: (item: any) => string | string[] | undefined;
+    rowDisabled?: (item: any) => boolean;
 
     stickyHeader?: boolean;
     stickyFooter?: boolean;
     fixedSelectColumn?: boolean;
     bordered?: boolean;
     striped?: boolean;
+    widthMode?: WidthMode;
   }>(),
   {
     items: () => [],
@@ -270,13 +294,15 @@ const props = withDefaults(
     useWidthClass: true,
     selectColWidth: 40,
     rowClassFn: undefined,
+    rowDisabled: undefined,
 
     stickyHeader: true,
     stickyFooter: false,
     fixedSelectColumn: false,
     bordered: true,
     striped: true,
-  }
+    widthMode: 'fit',
+  },
 );
 
 const emit = defineEmits<{
@@ -287,34 +313,99 @@ const emit = defineEmits<{
   (e: 'sort', payload: { key: string; order: 'asc' | 'desc' }): void;
 }>();
 
+const headRef = ref<HTMLElement | null>(null);
+const bodyRef = ref<HTMLElement | null>(null);
+const footerRef = ref<HTMLElement | null>(null);
+const syncingScroll = ref(false);
+
+const syncScrollLeft = (source: 'head' | 'body' | 'footer', left: number) => {
+  if (syncingScroll.value) return;
+  syncingScroll.value = true;
+
+  if (source !== 'head' && headRef.value) headRef.value.scrollLeft = left;
+  if (source !== 'body' && bodyRef.value) bodyRef.value.scrollLeft = left;
+  if (source !== 'footer' && footerRef.value) footerRef.value.scrollLeft = left;
+
+  requestAnimationFrame(() => {
+    syncingScroll.value = false;
+  });
+};
+
+const handleHeadScroll = () => {
+  if (!headRef.value) return;
+  syncScrollLeft('head', headRef.value.scrollLeft);
+};
+
+const handleBodyScroll = () => {
+  if (!bodyRef.value) return;
+  syncScrollLeft('body', bodyRef.value.scrollLeft);
+};
+
+const handleFooterScroll = () => {
+  if (!footerRef.value) return;
+  syncScrollLeft('footer', footerRef.value.scrollLeft);
+};
+
 const normalizedColumns = computed<Column[]>(() =>
   (props.columns || [])
     .filter((c) => !!c && !!c.field)
     .map((c) => ({
       ...c,
       sortable: c.sortable === true,
-    }))
+    })),
 );
 
 const rowKeyValue = (item: any) => String(item?.[props.rowKey] ?? '');
+
+const isRowDisabled = (item: any) => {
+  return props.rowDisabled?.(item) === true;
+};
+
+const enabledCurrentRows = computed(() => {
+  return (props.items || []).filter(
+    (item) => !item?.isPlaceholder && !isRowDisabled(item),
+  );
+});
+
+const enabledCurrentIds = computed(() => {
+  return enabledCurrentRows.value.map((item) => rowKeyValue(item));
+});
 
 const selectionTypeSafe = computed<SelectionType>(() => {
   const t = props.selectionType ?? 'checkbox';
   return t === 'checkbox' || t === 'radio' || t === 'custom' ? t : 'checkbox';
 });
 
-const selectedSet = computed(() => new Set(props.selected));
+const selectedSet = computed(() => new Set(props.selected || []));
 
 const isAllCurrentRowsSelected = computed(() => {
   if (
     !props.selectable ||
     selectionTypeSafe.value !== 'checkbox' ||
     !props.showSelectAll ||
-    props.items.length === 0
+    enabledCurrentIds.value.length === 0
   ) {
     return false;
   }
-  return props.items.every((it) => selectedSet.value.has(rowKeyValue(it)));
+
+  return enabledCurrentIds.value.every((id) => selectedSet.value.has(id));
+});
+
+const someCurrentRowsSelected = computed(() => {
+  if (
+    !props.selectable ||
+    selectionTypeSafe.value !== 'checkbox' ||
+    !props.showSelectAll ||
+    enabledCurrentIds.value.length === 0
+  ) {
+    return false;
+  }
+
+  const hit = enabledCurrentIds.value.filter((id) =>
+    selectedSet.value.has(id),
+  ).length;
+
+  return hit > 0 && hit < enabledCurrentIds.value.length;
 });
 
 const toggleSelectAllCurrentRows = () => {
@@ -322,25 +413,51 @@ const toggleSelectAllCurrentRows = () => {
     !props.selectable ||
     selectionTypeSafe.value !== 'checkbox' ||
     !props.showSelectAll
-  )
+  ) {
     return;
+  }
 
-  const currentIds = props.items.map((it) => rowKeyValue(it));
+  const currentIds = enabledCurrentIds.value;
+
+  if (currentIds.length === 0) return;
+
   if (isAllCurrentRowsSelected.value) {
     const next = (props.selected || []).filter(
-      (id) => !currentIds.includes(id)
+      (id) => !currentIds.includes(id),
     );
     emit('update:selected', next);
   } else {
     const next = Array.from(
-      new Set([...(props.selected || []), ...currentIds])
+      new Set([...(props.selected || []), ...currentIds]),
     );
     emit('update:selected', next);
   }
 };
 
+const toggleRowCheckbox = (item: any, checked: boolean) => {
+  if (!props.selectable || selectionTypeSafe.value !== 'checkbox') return;
+  if (isRowDisabled(item)) return;
+
+  const id = rowKeyValue(item);
+  const current = props.selected || [];
+
+  if (checked) {
+    emit('update:selected', Array.from(new Set([...current, id])));
+    return;
+  }
+
+  emit(
+    'update:selected',
+    current.filter((x) => x !== id),
+  );
+};
+
 const toggleRowRadio = (id: string) => {
   if (!props.selectable || selectionTypeSafe.value !== 'radio') return;
+
+  const item = (props.items || []).find((row) => rowKeyValue(row) === id);
+  if (item && isRowDisabled(item)) return;
+
   emit('update:selectedId', id);
 };
 
@@ -349,14 +466,63 @@ const getCellValue = (item: any, field: string) => item?.[field] ?? '';
 const toWidthClasses = (w?: WidthSpec): string[] => {
   if (!props.useWidthClass || !w) return [];
   if (typeof w === 'number') return cellWidth(w);
+
   const base = typeof w.base === 'number' ? w.base : undefined;
   const md = typeof w.md === 'number' ? w.md : undefined;
   const lg = typeof w.lg === 'number' ? w.lg : undefined;
+
   return cellWidth(base as number, md as number, lg as number);
 };
 
+const widthToPx = (w?: WidthSpec): string | undefined => {
+  if (!w) return undefined;
+  if (typeof w === 'number') return `${w}px`;
+  if (typeof w.base === 'number') return `${w.base}px`;
+  return undefined;
+};
+
+const colInlineStyle = (w?: WidthSpec) => {
+  const px = widthToPx(w);
+  if (!px) return {};
+  return {
+    width: px,
+    minWidth: px,
+    maxWidth: px,
+  };
+};
+
+const DEFAULT_COL_WIDTH = 120;
+
+const getWidthNumber = (w?: WidthSpec): number => {
+  if (!w) return DEFAULT_COL_WIDTH;
+  if (typeof w === 'number') return w;
+  if (typeof w.base === 'number') return w.base;
+  return DEFAULT_COL_WIDTH;
+};
+
+const totalTableWidth = computed(() => {
+  const selectWidth = props.selectable
+    ? getWidthNumber(props.selectColWidth)
+    : 0;
+
+  const columnsWidth = normalizedColumns.value.reduce((sum, col) => {
+    return sum + getWidthNumber(col.width);
+  }, 0);
+
+  return selectWidth + columnsWidth;
+});
+
+const tableInlineStyle = computed(() => {
+  if (props.widthMode !== 'fixed-min') return {};
+
+  return {
+    width: `${totalTableWidth.value}px`,
+    minWidth: '100%',
+  };
+});
+
 const selectColWidthClasses = computed(() =>
-  toWidthClasses(props.selectColWidth)
+  toWidthClasses(props.selectColWidth),
 );
 
 const columnWidthClasses = (col: Column): string[] => toWidthClasses(col.width);

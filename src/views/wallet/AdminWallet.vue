@@ -14,61 +14,61 @@
 
   <!-- 玩家錢包查詢 -->
   <div class="m-t-12">
-  <MCard>
-    <Form
-      ref="walletFormRef"
-      :initial-values="walletInitValues"
-      @submit="onWalletSubmit"
-    >
-      <FormTitle title="錢包資訊" />
+    <MCard>
+      <Form
+        ref="walletFormRef"
+        :initial-values="walletInitValues"
+        @submit="onWalletSubmit"
+      >
+        <FormTitle title="錢包資訊" />
 
-      <div class="flex justify-center m-y-8 gap-x-12">
-        <MButton type="submit" :disabled="!selectedUserId">查詢錢包</MButton>
-        <MButton type="button" variant="secondary" @click="resetWallet"
-          >清除</MButton
-        >
-      </div>
-    </Form>
+        <div class="flex justify-center m-y-8 gap-x-12">
+          <MButton type="submit" :disabled="!selectedUserId">查詢錢包</MButton>
+          <MButton type="button" variant="secondary" @click="resetWallet"
+            >清除</MButton
+          >
+        </div>
+      </Form>
 
-    <div class="m-t-12" v-if="walletSearched">
-      <template v-if="walletLoading">
-        <p class="adminWallet__hint">載入中...</p>
-      </template>
-
-      <template v-else>
-        <template v-if="wallet">
-          <div class="adminWallet__walletCard">
-            <div class="adminWallet__walletRow">
-              <span class="adminWallet__k">User ID</span>
-              <span class="adminWallet__v">{{ wallet.userId || '-' }}</span>
-            </div>
-            <div class="adminWallet__walletRow">
-              <span class="adminWallet__k">玩家名稱</span>
-              <span class="adminWallet__v">{{
-                wallet.userName || wallet.nickname || '-'
-              }}</span>
-            </div>
-            <div class="adminWallet__walletRow">
-              <span class="adminWallet__k">點數餘額</span>
-              <span class="adminWallet__v">{{
-                formatMoney(wallet.balance ?? wallet.coinBalance)
-              }}</span>
-            </div>
-            <div class="adminWallet__walletRow">
-              <span class="adminWallet__k">更新時間</span>
-              <span class="adminWallet__v">{{
-                formatDateTime(wallet.updatedAt)
-              }}</span>
-            </div>
-          </div>
+      <div class="m-t-12" v-if="walletSearched">
+        <template v-if="walletLoading">
+          <p class="adminWallet__hint">載入中...</p>
         </template>
 
         <template v-else>
-          <NoData message="查無此玩家錢包資料" />
+          <template v-if="wallet">
+            <div class="adminWallet__walletCard">
+              <div class="adminWallet__walletRow">
+                <span class="adminWallet__k">User ID</span>
+                <span class="adminWallet__v">{{ wallet.userId || '-' }}</span>
+              </div>
+              <div class="adminWallet__walletRow">
+                <span class="adminWallet__k">玩家名稱</span>
+                <span class="adminWallet__v">{{
+                  wallet.userName || wallet.nickname || '-'
+                }}</span>
+              </div>
+              <div class="adminWallet__walletRow">
+                <span class="adminWallet__k">點數餘額</span>
+                <span class="adminWallet__v">{{
+                  formatMoney(wallet.balance ?? wallet.coinBalance)
+                }}</span>
+              </div>
+              <div class="adminWallet__walletRow">
+                <span class="adminWallet__k">更新時間</span>
+                <span class="adminWallet__v">{{
+                  formatDateTime(wallet.updatedAt)
+                }}</span>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <NoData message="查無此玩家錢包資料" />
+          </template>
         </template>
-      </template>
-    </div>
-  </MCard>
+      </div>
+    </MCard>
   </div>
 
   <!-- 手動調整點數 -->
@@ -189,6 +189,8 @@ import {
   adjustWalletCoins,
   queryWalletTransactions,
 } from '@/services/adminWalletService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 /* ==============================
  * Types
@@ -266,7 +268,7 @@ const wallet = ref<any>(null);
 const onWalletSubmit = async () => {
   const userId = selectedUserId.value.trim();
   if (!userId) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '請先搜尋並選取玩家',
       iconType: 'warning',
@@ -316,7 +318,7 @@ const onAdjustSubmit = async (values: any) => {
   };
 
   if (!payload.userId) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '請先搜尋並選取玩家',
       iconType: 'warning',
@@ -324,7 +326,7 @@ const onAdjustSubmit = async (values: any) => {
     return;
   }
   if (!payload.coinType) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '請選擇 coinType',
       iconType: 'warning',
@@ -332,7 +334,7 @@ const onAdjustSubmit = async (values: any) => {
     return;
   }
   if (!Number.isFinite(payload.amount) || payload.amount === 0) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: 'amount 必須是數字，且不可為 0（正數=加值；負數=扣除）',
       iconType: 'warning',
@@ -340,7 +342,7 @@ const onAdjustSubmit = async (values: any) => {
     return;
   }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '調整確認',
     message: `確定要調整玩家點數嗎？\n玩家：${selectedUserLabel.value || payload.userId}\ncoinType=${payload.coinType}\namount=${payload.amount}`,
   });
@@ -349,7 +351,7 @@ const onAdjustSubmit = async (values: any) => {
   await executeApi({
     fn: async () => adjustWalletCoins(payload),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '調整成功',
         iconType: 'success',
@@ -403,7 +405,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });

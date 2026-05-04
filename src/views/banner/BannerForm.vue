@@ -1,135 +1,145 @@
 <!-- src/views/banner/BannerForm.vue -->
 <template>
   <MCard>
-    <form @submit.prevent="onSubmit">
+    <form class="banner-form" @submit.prevent="onSubmit">
       <p class="form__text form__text--title">
-        Banner {{ isEdit ? '編輯' : '新增' }}
+        Banner{{ isEdit ? '編輯' : '新增' }}
       </p>
 
-      <div class="flex flex-wrap">
-        <!-- 店家 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="店家"
-            v-model="storeId"
-            :options="storeOptions"
-            :error="errors.storeId"
-            :showAll="true"
-            allLabel="請選擇"
-            :allValue="''"
-          />
-        </div>
-      </div>
-      <div class="flex flex-wrap">
-        <!-- 標題 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="標題"
-            v-model="title"
-            :error="errors.title"
-            placeholder="請輸入 Banner 標題"
-          />
-        </div>
-      </div>
-      <div class="flex flex-wrap">
-        <!-- 排序 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="排序"
-            v-model="orderNum"
-            :error="errors.orderNum"
-            type="number"
-          />
-        </div>
-      </div>
-      <div class="flex flex-wrap">
-        <!-- 狀態 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="狀態"
-            v-model="status"
-            :options="statusOptions"
-            :error="errors.status"
-          />
-        </div>
-      </div>
-      <div class="flex flex-wrap">
-        <div class="w-50 flex">
-          <!-- 開始時間 -->
-          <div class="w-50 p-6">
+      <!-- 基本資料 -->
+      <FormSection title="基本資料">
+        <div class="flex flex-wrap">
+          <!-- 店家 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormSelect
+              label="店家"
+              v-model="storeId"
+              :options="storeOptions"
+              :error="displayErrors.storeId"
+              :showAll="true"
+              allLabel="請選擇"
+              :allValue="''"
+              required
+            />
+          </div>
+
+          <!-- 標題 -->
+          <div class="w-50 w-md-100 p-6">
             <FormInput
-              label="開始顯示時間"
+              label="標題"
+              v-model="title"
+              :error="displayErrors.title"
+              required
+              maxlength="100"
+              placeholder="請輸入 Banner 標題"
+            />
+          </div>
+
+          <!-- 排序 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="排序"
+              v-model="orderNum"
+              :error="displayErrors.orderNum"
+              type="number"
+              placeholder="例如：1"
+            />
+          </div>
+
+          <!-- 狀態 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormSelect
+              label="狀態"
+              v-model="status"
+              :options="statusOptions"
+              :error="displayErrors.status"
+              required
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      <!-- 顯示時間 -->
+      <FormSection title="顯示時間">
+        <div class="flex flex-wrap">
+          <div class="w-100 p-6">
+            <FormDateRangeField
+              label="顯示時間"
               type="datetime-local"
-              v-model="startTime"
-              :error="errors.startTime"
-            />
-          </div>
-
-          <!-- 結束時間 -->
-          <div class="w-50 p-6">
-            <FormInput
-              label="結束顯示時間"
-              type="datetime-local"
-              v-model="endTime"
-              :error="errors.endTime"
+              v-model:start="startTime"
+              v-model:end="endTime"
+              :start-error="displayErrors.startTime"
+              :end-error="displayErrors.endTime"
             />
           </div>
         </div>
-      </div>
-      <div class="flex flex-wrap">
-        <!-- 圖片 -->
-        <div class="w-50 p-6">
-          <UploadDropzone
-            label="圖片"
-            accept="image/*"
-            :disabled="uploading || bulkCreating || cropOpen"
-            :fileName="uploadFileName"
-            :errorMessage="uploadErrorMessage"
-            :statusText="uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''"
-            :showDecorIcons="true"
-            :showClear="true"
-            @select="handleSelectedFile"
-            @clear="clearSelectedFileUi"
-          />
+      </FormSection>
 
-          <!-- 也允許直接貼 URL -->
-          <div class="m-t-12">
-            <FormInput
-              label="圖片 URL"
-              v-model="imageUrl"
-              :error="errors.imageUrl"
-              @blur="syncPreviewFromUrl"
+      <!-- 圖片設定 -->
+      <FormSection title="圖片設定">
+        <div class="flex flex-wrap">
+          <div class="w-50 w-md-100 p-6">
+            <UploadDropzone
+              label="圖片"
+              accept="image/*"
+              :disabled="uploading || bulkCreating || cropOpen"
+              :fileName="uploadFileName"
+              :errorMessage="uploadErrorMessage"
+              :statusText="
+                uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
+              "
+              :showDecorIcons="true"
+              :showClear="true"
+              @select="handleSelectedFile"
+              @clear="clearSelectedFileUi"
             />
-          </div>
 
-          <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
-            <MButton
-              type="button"
-              class="mbtn--gray"
-              :disabled="uploading || bulkCreating"
-              @click="clearImage"
-            >
-              清除圖片
-            </MButton>
-            <p class="form__text" v-if="uploading">上傳中...</p>
-          </div>
+            <div class="m-t-12">
+              <FormInput
+                label="圖片 URL"
+                v-model="imageUrl"
+                :error="displayErrors.imageUrl"
+                maxlength="500"
+                placeholder="https://example.com/banner.jpg（或上方上傳後自動回填）"
+                @blur="syncPreviewFromUrl"
+              />
+            </div>
 
-          <div v-if="imagePreview" class="m-t-12">
-            <img
-              :src="imagePreview"
-              alt="preview"
-              style="max-width: 240px; border-radius: 8px"
-            />
+            <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
+              <MButton
+                type="button"
+                class="mbtn--gray"
+                :disabled="uploading || bulkCreating || cropOpen"
+                @click="clearImage"
+              >
+                <font-awesome-icon icon="fa-trash" class="m-r-4" />
+                清除圖片
+              </MButton>
+
+              <p class="form__text" v-if="uploading">上傳中...</p>
+            </div>
+
+            <div v-if="imagePreview" class="banner-form__image-preview m-t-12">
+              <img :src="imagePreview" alt="preview" />
+            </div>
           </div>
         </div>
-      </div>
+      </FormSection>
 
-      <div class="flex justify-center m-y-12 gap-x-12">
-        <MButton type="submit" :disabled="uploading || bulkCreating">
+      <!-- bottom button -->
+      <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
+        <MButton
+          type="submit"
+          :disabled="uploading || bulkCreating || cropOpen"
+        >
+          <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
 
-        <MButton @click="router.back()"> 返回 </MButton>
+        <MButton type="button" class="mbtn--red" @click="navigateBack">
+          <font-awesome-icon icon="fa-arrow-left" class="m-r-4" />
+          返回
+        </MButton>
       </div>
     </form>
 
@@ -158,11 +168,14 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
+import FormSection from '@/components/common/FormSection.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
 import UploadDropzone from '@/components/common/UploadDropzone.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore } from '@/stores';
+import { useBannerStore } from '@/stores/banner/useBannerStore';
 
 import {
   getBannerById,
@@ -171,31 +184,50 @@ import {
 } from '@/services/adminBannerService';
 import { uploadBannerImage } from '@/services/adminUploadService';
 import { getStoreOptions } from '@/services/adminStoreService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 const route = useRoute();
 const router = useRouter();
 const dialogStore = useDialogStore();
+const bannerStore = useBannerStore();
 
 const isEdit = computed(() => Boolean(route.params.id));
+const id = computed(() => String(route.params.id || ''));
+
+/** 是否已按過送出 */
+const isSubmitted = ref(false);
+
+/** 只有送出後才顯示錯誤 */
+const displayErrors = computed<Record<string, string | undefined>>(() => {
+  if (!isSubmitted.value) return {};
+  return errors.value;
+});
 
 const statusOptions: SelectOption[] = [
   { label: '下架', value: 'UNPUBLISHED' },
   { label: '上架', value: 'PUBLISHED' },
 ];
 
-/* 店家選項 */
+/* --------------------------------------
+ * Store options
+ * -------------------------------------- */
 const storeOptions = ref<SelectOption[]>([]);
 
 const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
-  list.map((x) => ({
-    label: x?.label ?? '',
-    value: x?.value ?? '',
-    ...(x?.description ? { description: x.description } : {}),
+  list.map((item) => ({
+    label: item?.label ?? item?.storeName ?? item?.name ?? '',
+    value: item?.value ?? item?.id ?? '',
+    ...(item?.description ? { description: item.description } : {}),
   }));
 
 const ensureStoreOptionExists = (storeIdValue: string) => {
   if (!storeIdValue) return;
-  const exists = storeOptions.value.some((o) => o.value === storeIdValue);
+
+  const exists = storeOptions.value.some(
+    (option) => String(option.value) === String(storeIdValue),
+  );
+
   if (!exists) {
     storeOptions.value.unshift({
       label: `店家（${storeIdValue}）`,
@@ -207,44 +239,86 @@ const ensureStoreOptionExists = (storeIdValue: string) => {
 const loadStoreOptions = async () => {
   await executeApi<any[]>({
     fn: () => getStoreOptions({ activeOnly: true }),
-    onSuccess: (data) => {
-      storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : [],
-      );
-      ensureStoreOptionExists(storeId.value);
+    onSuccess: (res: any) => {
+      const data = res?.data ?? res ?? [];
+      const arr = Array.isArray(data) ? data : [];
+
+      storeOptions.value = mapEnumOptionsToSelect(arr);
+      ensureStoreOptionExists(String(storeId.value || ''));
     },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
-/* schema */
+/* --------------------------------------
+ * Date utils
+ * -------------------------------------- */
+const normalizeToBackendLocalDateTime = (value?: string | null) => {
+  const text = String(value ?? '').trim();
+
+  if (!text) return null;
+  if (text.length >= 19) return text.slice(0, 19);
+  if (text.length === 16) return `${text}:00`;
+
+  return text;
+};
+
+const normalizeToDatetimeLocalInput = (value?: string | null) => {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  return text.length >= 16 ? text.slice(0, 16) : text;
+};
+
+/* --------------------------------------
+ * Schema
+ * -------------------------------------- */
 const schema = yup.object({
   storeId: yup.string().required('店家不能為空'),
-  title: yup.string().required('請輸入標題'),
-  imageUrl: yup.string().required('圖片 URL 不能為空'),
+
+  title: yup.string().required('請輸入標題').max(100, '標題最多100字'),
+
+  imageUrl: yup
+    .string()
+    .required('圖片 URL 不能為空')
+    .max(500, '圖片 URL 最多500字'),
+
   orderNum: yup
     .number()
     .typeError('排序必須是數字')
     .min(1, '排序最小為 1')
     .nullable()
-    .transform((v, o) =>
-      o === '' || o === null || o === undefined ? null : v,
+    .transform((value, originalValue) =>
+      originalValue === '' ||
+      originalValue === null ||
+      originalValue === undefined
+        ? null
+        : value,
     ),
+
   status: yup
     .string()
     .oneOf(['PUBLISHED', 'UNPUBLISHED'])
     .required('請選擇狀態'),
+
   startTime: yup.string().nullable(),
+
   endTime: yup
     .string()
     .nullable()
-    .test('endAfterStart', '結束時間必須晚於開始時間', function (endVal) {
+    .test('endAfterStart', '結束時間必須晚於開始時間', function (endValue) {
       const start = this.parent.startTime;
-      if (!start || !endVal) return true;
-      return endVal > start;
+
+      if (!start || !endValue) return true;
+
+      return endValue > start;
     }),
 });
 
-/* useForm */
+/* --------------------------------------
+ * useForm
+ * -------------------------------------- */
 const { errors, handleSubmit, setValues, defineField } = useForm({
   validationSchema: schema,
   initialValues: {
@@ -256,9 +330,9 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
     startTime: '',
     endTime: '',
   },
+  validateOnMount: false,
 });
 
-/* defineField */
 const [storeId] = defineField('storeId');
 const [title] = defineField('title');
 const [imageUrl] = defineField('imageUrl');
@@ -267,12 +341,14 @@ const [status] = defineField('status');
 const [startTime] = defineField('startTime');
 const [endTime] = defineField('endTime');
 
+/* --------------------------------------
+ * Image state
+ * -------------------------------------- */
 const imagePreview = ref('');
 
 const uploading = ref(false);
 const bulkCreating = ref(false);
 
-/* crop */
 const cropOpen = ref(false);
 const cropSrc = ref('');
 const cropFileName = ref('cropped.jpg');
@@ -301,66 +377,79 @@ onBeforeUnmount(() => {
   revokeCropSrc();
 });
 
-/* 編輯模式載入 */
-onMounted(async () => {
-  await loadStoreOptions();
-
-  if (!isEdit.value) return;
+/* --------------------------------------
+ * Load detail
+ * -------------------------------------- */
+const loadDetail = async () => {
+  if (!isEdit.value || !id.value) return;
 
   await executeApi({
-    fn: async () => getBannerById(route.params.id as string),
-    onSuccess: (data) => {
-      const d: any = data;
+    fn: async () => getBannerById(id.value),
+    onSuccess: (res: any) => {
+      const data = res?.data ?? res;
 
-      setValues({
-        storeId: d.storeId ?? '',
-        title: d.title ?? '',
-        imageUrl: d.imageUrl ?? '',
-        orderNum: d.orderNum ?? null,
-        status: d.status ?? 'UNPUBLISHED',
-        startTime: d.startTime,
-        endTime: d.endTime,
-      });
+      setValues(
+        {
+          storeId: data?.storeId ?? '',
+          title: data?.title ?? '',
+          imageUrl: data?.imageUrl ?? '',
+          orderNum: data?.orderNum ?? null,
+          status: data?.status ?? 'UNPUBLISHED',
+          startTime: normalizeToDatetimeLocalInput(data?.startTime),
+          endTime: normalizeToDatetimeLocalInput(data?.endTime),
+        },
+        false,
+      );
 
-      imagePreview.value = d.imageUrl ?? '';
-      ensureStoreOptionExists(d.storeId ?? '');
+      imagePreview.value = data?.imageUrl ?? '';
+      ensureStoreOptionExists(data?.storeId ?? '');
     },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
-});
+};
 
-/* 手動貼 URL 同步預覽 */
+/* --------------------------------------
+ * Image handlers
+ * -------------------------------------- */
 const syncPreviewFromUrl = () => {
   imagePreview.value = imageUrl.value || '';
 };
 
-/* 清除圖片 */
 const clearImage = () => {
   imageUrl.value = '';
   imagePreview.value = '';
+  clearSelectedFileUi();
 };
 
-/* 由 UploadDropzone 丟進來的 file */
 const handleSelectedFile = async (file: File) => {
   uploadErrorMessage.value = null;
 
   const maxSize = 5 * 1024 * 1024;
+
   if (file.size > maxSize) {
     uploadErrorMessage.value = '圖片大小不可超過 5MB';
-    await dialogStore.openInfoDialog({
+
+    await openInfoDialog({
       title: '提示訊息',
       message: '圖片大小不可超過 5MB',
       iconType: 'warning',
     });
+
     clearSelectedFileUi();
     return;
   }
+
   if (!file.type.startsWith('image/')) {
     uploadErrorMessage.value = '請選擇圖片檔案';
-    await dialogStore.openInfoDialog({
+
+    await openInfoDialog({
       title: '提示訊息',
       message: '請選擇圖片檔案',
       iconType: 'warning',
     });
+
     clearSelectedFileUi();
     return;
   }
@@ -376,17 +465,17 @@ const handleSelectedFile = async (file: File) => {
   cropOpen.value = true;
 };
 
-/* crop confirm -> upload */
 const onCropConfirm = async (croppedFile: File) => {
   cropOpen.value = false;
   revokeCropSrc();
 
   if (bulkCreating.value) {
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '批量新增進行中，請稍後再上傳圖片',
       iconType: 'warning',
     });
+
     return;
   }
 
@@ -394,22 +483,23 @@ const onCropConfirm = async (croppedFile: File) => {
 
   await executeApi<{ imageUrl: string }>({
     fn: async () => uploadBannerImage(croppedFile),
-    onSuccess: async (data) => {
-      const url = data?.imageUrl || '';
+    onSuccess: async (res: any) => {
+      const url = res?.imageUrl || res?.data?.imageUrl || '';
 
       if (!url) {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: '提示訊息',
           message: '上傳成功但未取得 imageUrl，請檢查後端回傳格式',
           iconType: 'warning',
         });
+
         return;
       }
 
       imageUrl.value = url;
       imagePreview.value = url;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '圖片上傳成功',
         iconType: 'success',
@@ -418,87 +508,102 @@ const onCropConfirm = async (croppedFile: File) => {
     onFinally: async () => {
       uploading.value = false;
     },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
-/* 快速產生資料 */
-const pad2 = (n: number) => String(n).padStart(2, '0');
-const toDatetimeLocal = (date: Date) => {
-  const y = date.getFullYear();
-  const m = pad2(date.getMonth() + 1);
-  const d = pad2(date.getDate());
-  const hh = pad2(date.getHours());
-  const mm = pad2(date.getMinutes());
-  return `${y}-${m}-${d}T${hh}:${mm}`;
+/* --------------------------------------
+ * Submit
+ * -------------------------------------- */
+const onSubmit = handleSubmit(
+  async (values) => {
+    isSubmitted.value = true;
+
+    if (uploading.value || bulkCreating.value || cropOpen.value) {
+      await openInfoDialog({
+        title: '提示訊息',
+        message: cropOpen.value
+          ? '圖片裁切中，請先完成裁切再送出'
+          : '操作進行中，請稍後再送出',
+        iconType: 'warning',
+      });
+
+      return;
+    }
+
+    const ok = await openConfirmDialog({
+      title: '儲存確認',
+      message: '確定要儲存 Banner 嗎？',
+    });
+
+    if (!ok) return;
+
+    const payload = {
+      storeId: values.storeId,
+      title: String(values.title ?? '').trim(),
+      imageUrl: String(values.imageUrl ?? '').trim(),
+      orderNum:
+        values.orderNum === null || values.orderNum === undefined
+          ? null
+          : Number(values.orderNum),
+      status: values.status,
+      startTime: normalizeToBackendLocalDateTime(values.startTime),
+      endTime: normalizeToBackendLocalDateTime(values.endTime),
+    };
+
+    await executeApi({
+      fn: async () => {
+        if (isEdit.value) {
+          return updateBanner(id.value, payload);
+        }
+
+        return createBanner(payload);
+      },
+      onSuccess: async () => {
+        await openInfoDialog({
+          title: '提示訊息',
+          message: isEdit.value ? '更新成功' : '新增成功',
+          iconType: 'success',
+        });
+
+        bannerStore.setShouldRefresh(true);
+        router.push('/home/banner');
+      },
+      showSuccessDialog: false,
+      showFailDialog: true,
+      showCatchDialog: true,
+    });
+  },
+  () => {
+    isSubmitted.value = true;
+  },
+);
+
+/* --------------------------------------
+ * Navigation
+ * -------------------------------------- */
+const navigateBack = () => {
+  router.push('/home/banner');
 };
 
-/* submit */
-const onSubmit = handleSubmit(async (values) => {
-  if (uploading.value || bulkCreating.value || cropOpen.value) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: cropOpen.value
-        ? '圖片裁切中，請先完成裁切再送出'
-        : '操作進行中，請稍後再送出',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  if (!values.storeId) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '請選擇店家',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  if (!values.imageUrl) {
-    await dialogStore.openInfoDialog({
-      title: '提示訊息',
-      message: '請上傳（裁切）或輸入圖片 URL',
-      iconType: 'warning',
-    });
-    return;
-  }
-
-  const payload = {
-    storeId: values.storeId,
-    title: values.title,
-    imageUrl: values.imageUrl,
-    orderNum: values.orderNum ?? null,
-    status: values.status,
-    startTime: values.startTime,
-    endTime: values.endTime,
-  };
-
-  if (!isEdit.value) {
-    await executeApi({
-      fn: async () => createBanner(payload),
-      onSuccess: async () => {
-        await dialogStore.openInfoDialog({
-          title: '提示訊息',
-          message: '新增成功',
-          iconType: 'success',
-        });
-        router.push('/home/banner');
-      },
-    });
-  } else {
-    await executeApi({
-      fn: async () => updateBanner(route.params.id as string, payload),
-      onSuccess: async () => {
-        await dialogStore.openInfoDialog({
-          title: '提示訊息',
-          message: '更新成功',
-          iconType: 'success',
-        });
-        router.push('/home/banner');
-      },
-    });
-  }
+/* --------------------------------------
+ * Mounted
+ * -------------------------------------- */
+onMounted(async () => {
+  await loadStoreOptions();
+  await loadDetail();
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.banner-form {
+  &__image-preview {
+    img {
+      max-width: 240px;
+      border-radius: 8px;
+    }
+  }
+}
+</style>

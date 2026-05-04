@@ -1,320 +1,386 @@
-// sidebar-layout.scss (或你原本放這份的檔案)
+// src/assets/styles/layout/_sidebarLayout.scss
 @use 'sass:color';
-@use '@/assets/styles/base/tokens' as *;
+@use '../base/tokens' as *;
 
-/* Layout sizes */
+$page-bg: #f7f7f7;
 $header-height: 60px;
-$sidebar-width: 200px;
+$sidebar-width: 260px;
 
-/* 禁止滾動（手機展開側欄用） */
-body.no-scroll {
+:global(html),
+:global(body),
+:global(#app) {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+:global(body.no-scroll) {
   overflow: hidden;
 }
 
 .sidebar-layout {
+  position: relative;
   width: 100%;
   height: 100vh;
-  font-family: 'Poppins', sans-serif;
+  min-width: 0;
+  overflow: hidden;
+  font-family: 'Poppins', 'Noto Sans TC', sans-serif;
+  background: $page-bg;
 
-  /* --------- Overlay（Mobile 打開遮罩） --------- */
   &__overlay {
     position: fixed;
     top: $header-height;
     left: 0;
     right: 0;
     bottom: 0;
-    background: color.change(#000, $alpha: 0.45);
-    backdrop-filter: blur(1px);
     z-index: 998;
+    background: rgba($ink-900, 0.42);
+    backdrop-filter: blur(2px);
     animation: fadeIn 0.2s ease-out;
   }
 
-  /* --------- Sidebar --------- */
   &__sidebar {
     position: fixed;
     top: $header-height;
     left: 0;
     bottom: 0;
-    width: $sidebar-width;
-
-    background-color: $form-bg;
-    border-right: 1px solid $form-border;
-    color: $form-text;
-
     z-index: 999;
+    width: $sidebar-width;
+    background: $bg-light;
+    color: $ink-900;
+    border-right: 1px solid $border-light;
+    box-shadow: 4px 0 14px rgba($ink-900, 0.05);
     transform: translateX(-100%);
     transition: transform 0.28s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+
+    &--visible {
+      transform: translateX(0);
+    }
   }
 
-  /* 展開 */
+  &__header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    width: 100%;
+    max-width: 100vw;
+    height: $header-height;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.25rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, $brand, $brand-dark);
+    box-shadow: 0 2px 12px rgba($ink-900, 0.16);
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  &__content {
+    position: fixed;
+    top: $header-height;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    min-width: 0;
+    background: $page-bg;
+    transition: left 0.28s ease;
+    overflow: hidden;
+  }
+
+  &--open,
   &.sidebar-open {
     .sidebar-layout__sidebar {
       transform: translateX(0);
     }
+
     .sidebar-layout__content {
-      margin-left: $sidebar-width;
+      left: $sidebar-width;
     }
   }
 
-  /* --------- Menu --------- */
-  &__menu {
-    padding: 1rem 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    .sidebar-layout__item {
-      &--active > .sidebar-layout__link {
-        background-color: $brand;
-        color: #fff;
-        font-weight: 700;
-      }
-    }
-
-    .sidebar-layout__link {
-      display: block;
-      padding: 12px 20px;
-      border-radius: $form-radius;
-      font-size: 1.05rem;
-      color: $form-text;
-      transition: background-color 0.25s ease, color 0.25s ease;
-      cursor: pointer;
-
-      &:hover {
-        background-color: $bg-light;
-      }
-    }
-
-    /* ------- Submenu ------- */
-    .sidebar-layout__submenu {
-      padding-left: 1rem;
-      margin-top: 4px;
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      .sidebar-layout__sublink {
-        position: relative;
-        display: block;
-        padding: 8px 28px;
-        border-radius: 4px;
-
-        background: $form-bg;
-        color: $form-text;
-
-        font-size: 0.95rem;
-        transition: background-color 0.25s ease, color 0.25s ease;
-
-        &:hover {
-          background: $bg-light;
-        }
-
-        &.active {
-          background: color.change($brand, $alpha: 0.08);
-          color: $brand-dark;
-          font-weight: 700;
-
-          &::before {
-            content: '';
-            position: absolute;
-            left: 8px;
-            top: 8px;
-            bottom: 8px;
-            width: 4px;
-            background: $brand;
-            border-radius: 4px;
-          }
-        }
-      }
-    }
+  &__body {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: auto;
+    padding: 1.25rem;
+    box-sizing: border-box;
   }
 
-  /* --------- Content --------- */
-  &__content {
-    position: relative;
-    background: $bg-light; // 原 #fafafa
-    min-height: 100vh;
-    padding-top: $header-height;
-    transition: margin-left 0.28s ease;
+  &__body-inner {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
-  /* --------- Header --------- */
-  &__header {
-    position: fixed;
-    inset: 0 0 auto 0;
-    height: $header-height;
+  &__body-inner > :deep(*) {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
 
-    background-color: $brand;
-    color: #fff;
-
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 1rem;
-
-    z-index: 1000;
-    box-shadow: 0 2px 10px #{color.change($shadow-brand, $alpha: 0.35)};
+  &__body-inner :deep(.report-table),
+  &__body-inner :deep(.report-table-wrapper),
+  &__body-inner :deep(.report-table__wrapper) {
+    max-width: 100%;
+    min-width: 0;
   }
 
   &__left {
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 1rem;
   }
 
-  /* --------- Toggle（Hamburger） --------- */
   &__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
     width: 40px;
     height: 40px;
-    border-radius: 10px;
-
-    background-color: $brand-hover;
-    color: #fff;
-
-    display: grid;
-    place-items: center;
-
     border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 1.4rem;
     cursor: pointer;
-    font-size: 1.1rem;
-
-    transition: background-color 0.25s ease, transform 0.15s ease;
+    transition:
+      background-color 0.2s ease,
+      transform 0.15s ease;
 
     &:hover {
-      background-color: $brand-dark;
+      background: rgba(255, 255, 255, 0.26);
     }
+
     &:active {
-      transform: scale(0.93);
+      transform: scale(0.95);
     }
   }
 
-  /* --------- Logo --------- */
-  &__logo-img {
-    height: 36px;
-  }
-
-  /* --------- User Info --------- */
-  &__user-info {
+  &__logo {
+    min-width: 0;
     display: flex;
     align-items: center;
+  }
+
+  &__logo-img {
+    height: 36px;
+    max-width: 180px;
+    object-fit: contain;
+  }
+
+  &__user-info {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: 1rem;
   }
 
   &__username {
-    font-size: 14px;
+    min-width: 0;
+    max-width: 320px;
+    font-size: $font-lg;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__actions {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex: 0 0 auto;
   }
 
   &__language-select {
-    padding: 4px 6px;
-    border-radius: 4px;
-    border: 1px solid $form-border;
-    background: $form-bg;
-    color: $form-text;
+    height: $form-h-md;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 8px;
+    color: $ink-900;
+    background: #ffffff;
+    outline: none;
   }
 
-  /* --------- Logout Button --------- */
   &__logout {
-    background-color: $danger;
-    color: #fff;
-    padding: 4px 10px;
-    border-radius: $form-radius;
-    border: none;
+    height: $form-h-md;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: $danger;
+    color: #ffffff;
     cursor: pointer;
-    font-weight: 700;
-
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    transition: background-color 0.2s ease;
 
     &:hover {
-      background-color: color.mix($danger, #000, 10%);
-    }
-
-    &:active {
-      transform: scale(0.94);
-      background-color: color.mix($danger, #000, 18%);
+      background: color.adjust($danger, $lightness: -8%);
     }
   }
 
-  /* --------- Main Body --------- */
-  &__body {
-    padding: 1.5rem;
-    min-height: calc(100vh - $header-height);
+  &__menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 1rem 0.75rem;
+    margin: 0;
+    list-style: none;
+  }
+
+  &__item {
+    border-radius: 12px;
+
+    &--active > .sidebar-layout__link {
+      background: $brand;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 6px 14px rgba($brand, 0.2);
+    }
+  }
+
+  &__link {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: $ink-900;
+    text-align: left;
+    font-size: 1.5rem;
+    line-height: 1.4;
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      background: $brand-light;
+      color: $brand-dark;
+    }
+  }
+
+  &__link-arrow {
+    flex: 0 0 auto;
+    font-size: 1.2rem;
+    color: currentColor;
+    transition: transform 0.2s ease;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 0 6px 10px;
+    margin: 0;
+    list-style: none;
+  }
+
+  &__sublink {
+    position: relative;
+    display: block;
+    padding: 9px 12px 9px 24px;
+    border-radius: 10px;
+    color: $muted;
+    background: transparent;
+    font-size: 1.35rem;
+    line-height: 1.4;
+    text-decoration: none;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+
+    &:hover {
+      background: $brand-light;
+      color: $brand-dark;
+    }
+
+    &.active {
+      background: $brand-light-hover;
+      color: $brand-dark;
+      font-weight: 700;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 9px;
+        bottom: 9px;
+        width: 4px;
+        border-radius: 999px;
+        background: $brand;
+      }
+    }
   }
 }
 
-/* ===========================
-   📱 Mobile (<= 768px)
-   =========================== */
 @media (max-width: 768px) {
-  .sidebar-layout__sidebar {
-    width: 75vw;
-  }
+  .sidebar-layout {
+    &--open,
+    &.sidebar-open {
+      .sidebar-layout__content {
+        left: 0;
+      }
+    }
 
-  .sidebar-layout__sidebar:not(.sidebar-layout__sidebar--hidden) {
-    transform: translateX(0);
+    &__sidebar {
+      width: min(82vw, 320px);
+    }
+
+    &__header {
+      padding: 0 0.75rem;
+    }
+
+    &__logo-img {
+      height: 30px;
+      max-width: 140px;
+    }
+
+    &__user-info {
+      gap: 0.5rem;
+    }
+
+    &__username {
+      display: none;
+    }
+
+    &__body {
+      padding: 0.75rem;
+    }
+
+    &__body-inner {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
   }
 }
 
-/* ===========================
-   Active sublink override（保留）
-   =========================== */
-.sidebar-layout__sublink.active {
-  background-color: color.change($brand, $alpha: 0.1);
-  color: $brand-dark !important;
-}
-
-/* ===========================
-   Animation
-   =========================== */
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
-  }
-}
-
-/* ===========================
-   Notice Section（保留原始結構）
-   =========================== */
-.notice-section {
-  margin-bottom: 1.5rem;
-
-  &__title {
-    font-weight: 700;
-    color: $brand-dark;
-    margin-bottom: 0.5rem;
-  }
-
-  &__list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1rem 0;
-  }
-
-  &__item {
-    cursor: pointer;
-    padding: 6px 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-
-    &:hover {
-      background: color.change($brand, $alpha: 0.12);
-    }
-  }
-
-  &__detail {
-    background: $form-bg;
-    padding: 1rem;
-    border: 1px solid $form-border;
-    border-radius: $form-radius;
   }
 }

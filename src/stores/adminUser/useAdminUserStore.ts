@@ -3,68 +3,102 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export const useAdminUserStore = defineStore('adminUser', () => {
-  const list = ref<any[]>([]);
-  const searchCondition = ref<any>({
+  /** 搜尋條件 */
+  const searchCondition = ref({
     keyword: '',
-    role: '',
-    storeId: '',
     status: '',
+    storeId: '',
+    roleCode: '',
   });
 
-  const sortKey = ref<string>('');
+  /** 查詢結果 */
+  const list = ref<any[]>([]);
+
+  /** 分頁資訊 */
+  const currentPage = ref(1);
+  const pageLimitSize = ref(10);
+
+  /** 排序 */
+  const sortKey = ref('');
   const sortOrder = ref<'asc' | 'desc' | ''>('asc');
 
-  const currentPage = ref<number>(1);
-  const pageLimitSize = ref<number>(10);
+  /** 已勾選資料 */
+  const selectedIds = ref<string[]>([]);
 
-  const setList = (rows: any[]) => {
-    list.value = rows ?? [];
+  /** 返回列表後是否重新查詢 */
+  const shouldRefresh = ref(false);
+
+  const setSearchCondition = (value: any) => {
+    searchCondition.value = {
+      ...searchCondition.value,
+      ...(value ?? {}),
+    };
   };
 
-  const setSearchCondition = (cond: any) => {
-    searchCondition.value = { ...searchCondition.value, ...(cond ?? {}) };
+  const setList = (value: any[]) => {
+    list.value = value ?? [];
   };
 
-  const setSort = (key: string, order: any) => {
-    sortKey.value = key || '';
-    sortOrder.value = order || 'asc';
+  const setCurrentPage = (value: number) => {
+    currentPage.value = value;
   };
 
-  const setCurrentPage = (p: number) => {
-    currentPage.value = p;
+  const setPageLimitSize = (value: number) => {
+    pageLimitSize.value = value;
   };
 
-  const setPageLimitSize = (n: number) => {
-    pageLimitSize.value = n;
+  const setSort = (key: string, order: 'asc' | 'desc' | '') => {
+    sortKey.value = key;
+    sortOrder.value = order;
+  };
+
+  const setSelectedIds = (value: string[]) => {
+    selectedIds.value = value ?? [];
+  };
+
+  const setShouldRefresh = (value: boolean) => {
+    shouldRefresh.value = value;
+  };
+
+  const clearSelectedIds = () => {
+    selectedIds.value = [];
   };
 
   const resetAll = () => {
-    list.value = [];
     searchCondition.value = {
       keyword: '',
-      role: '',
-      storeId: '',
       status: '',
+      storeId: '',
+      roleCode: '',
     };
-    sortKey.value = '';
-    sortOrder.value = 'asc';
+
+    list.value = [];
     currentPage.value = 1;
     pageLimitSize.value = 10;
+    sortKey.value = '';
+    sortOrder.value = 'asc';
+    selectedIds.value = [];
+    shouldRefresh.value = false;
   };
 
   return {
-    list,
     searchCondition,
-    sortKey,
-    sortOrder,
+    list,
     currentPage,
     pageLimitSize,
+    sortKey,
+    sortOrder,
+    selectedIds,
+    shouldRefresh,
 
-    setList,
     setSearchCondition,
-    setSort,
+    setList,
     setCurrentPage,
     setPageLimitSize,
+    setSort,
+    setSelectedIds,
+    setShouldRefresh,
+    clearSelectedIds,
     resetAll,
   };
 });

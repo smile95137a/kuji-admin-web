@@ -155,27 +155,27 @@ SCRATCH_STORE 商品建立後，店家必須透過後台指定大獎籤號，完
 
 ### 新增 / 修改 API
 
-| 動作 | Method | 端點 | 主要 Request 欄位 | 主要 Response 欄位 | 前端 UI 狀態 |
-|------|--------|------|------------------|--------------------|-------------|
-| 指定大獎號碼 | POST | `/api/admin/lottery/{id}/designate-prize` | `{ designatedPrizeNumber: number }` | `{ designationStatus: "COMPLETED" }` | Modal loading → Toast → 刷新列表 |
-| 查詢商品列表（含 designationStatus） | POST | `/api/admin/lottery-with-prizes/list` | `condition: { ..., designationStatus?: "PENDING"\|"COMPLETED" }` | `[{ ..., designationStatus, gameMode }]` | loading → 表格渲染 |
+| 動作                                 | Method | 端點                                      | 主要 Request 欄位                                                | 主要 Response 欄位                       | 前端 UI 狀態                     |
+| ------------------------------------ | ------ | ----------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------- | -------------------------------- |
+| 指定大獎號碼                         | POST   | `/api/admin/lottery/{id}/designate-prize` | `{ designatedPrizeNumber: number }`                              | `{ designationStatus: "COMPLETED" }`     | Modal loading → Toast → 刷新列表 |
+| 查詢商品列表（含 designationStatus） | POST   | `/api/admin/lottery-with-prizes/list`     | `condition: { ..., designationStatus?: "PENDING"\|"COMPLETED" }` | `[{ ..., designationStatus, gameMode }]` | loading → 表格渲染               |
 
 ### 修改現有 API 請求欄位
 
-| 端點 | 新增欄位 | 說明 |
-|------|---------|------|
-| `POST /api/admin/lottery/{id}/prizes`（新增獎品） | `isGrandPrize: boolean` | 標記是否為刮刮樂大獎；刮刮樂商品必填 |
-| `PUT /api/admin/prize/{id}`（更新獎品） | `isGrandPrize: boolean` | 同上 |
-| `POST /api/admin/lottery-with-prizes/list`（列表查詢） | `condition.designationStatus` | 篩選指定狀態 |
+| 端點                                                   | 新增欄位                      | 說明                                 |
+| ------------------------------------------------------ | ----------------------------- | ------------------------------------ |
+| `POST /api/admin/lottery/{id}/prizes`（新增獎品）      | `isGrandPrize: boolean`       | 標記是否為刮刮樂大獎；刮刮樂商品必填 |
+| `PUT /api/admin/prize/{id}`（更新獎品）                | `isGrandPrize: boolean`       | 同上                                 |
+| `POST /api/admin/lottery-with-prizes/list`（列表查詢） | `condition.designationStatus` | 篩選指定狀態                         |
 
 ### Response 欄位更新
 
 商品列表及詳情 Response 需包含以下新欄位：
 
-| 欄位 | 型別 | 說明 |
-|------|------|------|
+| 欄位                | 型別                               | 說明                               |
+| ------------------- | ---------------------------------- | ---------------------------------- |
 | `designationStatus` | `"PENDING" \| "COMPLETED" \| null` | 刮刮樂商品專屬；一番賞/扭蛋為 null |
-| `gameMode` | `string` | 已有欄位，確認列表 API 有回傳 |
+| `gameMode`          | `string`                           | 已有欄位，確認列表 API 有回傳      |
 
 ---
 
@@ -200,7 +200,7 @@ SCRATCH_STORE 商品建立後，店家必須透過後台指定大獎籤號，完
 ### 指定大獎號碼 Modal
 
 - **FR-UI-010**：Modal 開啟時顯示商品名稱與 maxDraws；號碼欄位為 `type="number"` 輸入框（min=1，max=maxDraws），前端即時驗證並顯示錯誤訊息，不呼叫 API。
-- **FR-UI-011**：確認送出前顯示二次確認 Dialog（使用現有 `dialogStore.openConfirmDialog`）。
+- **FR-UI-011**：確認送出前顯示二次確認 Dialog（使用現有 `openConfirmDialog`）。
 - **FR-UI-012**：送出成功後呼叫 Toast 並自動刷新商品列表資料（同現有 `refresh()` 流程）。
 - **FR-UI-013**：送出失敗時，Modal 保持開啟，顯示後端錯誤訊息，號碼輸入欄位保留原值。
 

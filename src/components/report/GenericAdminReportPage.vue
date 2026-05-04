@@ -12,6 +12,7 @@ import { useReportFilter } from '@/composables/useReportFilter';
 import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import type { QueryReq } from '@/services/adminReportService';
 import { getErrorMessage } from '@/utils/ErrorUtils';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 type StoreOption = { label: string; value: string };
 
@@ -30,7 +31,9 @@ type TableSection = {
 
 const props = defineProps<{
   title: string;
-  fetchReportApi: (req: QueryReq<Record<string, any>>) => Promise<ApiResponse<any>>;
+  fetchReportApi: (
+    req: QueryReq<Record<string, any>>,
+  ) => Promise<ApiResponse<any>>;
 }>();
 
 const authStore = useAuthStore();
@@ -58,7 +61,7 @@ const roleSet = computed(() => {
 });
 
 const isAdmin = computed(
-  () => roleSet.value.has('ROLE_ADMIN') || roleSet.value.has('ADMIN')
+  () => roleSet.value.has('ROLE_ADMIN') || roleSet.value.has('ADMIN'),
 );
 
 const summaryEntries = computed(() => {
@@ -163,7 +166,7 @@ function buildTableSections(data: any): TableSection[] {
   }
 
   const entries = Object.entries(data).filter(([, value]) =>
-    Array.isArray(value)
+    Array.isArray(value),
   );
 
   return entries.map(([key, value]) => {
@@ -203,7 +206,7 @@ async function fetchReport(filter: {
       forbiddenMessage.value = '無權查詢其他店家報表，請使用可存取的店家條件。';
       return;
     }
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '查詢失敗',
       message: getErrorMessage(error),
       iconType: 'warning',
@@ -242,21 +245,13 @@ onMounted(async () => {
     <div v-if="loading" class="rp__state m-t-16">查詢中...</div>
     <div v-else-if="reportData" class="m-t-16">
       <div v-if="summaryEntries.length" class="rp__cards">
-        <div
-          v-for="entry in summaryEntries"
-          :key="entry.key"
-          class="rp__card"
-        >
+        <div v-for="entry in summaryEntries" :key="entry.key" class="rp__card">
           <p class="rp__card-label">{{ entry.label }}</p>
           <p class="rp__card-value">{{ entry.value }}</p>
         </div>
       </div>
 
-      <div
-        v-for="section in tableSections"
-        :key="section.key"
-        class="m-t-20"
-      >
+      <div v-for="section in tableSections" :key="section.key" class="m-t-20">
         <p class="form__text form__text--red m-b-8">{{ section.title }}</p>
         <ReportTable
           :columns="section.columns"

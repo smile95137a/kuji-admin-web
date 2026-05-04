@@ -84,6 +84,7 @@ import {
   createReferralCode,
   updateReferralCode,
 } from '@/services/adminReferralCodeService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* Setup */
 const route = useRoute();
@@ -153,7 +154,7 @@ const fillMockData = async () => {
     remark: '測試推薦碼',
   });
 
-  await dialogStore.openInfoDialog({
+  await openInfoDialog({
     title: '提示訊息',
     message: '已帶入測試資料',
     iconType: 'success',
@@ -172,7 +173,7 @@ const onSubmit = handleSubmit(async (values) => {
     await executeApi({
       fn: async () => createReferralCode(payload),
       onSuccess: async () => {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: '提示訊息',
           message: '新增成功',
           iconType: 'success',
@@ -184,7 +185,7 @@ const onSubmit = handleSubmit(async (values) => {
     await executeApi({
       fn: async () => updateReferralCode(route.params.id as string, payload),
       onSuccess: async () => {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: '提示訊息',
           message: '更新成功',
           iconType: 'success',

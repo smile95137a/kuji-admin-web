@@ -15,7 +15,10 @@
         v-for="tab in LOG_TABS"
         :key="tab.value"
         class="sl-tab"
-        :class="[`sl-tab--${tab.value.toLowerCase()}`, { 'sl-tab--active': activeTab === tab.value }]"
+        :class="[
+          `sl-tab--${tab.value.toLowerCase()}`,
+          { 'sl-tab--active': activeTab === tab.value },
+        ]"
         type="button"
         @click="switchTab(tab.value)"
       >
@@ -29,15 +32,32 @@
   <div class="m-t-12">
     <MCard>
       <div class="sl-filter-grid">
-        <FormInput label="開始時間" type="datetime-local" v-model="startInput" />
+        <FormInput
+          label="開始時間"
+          type="datetime-local"
+          v-model="startInput"
+        />
         <FormInput label="結束時間" type="datetime-local" v-model="endInput" />
-        <FormInput label="User ID（選填）" v-model="userIdInput" placeholder="輸入 userId 篩選特定使用者" />
-        <FormInput label="筆數上限" type="number" v-model="limitInput" placeholder="預設 200" />
+        <FormInput
+          label="User ID（選填）"
+          v-model="userIdInput"
+          placeholder="輸入 userId 篩選特定使用者"
+        />
+        <FormInput
+          label="筆數上限"
+          type="number"
+          v-model="limitInput"
+          placeholder="預設 200"
+        />
       </div>
       <div class="sl-filter-actions">
         <MButton @click="doSearch">查詢</MButton>
-        <MButton type="button" @click="resetFilters" class="mbtn--gray">清除</MButton>
-        <MButton type="button" class="mbtn--red" @click="cleanupLogs">清除過期日誌</MButton>
+        <MButton type="button" @click="resetFilters" class="mbtn--gray"
+          >清除</MButton
+        >
+        <MButton type="button" class="mbtn--red" @click="cleanupLogs"
+          >清除過期日誌</MButton
+        >
       </div>
     </MCard>
   </div>
@@ -62,20 +82,29 @@
         >
           <!-- createdAt -->
           <template #cell-createdAt="{ item }">
-            <DateFormatter v-if="item.createdAt" :date="item.createdAt" format="YYYY-MM-DD HH:mm:ss" />
+            <DateFormatter
+              v-if="item.createdAt"
+              :date="item.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
             <span v-else class="sl-empty">—</span>
           </template>
 
           <!-- requestMethod badge -->
           <template #cell-requestMethod="{ item }">
-            <span class="sl-method" :class="`sl-method--${(item.requestMethod ?? '').toLowerCase()}`">
+            <span
+              class="sl-method"
+              :class="`sl-method--${(item.requestMethod ?? '').toLowerCase()}`"
+            >
               {{ item.requestMethod || '-' }}
             </span>
           </template>
 
           <!-- requestUrl monospace -->
           <template #cell-requestUrl="{ item }">
-            <span class="sl-url" :title="item.requestUrl || ''">{{ truncate(item.requestUrl, 50) }}</span>
+            <span class="sl-url" :title="item.requestUrl || ''">{{
+              truncate(item.requestUrl, 50)
+            }}</span>
           </template>
 
           <!-- responseStatus colored badge -->
@@ -83,9 +112,13 @@
             <span
               class="sl-status"
               :class="
-                item.responseStatus >= 500 ? 'sl-status--5xx' :
-                item.responseStatus >= 400 ? 'sl-status--4xx' :
-                item.responseStatus >= 300 ? 'sl-status--3xx' : 'sl-status--2xx'
+                item.responseStatus >= 500
+                  ? 'sl-status--5xx'
+                  : item.responseStatus >= 400
+                    ? 'sl-status--4xx'
+                    : item.responseStatus >= 300
+                      ? 'sl-status--3xx'
+                      : 'sl-status--2xx'
               "
             >
               {{ item.responseStatus ?? '-' }}
@@ -94,7 +127,11 @@
 
           <!-- errorMessage -->
           <template #cell-errorMessage="{ item }">
-            <span v-if="item.errorMessage" class="sl-error" :title="item.errorMessage">
+            <span
+              v-if="item.errorMessage"
+              class="sl-error"
+              :title="item.errorMessage"
+            >
               {{ truncate(item.errorMessage, 50) }}
             </span>
             <span v-else class="sl-empty">—</span>
@@ -143,6 +180,8 @@ import {
   getSystemLogsByDateRange,
   cleanupOldSystemLogs,
 } from '@/services/adminSystemLogService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Constants
@@ -154,7 +193,7 @@ const LOG_TABS = [
   { label: '支付日誌', value: 'PAYMENT' },
 ] as const;
 
-type LogType = typeof LOG_TABS[number]['value'];
+type LogType = (typeof LOG_TABS)[number]['value'];
 
 /* ==============================
  * Store
@@ -199,7 +238,13 @@ const truncate = (s?: string, max = 60) => {
 const sortKey = ref('');
 const sortOrder = ref<'asc' | 'desc' | ''>('');
 
-const handleSort = ({ key, order }: { key: string; order: 'asc' | 'desc' | '' }) => {
+const handleSort = ({
+  key,
+  order,
+}: {
+  key: string;
+  order: 'asc' | 'desc' | '';
+}) => {
   sortKey.value = key;
   sortOrder.value = order;
   goToPage(1);
@@ -213,7 +258,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -269,12 +314,20 @@ const fetchLogs = async (logType: LogType) => {
     if (start && end) {
       // 有時間區間：用 date-range API，前端篩 logType
       const res = await getSystemLogsByDateRange(start, end, limit);
-      const all: any[] = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
+      const all: any[] = Array.isArray(res)
+        ? res
+        : Array.isArray((res as any)?.data)
+          ? (res as any).data
+          : [];
       rows = all.filter((r) => r?.logType === logType);
     } else {
       // 無時間區間：直接依類型查
       const res = await getSystemLogsByType(logType, limit);
-      rows = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
+      rows = Array.isArray(res)
+        ? res
+        : Array.isArray((res as any)?.data)
+          ? (res as any).data
+          : [];
     }
 
     // 前端 userId 篩選
@@ -308,7 +361,7 @@ const switchTab = (tab: LogType) => {
 const cleanupLogs = async () => {
   const days = 90;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '清除確認',
     message: `確定要清除 ${days} 天前的系統日誌嗎？（不可復原）`,
   });
@@ -318,7 +371,7 @@ const cleanupLogs = async () => {
     fn: async () => cleanupOldSystemLogs(days),
     onSuccess: async (data: any) => {
       const deleted = (data as any)?.data ?? data ?? 0;
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: `清除完成：共刪除 ${deleted} 筆日誌`,
         iconType: 'success',
@@ -390,9 +443,15 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 
-  &:hover { background: #f3f4f6; border-color: #d1d5db; }
+  &:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+  }
 
   &__dot {
     width: 8px;
@@ -402,17 +461,45 @@ onMounted(() => {
   }
 }
 
-.sl-tab--login .sl-tab__dot { background: #3b82f6; }
-.sl-tab--login.sl-tab--active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
+.sl-tab--login .sl-tab__dot {
+  background: #3b82f6;
+}
+.sl-tab--login.sl-tab--active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  font-weight: 600;
+}
 
-.sl-tab--admin .sl-tab__dot { background: #f59e0b; }
-.sl-tab--admin.sl-tab--active { background: #fffbeb; border-color: #f59e0b; color: #d97706; font-weight: 600; }
+.sl-tab--admin .sl-tab__dot {
+  background: #f59e0b;
+}
+.sl-tab--admin.sl-tab--active {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #d97706;
+  font-weight: 600;
+}
 
-.sl-tab--draw .sl-tab__dot { background: #10b981; }
-.sl-tab--draw.sl-tab--active { background: #ecfdf5; border-color: #10b981; color: #059669; font-weight: 600; }
+.sl-tab--draw .sl-tab__dot {
+  background: #10b981;
+}
+.sl-tab--draw.sl-tab--active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #059669;
+  font-weight: 600;
+}
 
-.sl-tab--payment .sl-tab__dot { background: #8b5cf6; }
-.sl-tab--payment.sl-tab--active { background: #f5f3ff; border-color: #8b5cf6; color: #7c3aed; font-weight: 600; }
+.sl-tab--payment .sl-tab__dot {
+  background: #8b5cf6;
+}
+.sl-tab--payment.sl-tab--active {
+  background: #f5f3ff;
+  border-color: #8b5cf6;
+  color: #7c3aed;
+  font-weight: 600;
+}
 
 /* ── Filters ── */
 .sl-filter-grid {
@@ -441,11 +528,26 @@ onMounted(() => {
   font-family: 'Courier New', Courier, monospace;
   letter-spacing: 0.04em;
 
-  &--get    { background: #f3f4f6; color: #374151; }
-  &--post   { background: #dbeafe; color: #1d4ed8; }
-  &--put    { background: #fef3c7; color: #d97706; }
-  &--patch  { background: #fef3c7; color: #d97706; }
-  &--delete { background: #fee2e2; color: #dc2626; }
+  &--get {
+    background: #f3f4f6;
+    color: #374151;
+  }
+  &--post {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  &--put {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  &--patch {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  &--delete {
+    background: #fee2e2;
+    color: #dc2626;
+  }
 }
 
 .sl-status {
@@ -456,10 +558,22 @@ onMounted(() => {
   font-weight: 700;
   font-family: 'Courier New', Courier, monospace;
 
-  &--2xx { background: #d1fae5; color: #065f46; }
-  &--3xx { background: #dbeafe; color: #1d4ed8; }
-  &--4xx { background: #fef3c7; color: #d97706; }
-  &--5xx { background: #fee2e2; color: #dc2626; }
+  &--2xx {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  &--3xx {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  &--4xx {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  &--5xx {
+    background: #fee2e2;
+    color: #dc2626;
+  }
 }
 
 .sl-url {
@@ -468,6 +582,11 @@ onMounted(() => {
   color: #4b5563;
 }
 
-.sl-error { color: #dc2626; font-size: 12px; }
-.sl-empty { color: #d1d5db; }
+.sl-error {
+  color: #dc2626;
+  font-size: 12px;
+}
+.sl-empty {
+  color: #d1d5db;
+}
 </style>

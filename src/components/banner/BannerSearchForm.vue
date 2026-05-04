@@ -27,43 +27,45 @@
       />
     </div>
 
-    <!-- 標題（模糊） -->
+    <!-- 標題 -->
+  </div>
+  <div class="flex flex-wrap">
     <div class="w-50 w-md-100 p-6">
       <FormInput
         label="標題"
         v-model="title"
         :error="errors.title"
-        placeholder="請輸入標題（模糊查詢）"
         maxlength="50"
       />
     </div>
-
-    <!-- 建立時間（起） -->
-    <div class="w-25 w-md-50 w-sm-100 p-6">
-      <FormInput
-        label="建立時間（起）"
-        type="datetime-local"
-        v-model="createdAtStart"
-        :error="errors.createdAtStart"
-      />
-    </div>
-
-    <!-- 建立時間（迄） -->
-    <div class="w-25 w-md-50 w-sm-100 p-6">
-      <FormInput
-        label="建立時間（迄）"
-        type="datetime-local"
-        v-model="createdAtEnd"
-        :error="errors.createdAtEnd"
-      />
+  </div>
+  <div class="flex flex-wrap">
+    <div class="w-50 w-md-100 p-6">
+      <p class="form__text">建立日期</p>
+      <div class="flex items-center gap-x-8">
+        <FormInput
+          type="date"
+          v-model="createdAtStart"
+          :error="errors.createdAtStart"
+          :show-label="false"
+        />
+        <span>~</span>
+        <FormInput
+          type="date"
+          v-model="createdAtEnd"
+          :error="errors.createdAtEnd"
+          :show-label="false"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useFormContext } from 'vee-validate';
+
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormInput from '@/components/common/FormInput.vue';
-import { useFormContext } from 'vee-validate';
 
 defineProps<{
   statusOptions: SelectOption[];

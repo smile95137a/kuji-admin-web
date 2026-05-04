@@ -1,97 +1,93 @@
 <!-- src/views/role/RoleForm.vue -->
 <template>
   <MCard>
-    <form @submit.prevent="onSubmit">
+    <form class="role-form" @submit.prevent="onSubmit">
       <p class="form__text form__text--title">{{ pageTitle }}</p>
 
-      <div class="flex flex-wrap">
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="角色名稱"
-            v-model="name"
-            :error="errors.name"
-            required
-            maxlength="50"
-            placeholder="例如：店家負責人"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="角色代碼"
-            v-model="code"
-            :error="errors.code"
-            required
-            maxlength="50"
-            placeholder="例如：ROLE_STORE_OWNER"
-          />
-        </div>
-
-        <div class="w-100 p-6">
-          <FormInput
-            label="描述（可選）"
-            v-model="description"
-            :error="errors.description"
-            maxlength="200"
-            placeholder="可留空"
-          />
-        </div>
-
-        <!-- 檢視資訊 -->
-        <template v-if="isDetail">
-          <div class="w-100 p-6">
-            <p class="form__text form__text--red">系統資訊（檢視）</p>
-          </div>
-
+      <!-- 基本資料 -->
+      <FormSection title="基本資料">
+        <div class="flex flex-wrap">
+          <!-- 角色名稱 -->
           <div class="w-50 w-md-100 p-6">
             <FormInput
-              label="建立時間"
-              :modelValue="formatDateTime(detail?.createdAt)"
-              disabled
+              label="角色名稱"
+              v-model="name"
+              :error="displayErrors.name"
+              required
+              maxlength="50"
+              placeholder="例如：店家負責人"
+              :disabled="isDetail"
+            />
+          </div>
+        </div>
+        <div class="flex flex-wrap">
+          <!-- 角色代碼 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="角色代碼"
+              v-model="code"
+              :error="displayErrors.code"
+              required
+              maxlength="50"
+              placeholder="例如：ROLE_STORE_OWNER"
+              :disabled="isDetail"
+            />
+          </div>
+        </div>
+        <div class="flex flex-wrap">
+          <!-- 描述 -->
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="描述"
+              v-model="description"
+              :error="displayErrors.description"
+              maxlength="200"
+              placeholder="可留空"
+              :disabled="isDetail"
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      <!-- 系統資訊 -->
+      <FormSection v-if="isDetail" title="系統資訊">
+        <div class="flex flex-wrap">
+          <div class="w-50 w-md-100 p-6">
+            <p class="form__text">建立時間</p>
+            <DateFormatter
+              :date="detail?.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
             />
           </div>
 
           <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="更新時間"
-              :modelValue="formatDateTime(detail?.updatedAt)"
-              disabled
+            <p class="form__text">更新時間</p>
+            <DateFormatter
+              :date="detail?.updatedAt"
+              format="YYYY-MM-DD HH:mm:ss"
             />
           </div>
-        </template>
-      </div>
+        </div>
+      </FormSection>
 
       <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
         <template v-if="!isDetail">
-          <MButton
-            v-if="isDev"
-            type="button"
-            class="mbtn--gray"
-            @click="fillMockData"
-          >
-            快速產生資料
+          <MButton type="submit">
+            <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
+            儲存
           </MButton>
-
-          <MButton
-            v-if="isDev && mode === 'add'"
-            type="button"
-            class="mbtn--gray"
-            @click="createMockBatch(12)"
-          >
-            快速建立 12 筆
-          </MButton>
-
-          <MButton type="submit">儲存</MButton>
         </template>
 
         <template v-else>
           <MButton type="button" class="mbtn--gray" @click="navigateToEdit">
+            <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
             編輯
           </MButton>
         </template>
 
-        <MButton type="button" class="mbtn--red" @click="router.back()">
+        <MButton type="button" class="mbtn--red" @click="navigateBack">
+          <font-awesome-icon icon="fa-arrow-left" class="m-r-4" />
           返回
         </MButton>
       </div>
@@ -103,27 +99,35 @@
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
-import * as yup from 'yup';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormSection from '@/components/common/FormSection.vue';
+import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { useDialogStore } from '@/stores';
+import { useRoleStore } from '@/stores/role/useRoleStore';
 
 import {
   createRole,
   updateRole,
   getRoleById,
 } from '@/services/adminRoleService';
-import { buildRoleSchema } from '@/validators/roleSchemas';
 
-/* Setup */
+import { buildRoleSchema } from '@/validators/roleSchemas';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
+
 const route = useRoute();
 const router = useRouter();
 const dialogStore = useDialogStore();
+const roleStore = useRoleStore();
 
+/* --------------------------------------
+ * Mode
+ * -------------------------------------- */
 const mode = computed<'add' | 'edit' | 'detail'>(() => {
   if (route.name === 'RoleAdd') return 'add';
   if (route.name === 'RoleEdit') return 'edit';
@@ -131,21 +135,36 @@ const mode = computed<'add' | 'edit' | 'detail'>(() => {
 });
 
 const isDetail = computed(() => mode.value === 'detail');
+const isEdit = computed(() => mode.value === 'edit');
 const id = computed(() => String(route.params.id || ''));
 
-/* dev-only */
-const isDev = import.meta.env.DEV;
-
-/* page title */
+/* --------------------------------------
+ * Page title
+ * -------------------------------------- */
 const pageTitle = computed(() => {
   if (mode.value === 'add') return '新增角色';
   if (mode.value === 'edit') return '編輯角色';
   return '角色詳情';
 });
 
+/* --------------------------------------
+ * Submit error display
+ * -------------------------------------- */
+const isSubmitted = ref(false);
+
+const displayErrors = computed<Record<string, string | undefined>>(() => {
+  if (!isSubmitted.value) return {};
+  return errors.value;
+});
+
+/* --------------------------------------
+ * Schema
+ * -------------------------------------- */
 const schema = computed(() => buildRoleSchema(isDetail.value));
 
-/* useForm（defineField + v-model） */
+/* --------------------------------------
+ * useForm
+ * -------------------------------------- */
 const { errors, handleSubmit, setValues, defineField } = useForm({
   validationSchema: schema,
   initialValues: {
@@ -153,34 +172,36 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
     code: '',
     description: '',
   },
+  validateOnMount: false,
 });
 
 const [name] = defineField('name');
 const [code] = defineField('code');
 const [description] = defineField('description');
 
-/* detail */
+/* --------------------------------------
+ * Detail
+ * -------------------------------------- */
 const detail = ref<any>(null);
-
-const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
 
 const reloadDetail = async () => {
   if (!id.value) return;
 
   await executeApi({
     fn: async () => getRoleById(id.value),
-    onSuccess: (data) => {
-      // service 若回 ApiResponse，executeApi 通常會把 data 解開；
-      // 這邊保守處理
-      const d = (data as any)?.data ?? data;
+    onSuccess: (res: any) => {
+      const data = res?.data ?? res;
 
-      detail.value = d;
+      detail.value = data;
 
-      setValues({
-        name: d?.name ?? '',
-        code: d?.code ?? '',
-        description: d?.description ?? '',
-      });
+      setValues(
+        {
+          name: data?.name ?? '',
+          code: data?.code ?? '',
+          description: data?.description ?? '',
+        },
+        false,
+      );
     },
     showSuccessDialog: false,
     showFailDialog: true,
@@ -188,111 +209,77 @@ const reloadDetail = async () => {
   });
 };
 
-onMounted(async () => {
-  // edit / detail 都要載入
-  if (mode.value !== 'add') {
-    await reloadDetail();
-  }
-});
+/* --------------------------------------
+ * Submit
+ * -------------------------------------- */
+const onSubmit = handleSubmit(
+  async (values) => {
+    isSubmitted.value = true;
 
-/* mock */
-const fillMockData = async () => {
-  const ts = Date.now();
-  setValues({
-    name: `測試角色_${ts}`,
-    code: `ROLE_TEST_${ts}`,
-    description: 'dev 快速帶入的 mock 角色資料',
-  });
-};
+    if (isDetail.value) return;
 
-/* submit */
-const onSubmit = handleSubmit(async (values) => {
-  if (isDetail.value) return;
+    const ok = await openConfirmDialog({
+      title: '儲存確認',
+      message: '確定要儲存角色嗎？',
+    });
 
-  const ok = await dialogStore.openConfirmDialog({
-    title: '儲存確認',
-    message: '確定要儲存角色嗎？',
-  });
-  if (!ok) return;
+    if (!ok) return;
 
-  await executeApi({
-    fn: async () => {
-      if (mode.value === 'edit') {
-        return updateRole({
-          id: id.value,
-          name: values.name?.trim(),
-          code: values.code?.trim(),
-          description: values.description?.trim() || null,
+    const payload = {
+      name: String(values.name ?? '').trim(),
+      code: String(values.code ?? '').trim(),
+      description: String(values.description ?? '').trim() || null,
+    };
+
+    await executeApi({
+      fn: async () => {
+        if (isEdit.value) {
+          return updateRole({
+            id: id.value,
+            ...payload,
+          });
+        }
+
+        return createRole(payload);
+      },
+      onSuccess: async () => {
+        await openInfoDialog({
+          title: '提示訊息',
+          message: '儲存成功',
+          iconType: 'success',
         });
-      }
-      return createRole({
-        name: values.name?.trim(),
-        code: values.code?.trim(),
-        description: values.description?.trim() || null,
-      });
-    },
-    onSuccess: async () => {
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message: '儲存成功',
-        iconType: 'success',
-      });
-      router.push('/home/roles');
-    },
-  });
-});
 
-/* navigation */
+        roleStore.setShouldRefresh(true);
+        router.push('/home/roles');
+      },
+      showSuccessDialog: false,
+      showFailDialog: true,
+      showCatchDialog: true,
+    });
+  },
+  () => {
+    isSubmitted.value = true;
+  },
+);
+
+/* --------------------------------------
+ * Navigation
+ * -------------------------------------- */
 const navigateToEdit = () => {
   if (!id.value) return;
   router.push(`/home/roles/edit/${id.value}`);
 };
 
-/* ✅ Dev only：批次建立多筆角色 */
-const createMockBatch = async (count = 12) => {
-  if (mode.value !== 'add') return;
-
-  const ok = await dialogStore.openConfirmDialog({
-    title: '快速建立確認',
-    message: `確定要一次建立 ${count} 筆測試角色嗎？（僅 dev 用）`,
-  });
-  if (!ok) return;
-
-  const baseTs = Date.now();
-
-  await executeApi({
-    fn: async () => {
-      const tasks = Array.from({ length: count }).map((_, idx) => {
-        const suffix = `${baseTs}_${idx + 1}`;
-        return createRole({
-          name: `測試角色_${suffix}`,
-          code: `ROLE_TEST_${suffix}`,
-          description: `dev 批次建立（${idx + 1}/${count}）`,
-        });
-      });
-
-      return Promise.allSettled(tasks);
-    },
-    onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
-      const failCount = results.length - okCount;
-
-      await dialogStore.openInfoDialog({
-        title: '提示訊息',
-        message:
-          failCount > 0
-            ? `批次建立完成：成功 ${okCount}、失敗 ${failCount}`
-            : `批次建立完成：成功 ${okCount}`,
-        iconType: failCount > 0 ? 'warning' : 'success',
-      });
-
-      router.push('/home/roles');
-    },
-    showSuccessDialog: false,
-    showFailDialog: true,
-    showCatchDialog: true,
-  });
+const navigateBack = () => {
+  router.push('/home/roles');
 };
-</script>
 
-<style scoped></style>
+/* --------------------------------------
+ * Mounted
+ * -------------------------------------- */
+onMounted(async () => {
+  if (mode.value !== 'add') {
+    await reloadDetail();
+  }
+});
+</script>

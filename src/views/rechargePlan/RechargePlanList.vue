@@ -71,9 +71,13 @@
             <button
               type="button"
               class="recharge__toggle"
-              :class="item.isActive ? 'recharge__toggle--on' : 'recharge__toggle--off'"
+              :class="
+                item.isActive ? 'recharge__toggle--on' : 'recharge__toggle--off'
+              "
               @click="toggleActive(item)"
-            >{{ item.isActive ? '啟用' : '停用' }}</button>
+            >
+              {{ item.isActive ? '啟用' : '停用' }}
+            </button>
           </template>
 
           <template #cell-displayOrder="{ item }">
@@ -165,6 +169,8 @@ import {
   deleteRechargePlan,
   updateRechargePlan,
 } from '@/services/adminRechargePlanService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Router / Store
@@ -225,7 +231,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -278,7 +284,7 @@ const onSubmit = async (_values: any) => {
 const selectedIds = ref<string[]>([]);
 
 const selectedRows = computed(() =>
-  list.value.filter((row: any) => selectedIds.value.includes(row.id))
+  list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
@@ -290,7 +296,7 @@ const refresh = async () => {
 };
 
 const deleteOne = async (item: any) => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除「${item?.name || '-'}」嗎？（刪除後無法復原）`,
   });
@@ -299,7 +305,7 @@ const deleteOne = async (item: any) => {
   await executeApi({
     fn: async () => deleteRechargePlan(item.id),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '刪除成功',
         iconType: 'success',
@@ -313,7 +319,7 @@ const deleteOne = async (item: any) => {
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆儲值方案嗎？（刪除後無法復原）`,
   });
@@ -326,7 +332,7 @@ const deleteSelected = async () => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -346,7 +352,7 @@ const deleteSelected = async () => {
  * ============================== */
 const toggleActive = async (item: any) => {
   const newState = !item.isActive;
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: `${newState ? '啟用' : '停用'}確認`,
     message: `確定要將「${item.name || item.id}」${newState ? '啟用' : '停用'}？`,
   });
@@ -392,5 +398,7 @@ onMounted(async () => {
   background: #f3f4f6;
   color: #6b7280;
 }
-.recharge__toggle:hover { opacity: 0.8; }
+.recharge__toggle:hover {
+  opacity: 0.8;
+}
 </style>

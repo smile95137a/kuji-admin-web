@@ -1,3 +1,4 @@
+<!-- src/components/common/NoData.vue -->
 <template>
   <div class="noData">
     <div class="noData__img">
@@ -9,7 +10,6 @@
 
 <script setup lang="ts">
 import p1 from '@/assets/image/logo.png';
-import { withDefaults, defineProps } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -17,6 +17,6 @@ const props = withDefaults(
   }>(),
   {
     message: '查無資料',
-  }
+  },
 );
 </script>

@@ -1,6 +1,22 @@
 @use 'sass:color';
-@use '@/assets/styles/base/tokens' as *;
-/* sr-only（此檔自帶，不需共用） */
+@use '../base/tokens' as *;
+
+/* ===== 尺寸（只影響圓點） ===== */
+$radio-dot-size-sm: 16px;
+$radio-dot-size-md: 18px;
+$radio-dot-size-lg: 20px;
+
+/* ===== 字體大小 ===== */
+/* 先保留你目前的 rem 字級，避免直接吃 token 的 10px 後畫面變小 */
+$radio-font-xs: 1.2rem;
+$radio-font-md: 1.4rem;
+
+/* ===== Radio 專用色 ===== */
+$radio-border-hover: color.mix($brand, $form-border, 18%);
+$radio-border-active: color.mix($brand, $form-border, 38%);
+$radio-focus-ring: color.change($brand, $alpha: 0.24);
+
+/* ===== sr-only（獨立） ===== */
 .sr-only {
   position: absolute !important;
   white-space: nowrap !important;
@@ -14,161 +30,161 @@
   margin: -1px !important;
 }
 
+/* ===== Radio ===== */
 .mradio {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   position: relative;
-  color: $form-text;
-  line-height: 1.5;
 
-  /* ===== 尺寸 ===== */
-  &--sm {
-    .mradio__label {
-      font-size: 0.875rem;
-    }
-    .mradio__dot {
-      width: 16px;
-      height: 16px;
-    }
-  }
-  &--md {
-    .mradio__label {
-      font-size: 1rem;
-    }
-    .mradio__dot {
-      width: 18px;
-      height: 18px;
-    }
-  }
-  &--lg {
-    .mradio__label {
-      font-size: 1.125rem;
-    }
-    .mradio__dot {
-      width: 20px;
-      height: 20px;
-    }
-  }
+  font-size: $radio-font-md;
+  line-height: 1.5;
+  color: $form-text;
 
   &--disabled {
     opacity: 0.55;
     pointer-events: none;
   }
 
-  /* ===== 標籤 ===== */
+  /* ---------- Label ---------- */
   &__label {
     display: inline-flex;
     align-items: center;
-    cursor: pointer;
     gap: 0.5rem;
+    cursor: pointer;
     font-weight: 500;
     user-select: none;
   }
 
   &__text {
     line-height: 1.2;
+    font-size: $radio-font-md;
   }
 
-  /* ===== 外圈（白底圓框） ===== */
+  /* ---------- 外圈 ---------- */
   &__dot {
     display: inline-block;
-    box-sizing: border-box;
-    border: 1px solid $form-border;
-    border-radius: 9999px;
-    width: 18px;
-    height: 18px;
     position: relative;
-    background-color: #fff;
+    box-sizing: border-box;
+    border-radius: 9999px;
+
+    width: $radio-dot-size-md;
+    height: $radio-dot-size-md;
+
+    background-color: $form-bg;
+    border: 1px solid $form-border;
+
     outline: 3px solid transparent;
     outline-offset: -2px;
+
     transition: all 120ms ease-in-out;
-    transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
+    transform: scale3d(1, 1, 1);
   }
 
-  /* ===== 內圈（實心點） ===== */
+  /* ---------- 內圈 ---------- */
   &__dot::after {
     content: '';
     position: absolute;
     inset: 4px;
     border-radius: 9999px;
-    background: transparent;
+
+    background-color: transparent;
     transform: scale(0);
-    transition: transform 120ms ease-in-out, background-color 120ms ease-in-out;
+
+    transition:
+      transform 120ms ease-in-out,
+      background-color 120ms ease-in-out;
   }
 
-  /* ===== Hover（未禁用） ===== */
+  /* ---------- 尺寸（只改 dot） ---------- */
+  &--sm .mradio__dot {
+    width: $radio-dot-size-sm;
+    height: $radio-dot-size-sm;
+  }
+
+  &--lg .mradio__dot {
+    width: $radio-dot-size-lg;
+    height: $radio-dot-size-lg;
+  }
+
+  /* ---------- Hover ---------- */
   .mradio__input:not(:disabled) + .mradio__label:hover .mradio__dot {
-    background-color: #fff;
-    border-color: color.mix($form-border, #000, 8%); // 增加一點深度
+    border-color: $radio-border-hover;
   }
 
-  /* ===== Active ===== */
+  /* ---------- Active ---------- */
   .mradio__input:not(:disabled):active + .mradio__label .mradio__dot {
-    background-color: #fff;
-    border-color: color.mix($form-border, #000, 20%);
+    border-color: $radio-border-active;
     transform: scale3d(0.95, 0.95, 1);
   }
 
-  /* ===== Focus（未選取） ===== */
+  /* ---------- Focus ---------- */
   .mradio__input:focus + .mradio__label .mradio__dot {
     border-color: $brand;
-    outline-color: $brand-light !important;
+    outline-color: $radio-focus-ring !important;
     outline-offset: 0 !important;
   }
 
-  /* ===== Checked ===== */
+  /* ---------- Checked ---------- */
   .mradio__input:checked + .mradio__label .mradio__dot {
-    background-color: #fff;
     border-color: $brand;
   }
+
   .mradio__input:checked + .mradio__label .mradio__dot::after {
     background-color: $brand;
-    transform: scale(1.3);
+    transform: scale(1);
   }
 
-  /* ===== Checked + hover ===== */
+  /* Checked + hover */
   .mradio__input:checked + .mradio__label:hover .mradio__dot {
+    border-color: $brand-hover;
+  }
+
+  .mradio__input:checked + .mradio__label:hover .mradio__dot::after {
+    background-color: $brand-hover;
+  }
+
+  /* Checked + active */
+  .mradio__input:checked:active + .mradio__label .mradio__dot {
     border-color: $brand-dark;
   }
-  .mradio__input:checked + .mradio__label:hover .mradio__dot::after {
+
+  .mradio__input:checked:active + .mradio__label .mradio__dot::after {
     background-color: $brand-dark;
   }
 
-  /* ===== Checked + active ===== */
-  .mradio__input:checked:active + .mradio__label .mradio__dot {
-    border-color: color.mix($brand, #000, 20%);
-  }
-  .mradio__input:checked:active + .mradio__label .mradio__dot::after {
-    background-color: color.mix($brand, #000, 20%);
-  }
-
-  /* ===== Checked + focus ===== */
+  /* Checked + focus */
   .mradio__input:checked:focus + .mradio__label .mradio__dot {
-    border-color: $brand;
-    outline-color: $brand-light !important;
-    outline-offset: 0 !important;
+    border-color: $brand-dark;
+    outline-color: $radio-focus-ring !important;
   }
 
-  /* ===== Error 狀態 ===== */
-  &--error .mradio__label .mradio__dot {
-    border-color: $danger;
+  /* ---------- Error ---------- */
+  &--error {
+    .mradio__dot {
+      border-color: $danger;
+    }
+
+    .mradio__error-text {
+      color: $danger;
+    }
   }
 
   &__error-text {
     margin-left: 2rem;
-    color: $danger;
-    font-size: 0.875rem;
+    font-size: $radio-font-xs;
     line-height: 1.2;
   }
 
-  /* 可用 :has()（加強選取效果） */
-  &:has(.mradio__input:checked) .mradio__dot {
-    background-color: #fff;
-    border-color: $brand;
-  }
-  &:has(.mradio__input:checked) .mradio__dot::after {
-    background-color: $brand;
-    transform: scale(1);
+  /* ---------- :has() 增強 ---------- */
+  &:has(.mradio__input:checked) {
+    .mradio__dot {
+      border-color: $brand;
+    }
+
+    .mradio__dot::after {
+      background-color: $brand;
+      transform: scale(1);
+    }
   }
 }

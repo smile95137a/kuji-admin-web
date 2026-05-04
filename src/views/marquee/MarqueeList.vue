@@ -1,54 +1,10 @@
 <!-- src/views/marquee/MarqueeList.vue -->
 <template>
   <MCard>
-    <Form
-      ref="formRef"
-      :initial-values="initValues"
-      @submit="onSubmit"
-      v-slot="{ values, setFieldValue }"
-    >
+    <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
       <FormTitle title="跑馬燈管理" />
 
-      <div class="flex flex-wrap">
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="狀態"
-            :modelValue="values.active"
-            @update:modelValue="setFieldValue('active', $event)"
-            :options="activeOptions"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="內容關鍵字"
-            :modelValue="values.keyword"
-            @update:modelValue="setFieldValue('keyword', $event)"
-            placeholder="輸入內容關鍵字"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="開始時間起"
-            type="date"
-            :modelValue="values.startDate"
-            @update:modelValue="setFieldValue('startDate', $event)"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="開始時間迄"
-            type="date"
-            :modelValue="values.endDate"
-            @update:modelValue="setFieldValue('endDate', $event)"
-          />
-        </div>
-      </div>
+      <MarqueeSearchForm :active-options="activeOptions" />
 
       <div class="flex justify-center m-y-8">
         <MButton type="submit">查詢</MButton>
@@ -59,20 +15,32 @@
   <div class="m-t-12">
     <MCard>
       <div class="flex justify-end gap-x-12 flex-wrap">
-        <MButton @click="navigateToAdd">新增</MButton>
+        <MButton @click="navigateToAdd">
+          <font-awesome-icon icon="fa-plus" class="m-r-4" />
+          新增
+        </MButton>
 
         <MButton type="button" class="mbtn--gray" @click="broadcastNow">
+          <font-awesome-icon icon="fa-bullhorn" class="m-r-4" />
           手動廣播
         </MButton>
 
-        <MButton :disabled="!canEnable" @click="enableSelected">啟用</MButton>
-        <MButton :disabled="!canDisable" @click="disableSelected">停用</MButton>
+        <MButton :disabled="!canEnable" @click="enableSelected">
+          <font-awesome-icon icon="fa-circle-check" class="m-r-4" />
+          啟用
+        </MButton>
+
+        <MButton :disabled="!canDisable" @click="disableSelected">
+          <font-awesome-icon icon="fa-ban" class="m-r-4" />
+          停用
+        </MButton>
 
         <MButton
           class="mbtn--red"
           :disabled="!canDelete"
           @click="deleteSelected"
         >
+          <font-awesome-icon icon="fa-trash" class="m-r-4" />
           刪除
         </MButton>
       </div>
@@ -96,37 +64,65 @@
           :sort-order="sortOrder"
           @sort="handleSort"
         >
-          <!-- 內容可點 -->
+          <!-- 內容 -->
           <template #cell-content="{ item }">
             <span class="clickable" @click="navigateToEdit(item)">
               {{ item.content || '-' }}
             </span>
           </template>
 
-          <!-- 狀態 -->
-          <template #cell-isActive="{ item }">
-            <span>{{
-              normalizeIsActiveNum(item.isActive) === 1 ? '啟用' : '停用'
-            }}</span>
+          <!-- 連結類型 -->
+          <template #cell-linkType="{ item }">
+            <span>{{ linkTypeText(item.linkType) }}</span>
           </template>
 
-          <!-- 日期 -->
+          <!-- 連結 -->
+          <template #cell-linkUrl="{ item }">
+            <span class="ml__link-text">{{ item.linkUrl || '-' }}</span>
+          </template>
+
+          <!-- 背景色 -->
+          <template #cell-bgColor="{ item }">
+            <div class="ml__color-cell">
+              <span
+                v-if="item.bgColor"
+                class="ml__color-dot"
+                :style="{ backgroundColor: item.bgColor }"
+              />
+              <span>{{ item.bgColor || '-' }}</span>
+            </div>
+          </template>
+
+          <!-- 文字色 -->
+          <template #cell-textColor="{ item }">
+            <div class="ml__color-cell">
+              <span
+                v-if="item.textColor"
+                class="ml__color-dot"
+                :style="{ backgroundColor: item.textColor }"
+              />
+              <span>{{ item.textColor || '-' }}</span>
+            </div>
+          </template>
+
+          <!-- 狀態 -->
+          <template #cell-isActive="{ item }">
+            <span :class="activeBadgeClass(item.isActive)">
+              {{ normalizeIsActiveNum(item.isActive) === 1 ? '啟用' : '停用' }}
+            </span>
+          </template>
+
+          <!-- 開始時間 -->
           <template #cell-startTime="{ item }">
             <DateFormatter
-              v-if="item.startTime"
               :date="item.startTime"
               format="YYYY-MM-DD HH:mm:ss"
             />
-            <span v-else>-</span>
           </template>
 
+          <!-- 結束時間 -->
           <template #cell-endTime="{ item }">
-            <DateFormatter
-              v-if="item.endTime"
-              :date="item.endTime"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else>-</span>
+            <DateFormatter :date="item.endTime" format="YYYY-MM-DD HH:mm:ss" />
           </template>
         </ReportTable>
 
@@ -140,7 +136,7 @@
             :goToPage="goToPage"
             :pageLimitSize="pageLimitSize"
             :totalItems="list.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+            @update:pageLimitSize="handlePageLimitSizeChange"
           />
         </div>
       </template>
@@ -149,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { Form, FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
@@ -163,83 +159,90 @@ import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
-import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
+
+import MarqueeSearchForm from '@/components/marquee/MarqueeSearchForm.vue';
 
 import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useMarqueeStore } from '@/stores/marquee/useMarqueeStore';
 
 import {
   getAllMarquees,
   deleteMarquee,
-  updateMarqueeStatus, // ✅ 後端 @RequestParam status: string
+  updateMarqueeStatus,
   broadcastMarquees,
 } from '@/services/adminMarqueeService';
-
-type SelectOption = { label: string; value: any };
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
-const dialogStore = useDialogStore();
+const marqueeStore = useMarqueeStore();
 
-/* Form */
+/* --------------------------------------
+ * Form
+ * -------------------------------------- */
 const formRef = ref<FormContext | null>(null);
 
-const initValues = ref<any>({
-  active: '', // '' | '1' | '0'
+const initValues = ref({
+  active: '',
   keyword: '',
   startDate: '',
   endDate: '',
 });
 
-/* Search Hook */
-const { list, hasData, noDataMessage, query } = useSearchPage({
+/* --------------------------------------
+ * Search list
+ * -------------------------------------- */
+const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
   useLocalList: true,
 });
 
-/* ✅ 後端 isActive 可能回來 true/false/1/0/'1'/'0'：統一轉成 1/0 */
-const normalizeIsActiveNum = (v: any): 1 | 0 => {
-  if (v === 1 || v === '1' || v === true || v === 'true') return 1;
-  return 0;
-};
-
-const normalizeRows = (rows: any[]) => {
-  return (rows || []).map((r: any) => ({
-    ...r,
-    isActive: normalizeIsActiveNum(r?.isActive),
-  }));
-};
-
-/* Select Options */
+/* --------------------------------------
+ * Select options
+ * -------------------------------------- */
 const activeOptions = ref<SelectOption[]>([
   { label: '啟用', value: '1' },
   { label: '停用', value: '0' },
 ]);
 
-const loadSelectOptions = async () => {
-  await nextTick();
+/* --------------------------------------
+ * Utils
+ * -------------------------------------- */
+const normalizeIsActiveNum = (value: any): 1 | 0 => {
+  if (value === 1 || value === '1' || value === true || value === 'true') {
+    return 1;
+  }
+
+  return 0;
 };
 
-/* local filter */
-const filterRows = (rows: any[], cond: any) => {
-  const active = String(cond?.active ?? '').trim(); // '' | '1' | '0'
-  const keyword = String(cond?.keyword ?? '')
+const normalizeRows = (rows: any[]) => {
+  return (rows || []).map((row: any) => ({
+    ...row,
+    isActive: normalizeIsActiveNum(row?.isActive),
+  }));
+};
+
+const filterRows = (rows: any[], condition: any) => {
+  const active = String(condition?.active ?? '').trim();
+  const keyword = String(condition?.keyword ?? '')
     .trim()
     .toLowerCase();
-  const startDate = String(cond?.startDate ?? '').trim();
-  const endDate = String(cond?.endDate ?? '').trim();
+  const startDate = String(condition?.startDate ?? '').trim();
+  const endDate = String(condition?.endDate ?? '').trim();
 
-  return (rows || []).filter((r) => {
-    const hitActive = !active || String(r?.isActive ?? '') === active;
+  return (rows || []).filter((row: any) => {
+    const hitActive =
+      !active || String(normalizeIsActiveNum(row?.isActive)) === active;
 
     const hitKeyword =
       !keyword ||
-      String(r?.content || '')
+      String(row?.content || '')
         .toLowerCase()
         .includes(keyword);
 
-    // startTime 做日期區間（可選）
-    const startTime = String(r?.startTime || '');
+    const startTime = String(row?.startTime || '');
     const hitStart = !startDate || startTime >= `${startDate}T00:00:00`;
     const hitEnd = !endDate || startTime <= `${endDate}T23:59:59`;
 
@@ -247,29 +250,64 @@ const filterRows = (rows: any[], cond: any) => {
   });
 };
 
-/* Query */
-const doQuery = async (condition: any) => {
-  await query(async () => {
-    const res = await getAllMarquees();
-    return res;
-  });
+const activeBadgeClass = (value: any) => {
+  return normalizeIsActiveNum(value) === 1
+    ? 'badge badge--green'
+    : 'badge badge--gray';
+};
 
-  // ✅ 先把 isActive 正規化，再做 filter（避免 boolean 對不上 '1'/'0'）
-  list.value = normalizeRows(list.value);
-  list.value = filterRows(list.value, condition);
+const linkTypeText = (value?: string) => {
+  if (value === 'NONE') return '無連結';
+  if (value === 'URL') return '網址';
+  if (value === 'NEWS') return '最新消息';
+  if (value === 'BANNER') return 'Banner';
+  return value || '-';
+};
+
+/* --------------------------------------
+ * Query
+ * -------------------------------------- */
+const doQuery = async (condition: any) => {
+  await query(async () => getAllMarquees());
+
+  const rows = normalizeRows(list.value);
+  list.value = filterRows(rows, condition);
 };
 
 const onSubmit = async (values: any) => {
-  await doQuery(values);
-  goToPage(1);
+  const condition = {
+    active: values.active ?? '',
+    keyword: values.keyword ?? '',
+    startDate: values.startDate ?? '',
+    endDate: values.endDate ?? '',
+  };
+
+  await doQuery(condition);
+
+  marqueeStore.setSearchCondition(condition);
   selectedIds.value = [];
+  goToPage(1);
+  isSearch.value = true;
 };
 
-/* Sorting */
+const refresh = async () => {
+  const values = formRef.value?.values || initValues.value;
+  await onSubmit(values);
+};
+
+/* --------------------------------------
+ * Sorting
+ * -------------------------------------- */
 const sortKey = ref('');
 const sortOrder = ref<'asc' | 'desc' | ''>('asc');
 
-const handleSort = ({ key, order }: any) => {
+const handleSort = ({
+  key,
+  order,
+}: {
+  key: string;
+  order: 'asc' | 'desc' | '';
+}) => {
   sortKey.value = key;
   sortOrder.value = order;
   goToPage(1);
@@ -279,6 +317,7 @@ const sortedList = computed(() => {
   if (!sortKey.value || !sortOrder.value) return list.value;
 
   const arr = [...list.value];
+
   arr.sort((a: any, b: any) =>
     compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
@@ -286,10 +325,13 @@ const sortedList = computed(() => {
       locale: 'zh-TW',
     }),
   );
+
   return arr;
 });
 
-/* Pagination */
+/* --------------------------------------
+ * Pagination
+ * -------------------------------------- */
 const pageLimitSize = ref(10);
 
 const {
@@ -302,7 +344,14 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
-/* Columns */
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
+
+/* --------------------------------------
+ * Columns
+ * -------------------------------------- */
 const columns = [
   { field: 'content', label: '內容', width: 320, sortable: true },
   { field: 'linkType', label: '連結類型', width: 120, sortable: true },
@@ -315,8 +364,19 @@ const columns = [
   { field: 'endTime', label: '結束時間', width: 160, sortable: true },
 ];
 
-/* Selection */
+/* --------------------------------------
+ * Selection
+ * -------------------------------------- */
 const selectedIds = ref<string[]>([]);
+
+watch(
+  selectedIds,
+  (value) => {
+    marqueeStore.setSelectedIds([...value]);
+  },
+  { deep: true },
+);
+
 const selectedRows = computed(() =>
   list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
@@ -324,41 +384,51 @@ const selectedRows = computed(() =>
 const canEnable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r) => normalizeIsActiveNum(r.isActive) !== 1),
+    selectedRows.value.every(
+      (row: any) => normalizeIsActiveNum(row.isActive) !== 1,
+    ),
 );
+
 const canDisable = computed(
   () =>
     selectedRows.value.length > 0 &&
-    selectedRows.value.every((r) => normalizeIsActiveNum(r.isActive) === 1),
+    selectedRows.value.every(
+      (row: any) => normalizeIsActiveNum(row.isActive) === 1,
+    ),
 );
+
 const canDelete = computed(() => selectedRows.value.length > 0);
 
-const refresh = async () => {
-  const values = formRef.value?.values || initValues.value;
-  await onSubmit(values);
-};
-
-/* Bulk Actions */
+/* --------------------------------------
+ * Bulk actions
+ * -------------------------------------- */
 const enableSelected = async () => {
-  if (!canEnable.value) return;
+  if (!canEnable.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '只有「停用」的跑馬燈才能啟用。',
+      iconType: 'warning',
+    });
+    return;
+  }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '啟用確認',
     message: `確定要啟用選中的 ${selectedIds.value.length} 筆跑馬燈嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        // ✅ 後端是 status=String，所以傳 '1'
         selectedIds.value.map((id) => updateMarqueeStatus(id, '1')),
       ),
-    onSuccess: async (results: any[]) => {
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -374,25 +444,32 @@ const enableSelected = async () => {
 };
 
 const disableSelected = async () => {
-  if (!canDisable.value) return;
+  if (!canDisable.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '只有「啟用」的跑馬燈才能停用。',
+      iconType: 'warning',
+    });
+    return;
+  }
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '停用確認',
     message: `確定要停用選中的 ${selectedIds.value.length} 筆跑馬燈嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(
-        // ✅ 後端是 status=String，所以傳 '0'
         selectedIds.value.map((id) => updateMarqueeStatus(id, '0')),
       ),
-    onSuccess: async (results: any[]) => {
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -410,20 +487,21 @@ const disableSelected = async () => {
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆跑馬燈嗎？（刪除後無法復原）`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteMarquee(id))),
-    onSuccess: async (results: any[]) => {
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
@@ -439,34 +517,109 @@ const deleteSelected = async () => {
 };
 
 const broadcastNow = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '廣播確認',
     message: '確定要手動廣播所有啟用中的跑馬燈嗎？',
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () => broadcastMarquees(),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '廣播成功',
         iconType: 'success',
       });
     },
+    showSuccessDialog: false,
   });
 };
 
-/* Navigation */
-const navigateToAdd = () => router.push('/home/marquee/add');
-const navigateToEdit = (item: any) =>
-  router.push(`/home/marquee/edit/${item.id}`);
+/* --------------------------------------
+ * Save state / Navigation
+ * -------------------------------------- */
+const saveListState = () => {
+  marqueeStore.setList([...list.value]);
+  marqueeStore.setSearchCondition(formRef.value?.values || initValues.value);
+  marqueeStore.setSort(sortKey.value, sortOrder.value);
+  marqueeStore.setCurrentPage(currentPage.value);
+  marqueeStore.setPageLimitSize(pageLimitSize.value);
+  marqueeStore.setSelectedIds([...selectedIds.value]);
+};
 
-/* Lifecycle */
+const navigateToAdd = () => {
+  saveListState();
+  router.push('/home/marquee/add');
+};
+
+const navigateToEdit = (item: any) => {
+  saveListState();
+  router.push(`/home/marquee/edit/${item.id}`);
+};
+
+/* --------------------------------------
+ * Lifecycle
+ * -------------------------------------- */
 onMounted(async () => {
-  await loadSelectOptions();
-  await onSubmit(initValues.value);
+  if (marqueeStore.list.length > 0 && !marqueeStore.shouldRefresh) {
+    list.value = [...marqueeStore.list];
+    initValues.value = { ...marqueeStore.searchCondition };
+
+    await nextTick();
+    formRef.value?.setValues(marqueeStore.searchCondition);
+
+    sortKey.value = marqueeStore.sortKey || '';
+    sortOrder.value = marqueeStore.sortOrder || 'asc';
+    pageLimitSize.value = marqueeStore.pageLimitSize;
+    selectedIds.value = [...marqueeStore.selectedIds];
+
+    await nextTick();
+    goToPage(marqueeStore.currentPage);
+
+    isSearch.value = true;
+    marqueeStore.resetAll();
+    return;
+  }
+
+  const condition = marqueeStore.shouldRefresh
+    ? { ...marqueeStore.searchCondition }
+    : { ...initValues.value };
+
+  initValues.value = { ...condition };
+
+  await nextTick();
+  formRef.value?.setValues(condition);
+
+  await onSubmit(condition);
+  marqueeStore.resetAll();
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.ml {
+  &__link-text {
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__color-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__color-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 50%;
+  }
+}
+</style>

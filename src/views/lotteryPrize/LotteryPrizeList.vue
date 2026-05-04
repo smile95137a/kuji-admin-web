@@ -5,9 +5,17 @@
     <div
       v-if="isScratch"
       class="m-b-12"
-      style="padding:12px 16px;background:#e6f7ff;border-left:4px solid #1890ff;border-radius:4px;font-size:13px;color:#005a99;"
+      style="
+        padding: 12px 16px;
+        background: #e6f7ff;
+        border-left: 4px solid #1890ff;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #005a99;
+      "
     >
-      刮刮樂模式：大獎數量固定為 1（totalQuantity = 1），其餘 N-1 個籤位將自動設為銘謝惠顧，無需另行設定。
+      刮刮樂模式：大獎數量固定為 1（totalQuantity = 1），其餘 N-1
+      個籤位將自動設為銘謝惠顧，無需另行設定。
     </div>
 
     <FormTitle title="獎項管理" />
@@ -22,8 +30,13 @@
         <MButton
           @click="navigateToAdd"
           :disabled="isScratch && hasGrandPrize"
-          :title="isScratch && hasGrandPrize ? '刮刮樂商品只允許一個大獎，請先刪除現有大獎再重新設定' : ''"
-        >新增獎項</MButton>
+          :title="
+            isScratch && hasGrandPrize
+              ? '刮刮樂商品只允許一個大獎，請先刪除現有大獎再重新設定'
+              : ''
+          "
+          >新增獎項</MButton
+        >
 
         <!-- T015 — 完成配置 button for scratch DRAFT -->
         <MButton
@@ -31,7 +44,8 @@
           :disabled="!hasGrandPrize"
           :title="!hasGrandPrize ? '請先設定大獎才能完成配置' : ''"
           @click="doConfigured"
-        >完成配置</MButton>
+          >完成配置</MButton
+        >
 
         <MButton
           class="mbtn--red"
@@ -170,6 +184,8 @@ import {
   getLotteryWithPrizes,
   changeLotteryWithPrizesStatus,
 } from '@/services/adminLotteryWithPrizesService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const route = useRoute();
 const router = useRouter();
@@ -181,7 +197,8 @@ const lotteryId = computed(() => String(route.params.lotteryId || ''));
 const gameMode = ref('');
 const lotteryStatus = ref('');
 const isScratch = computed(
-  () => gameMode.value === 'SCRATCH_STORE' || gameMode.value === 'SCRATCH_PLAYER',
+  () =>
+    gameMode.value === 'SCRATCH_STORE' || gameMode.value === 'SCRATCH_PLAYER',
 );
 
 /* local list hook */
@@ -213,7 +230,7 @@ const sortedList = computed(() => {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
-    })
+    }),
   );
   return arr;
 });
@@ -301,7 +318,7 @@ const doConfigured = async () => {
   await executeApi({
     fn: () => changeLotteryWithPrizesStatus(lotteryId.value, 'CONFIGURED'),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '商品已完成配置',
         iconType: 'success',
@@ -316,7 +333,7 @@ const doConfigured = async () => {
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆獎項嗎？（刪除後無法復原）`,
   });
@@ -329,7 +346,7 @@ const deleteSelected = async () => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0

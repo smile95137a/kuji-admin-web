@@ -1,56 +1,129 @@
 <!-- src/components/common/ImageCropDialog.vue -->
 <template>
-  <div v-if="modelValue" class="dialog">
-    <div class="dialog__backdrop" @click="onCancel" />
+  <div v-if="modelValue" class="image-crop-dialog">
+    <div class="image-crop-dialog__backdrop" @click="onCancel" />
 
-    <div class="dialog__panel">
-      <div class="dialog__header">
-        <p class="dialog__title">{{ title }}</p>
-
-        <div class="dialog__actions">
-          <button class="dialog__btn" type="button" @click="resetCrop">
-            重置
-          </button>
-
-          <button class="dialog__btn" type="button" @click="fitContain">
-            看整張
-          </button>
-          <button class="dialog__btn" type="button" @click="fitCover">
-            填滿
-          </button>
-          <button class="dialog__btn" type="button" @click="actualSize">
-            1:1
-          </button>
-
-          <button class="dialog__btn" type="button" @click="zoomIn">
-            放大
-          </button>
-          <button class="dialog__btn" type="button" @click="zoomOut">
-            縮小
-          </button>
-
-          <button class="dialog__btn" type="button" @click="rotateLeft">
-            左轉
-          </button>
-          <button class="dialog__btn" type="button" @click="rotateRight">
-            右轉
-          </button>
-
-          <button class="dialog__btn" type="button" @click="flipX">
-            左右翻
-          </button>
-          <button class="dialog__btn" type="button" @click="flipY">
-            上下翻
-          </button>
-
-          <button class="dialog__btn" type="button" @click="toggleMoveMode">
-            {{ moveMode === 'move' ? '框選模式' : '拖曳模式' }}
-          </button>
+    <div class="image-crop-dialog__panel">
+      <!-- Header -->
+      <div class="image-crop-dialog__header">
+        <div class="image-crop-dialog__header-main">
+          <p class="image-crop-dialog__title">{{ titleText }}</p>
         </div>
+
+        <button
+          type="button"
+          class="image-crop-dialog__close"
+          aria-label="關閉"
+          @click="onCancel"
+        >
+          <font-awesome-icon :icon="['fas', 'xmark']" />
+        </button>
       </div>
 
-      <div class="dialog__body">
-        <cropper-canvas ref="canvasRef" class="cropper" background>
+      <!-- Toolbar -->
+      <div class="image-crop-dialog__toolbar">
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="resetCrop"
+        >
+          重置
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="fitContain"
+        >
+          看整張
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="fitCover"
+        >
+          填滿
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="actualSize"
+        >
+          1:1
+        </button>
+
+        <span class="image-crop-dialog__divider" />
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="zoomIn"
+        >
+          放大
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="zoomOut"
+        >
+          縮小
+        </button>
+
+        <span class="image-crop-dialog__divider" />
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="rotateLeft"
+        >
+          左轉
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="rotateRight"
+        >
+          右轉
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="flipX"
+        >
+          左右翻
+        </button>
+
+        <button
+          class="image-crop-dialog__tool-btn"
+          type="button"
+          @click="flipY"
+        >
+          上下翻
+        </button>
+
+        <span class="image-crop-dialog__divider" />
+
+        <button
+          class="image-crop-dialog__tool-btn image-crop-dialog__tool-btn--mode"
+          type="button"
+          @click="toggleMoveMode"
+        >
+          {{ moveMode === 'move' ? '框選模式' : '拖曳模式' }}
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="image-crop-dialog__body">
+        <cropper-canvas
+          ref="canvasRef"
+          class="image-crop-dialog__cropper"
+          background
+        >
           <cropper-image
             ref="imageRef"
             :src="src"
@@ -91,17 +164,24 @@
         </cropper-canvas>
       </div>
 
-      <div class="dialog__footer">
+      <!-- Hint -->
+      <p v-if="hintText" class="image-crop-dialog__hint">
+        {{ hintText }}
+      </p>
+
+      <!-- Footer -->
+      <div class="image-crop-dialog__footer">
         <button
-          class="dialog__btn dialog__btn--ghost"
+          class="image-crop-dialog__btn image-crop-dialog__btn--ghost"
           type="button"
+          :disabled="confirming"
           @click="onCancel"
         >
           取消
         </button>
 
         <button
-          class="dialog__btn dialog__btn--primary"
+          class="image-crop-dialog__btn image-crop-dialog__btn--primary"
           type="button"
           :disabled="confirming"
           @click="onConfirm"
@@ -109,8 +189,6 @@
           {{ confirming ? '處理中...' : '確定裁切' }}
         </button>
       </div>
-
-      <p v-if="hint" class="dialog__hint">{{ hint }}</p>
     </div>
   </div>
 </template>
@@ -127,33 +205,50 @@ import { computed, nextTick, ref, watch } from 'vue';
 type OutputMime = 'image/jpeg' | 'image/png' | 'image/webp';
 type MoveMode = 'move' | 'select';
 
-const props = defineProps<{
-  modelValue: boolean;
-  src: string;
-  title?: string;
-  hint?: string;
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    src: string;
+    title?: string;
+    hint?: string;
 
-  aspectRatio?: number | null;
-  outputWidth?: number;
-  outputHeight?: number;
+    aspectRatio?: number | null;
+    outputWidth?: number;
+    outputHeight?: number;
 
-  mimeType?: OutputMime;
-  quality?: number;
-  fileName?: string;
-}>();
+    mimeType?: OutputMime;
+    quality?: number;
+    fileName?: string;
+  }>(),
+  {
+    title: '裁切圖片',
+    hint: '',
+    aspectRatio: 1,
+    outputWidth: undefined,
+    outputHeight: undefined,
+    mimeType: 'image/jpeg',
+    quality: 0.9,
+    fileName: 'cropped.jpg',
+  },
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', v: boolean): void;
+  (e: 'update:modelValue', value: boolean): void;
   (e: 'cancel'): void;
   (e: 'confirm', file: File): void;
 }>();
 
-const title = computed(() => props.title ?? '裁切圖片');
-const hint = computed(() => props.hint ?? '');
+const titleText = computed(() => props.title || '裁切圖片');
+const hintText = computed(() => props.hint || '');
 
 const normalizedAspectRatio = computed(() => {
-  const v = props.aspectRatio;
-  return typeof v === 'number' && v > 0 ? v : NaN;
+  const value = props.aspectRatio;
+
+  if (typeof value === 'number' && value > 0) {
+    return value;
+  }
+
+  return NaN;
 });
 
 const canvasRef = ref<CropperCanvas | null>(null);
@@ -161,125 +256,188 @@ const imageRef = ref<CropperImage | null>(null);
 const selectionRef = ref<CropperSelection | null>(null);
 
 const confirming = ref(false);
-
 const moveMode = ref<MoveMode>('move');
-const toggleMoveMode = () => {
-  moveMode.value = moveMode.value === 'move' ? 'select' : 'move';
+
+const flipState = ref({
+  x: 1,
+  y: 1,
+});
+
+const safeClose = () => {
+  emit('update:modelValue', false);
 };
 
-const safeClose = () => emit('update:modelValue', false);
-
 const onCancel = () => {
+  if (confirming.value) return;
+
   emit('cancel');
   safeClose();
 };
 
 const ensureReady = async () => {
   await imageRef.value?.$ready?.();
-  // selection 也可能需要等一下才可用
   await nextTick();
 };
 
+const toggleMoveMode = () => {
+  moveMode.value = moveMode.value === 'move' ? 'select' : 'move';
+};
+
 const fitContain = async () => {
-  const img = imageRef.value;
-  if (!img) return;
+  const image = imageRef.value;
+
+  if (!image) return;
+
   await ensureReady();
-  img.$center?.('contain');
+  image.$center?.('contain');
 };
 
 const fitCover = async () => {
-  const img = imageRef.value;
-  if (!img) return;
+  const image = imageRef.value;
+
+  if (!image) return;
+
   await ensureReady();
-  img.$center?.('cover');
+  image.$center?.('cover');
 };
 
 const actualSize = async () => {
-  const img = imageRef.value;
-  if (!img) return;
+  const image = imageRef.value;
+
+  if (!image) return;
+
   await ensureReady();
-  img.$resetTransform?.();
-  img.$center?.('contain');
+  image.$resetTransform?.();
+  image.$center?.('contain');
 };
 
 const resetCrop = async () => {
-  const img = imageRef.value;
-  const sel = selectionRef.value;
-  if (!img || !sel) return;
+  const image = imageRef.value;
+  const selection = selectionRef.value;
+
+  if (!image || !selection) return;
 
   await ensureReady();
 
-  img.$resetTransform?.();
-  img.$center?.('contain');
+  image.$resetTransform?.();
+  image.$center?.('contain');
 
-  sel.aspectRatio = normalizedAspectRatio.value;
-  sel.$reset?.();
+  selection.aspectRatio = normalizedAspectRatio.value;
+  selection.$reset?.();
+
+  flipState.value = {
+    x: 1,
+    y: 1,
+  };
 };
 
-const zoomIn = () => imageRef.value?.$zoom?.(0.1);
-const zoomOut = () => imageRef.value?.$zoom?.(-0.1);
+const zoomIn = async () => {
+  await ensureReady();
+  imageRef.value?.$zoom?.(0.1);
+};
 
-const rotate = async (deg: 90 | -90) => {
-  const img = imageRef.value;
-  if (!img) return;
+const zoomOut = async () => {
+  await ensureReady();
+  imageRef.value?.$zoom?.(-0.1);
+};
 
-  await img.$ready?.();
-  img.$rotate?.(`${deg}deg`);
-  img.$center?.('contain');
+const rotate = async (degree: 90 | -90) => {
+  const image = imageRef.value;
+
+  if (!image) return;
+
+  await ensureReady();
+
+  image.$rotate?.(`${degree}deg`);
+  image.$center?.('contain');
 };
 
 const rotateRight = () => rotate(90);
 const rotateLeft = () => rotate(-90);
 
-const flipState = ref({ x: 1, y: 1 });
 const flipX = async () => {
-  const img = imageRef.value;
-  if (!img) return;
+  const image = imageRef.value;
+
+  if (!image) return;
+
   await ensureReady();
+
   flipState.value.x *= -1;
-  img.$scale?.(flipState.value.x, flipState.value.y);
-  img.$center?.('contain');
+
+  image.$scale?.(flipState.value.x, flipState.value.y);
+  image.$center?.('contain');
 };
+
 const flipY = async () => {
-  const img = imageRef.value;
-  if (!img) return;
+  const image = imageRef.value;
+
+  if (!image) return;
+
   await ensureReady();
+
   flipState.value.y *= -1;
-  img.$scale?.(flipState.value.x, flipState.value.y);
-  img.$center?.('contain');
+
+  image.$scale?.(flipState.value.x, flipState.value.y);
+  image.$center?.('contain');
+};
+
+const buildFileName = () => {
+  if (props.fileName) {
+    return props.fileName;
+  }
+
+  if (props.mimeType === 'image/png') {
+    return 'cropped.png';
+  }
+
+  if (props.mimeType === 'image/webp') {
+    return 'cropped.webp';
+  }
+
+  return 'cropped.jpg';
 };
 
 const onConfirm = async () => {
-  const sel = selectionRef.value;
-  if (!sel) return;
+  const selection = selectionRef.value;
+
+  if (!selection || confirming.value) return;
 
   confirming.value = true;
+
   try {
     const mimeType: OutputMime = props.mimeType ?? 'image/jpeg';
     const quality = typeof props.quality === 'number' ? props.quality : 0.9;
 
-    const canvas = await sel.$toCanvas?.({
+    const canvas = await selection.$toCanvas?.({
       width: props.outputWidth,
       height: props.outputHeight,
       beforeDraw: (ctx) => {
-        (ctx as any).imageSmoothingQuality = 'high';
+        (ctx as CanvasRenderingContext2D).imageSmoothingQuality = 'high';
       },
     });
-    if (!canvas) return;
+
+    if (!canvas) {
+      return;
+    }
 
     const blob: Blob = await new Promise((resolve, reject) => {
       canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+        (result) => {
+          if (result) {
+            resolve(result);
+            return;
+          }
+
+          reject(new Error('toBlob failed'));
+        },
         mimeType,
         quality,
       );
     });
 
-    const fileName =
-      props.fileName ??
-      (mimeType === 'image/png' ? 'cropped.png' : 'cropped.jpg');
-
-    const file = new File([blob], fileName, { type: mimeType });
+    const file = new File([blob], buildFileName(), {
+      type: mimeType,
+    });
 
     emit('confirm', file);
     safeClose();
@@ -291,13 +449,16 @@ const onConfirm = async () => {
 watch(
   () => [props.modelValue, props.src] as const,
   async ([open]) => {
-    if (!open) return;
+    if (!open || !props.src) return;
 
-    flipState.value = { x: 1, y: 1 };
+    moveMode.value = 'move';
+    flipState.value = {
+      x: 1,
+      y: 1,
+    };
 
     await nextTick();
     await ensureReady();
-
     await fitContain();
 
     if (selectionRef.value) {
@@ -305,78 +466,8 @@ watch(
       selectionRef.value.$reset?.();
     }
   },
-  { immediate: true },
+  {
+    immediate: true,
+  },
 );
 </script>
-
-<style scoped lang="scss">
-.dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-}
-.dialog__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-.dialog__panel {
-  position: relative;
-  width: min(920px, calc(100vw - 32px));
-  margin: 40px auto;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-}
-.dialog__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
-}
-.dialog__title {
-  font-weight: 700;
-  white-space: nowrap;
-}
-.dialog__actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.dialog__body {
-  padding: 12px 16px 0;
-}
-.cropper {
-  height: 420px;
-  width: 100%;
-  display: block;
-}
-.dialog__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 12px 16px 16px;
-}
-.dialog__btn {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
-}
-.dialog__btn--primary {
-  border-color: #111;
-  background: #111;
-  color: #fff;
-}
-.dialog__btn--ghost {
-  background: #f7f7f7;
-}
-.dialog__hint {
-  padding: 0 16px 16px;
-  color: #666;
-  font-size: 12px;
-}
-</style>

@@ -8,7 +8,10 @@
     </div>
 
     <div v-if="isStoreEditorRole" class="storeEditor__notice">
-      <span>ℹ️ 店家編輯（STORE_EDITOR）的權限範圍由後端依店家歸屬限制，前端設定僅供參考。</span>
+      <span
+        >ℹ️
+        店家編輯（STORE_EDITOR）的權限範圍由後端依店家歸屬限制，前端設定僅供參考。</span
+      >
     </div>
 
     <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
@@ -81,6 +84,8 @@ import {
   getRoleDetailById,
   setRoleMenuPermissions,
 } from '@/services/adminRoleService';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const route = useRoute();
 const router = useRouter();
@@ -90,15 +95,17 @@ const roleId = computed(() => String(route.params.id || ''));
 
 const menuTree = ref<any[]>([]);
 const roleDetail = ref<any>(null);
-const isAdminRole = computed(() =>
-  roleDetail.value?.code === 'ADMIN' ||
-  roleDetail.value?.name === 'ADMIN' ||
-  String(roleDetail.value?.code || '').toUpperCase() === 'ROLE_ADMIN'
+const isAdminRole = computed(
+  () =>
+    roleDetail.value?.code === 'ADMIN' ||
+    roleDetail.value?.name === 'ADMIN' ||
+    String(roleDetail.value?.code || '').toUpperCase() === 'ROLE_ADMIN',
 );
 
-const isStoreEditorRole = computed(() =>
-  roleDetail.value?.code === 'STORE_EDITOR' ||
-  String(roleDetail.value?.code || '').toUpperCase() === 'ROLE_STORE_EDITOR'
+const isStoreEditorRole = computed(
+  () =>
+    roleDetail.value?.code === 'STORE_EDITOR' ||
+    String(roleDetail.value?.code || '').toUpperCase() === 'ROLE_STORE_EDITOR',
 );
 
 /**
@@ -174,13 +181,13 @@ const loadData = async () => {
           ensurePermRow(menuId);
 
           permMap.value[menuId].canView = Boolean(
-            p.canView ?? p.view ?? p.read ?? false
+            p.canView ?? p.view ?? p.read ?? false,
           );
           permMap.value[menuId].canEdit = Boolean(
-            p.canEdit ?? p.edit ?? p.write ?? false
+            p.canEdit ?? p.edit ?? p.write ?? false,
           );
           permMap.value[menuId].canDelete = Boolean(
-            p.canDelete ?? p.delete ?? false
+            p.canDelete ?? p.delete ?? false,
           );
         });
       }
@@ -204,7 +211,7 @@ const onDeleteChange = (menuId: string) => {
 const goBack = () => router.push('/home/roles');
 
 const save = async () => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '儲存確認',
     message: '確定要儲存角色權限嗎？',
   });
@@ -224,7 +231,7 @@ const save = async () => {
     fn: async () =>
       setRoleMenuPermissions({ roleId: roleId.value, permissions }),
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '儲存成功',
         iconType: 'success',

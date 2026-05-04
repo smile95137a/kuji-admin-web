@@ -26,7 +26,9 @@
 
       <div class="flex justify-center m-y-8 gap-x-12">
         <MButton type="submit">查詢</MButton>
-        <MButton type="button" class="mbtn--gray" @click="resetFilters">清除</MButton>
+        <MButton type="button" class="mbtn--gray" @click="resetFilters"
+          >清除</MButton
+        >
       </div>
     </form>
   </MCard>
@@ -38,7 +40,9 @@
       </template>
 
       <template v-else-if="!hasData">
-        <NoData message="尚無店家資料，請至「帳號管理」建立第一位店家管理員以自動建立店家。" />
+        <NoData
+          message="尚無店家資料，請至「帳號管理」建立第一位店家管理員以自動建立店家。"
+        />
       </template>
 
       <template v-else>
@@ -97,7 +101,11 @@
           <template #cell-actions="{ item }">
             <div class="flex gap-x-8 flex-wrap">
               <MButton size="sm" @click="navigateToDetail(item)">詳情</MButton>
-              <MButton size="sm" variant="secondary" @click="navigateToEdit(item)">
+              <MButton
+                size="sm"
+                variant="secondary"
+                @click="navigateToEdit(item)"
+              >
                 編輯
               </MButton>
               <MButton
@@ -177,10 +185,8 @@ import StoreDisableModal from './StoreDisableModal.vue';
 import StoreEnableModal from './StoreEnableModal.vue';
 
 import { useDialogStore } from '@/stores';
-import {
-  queryStores,
-  updateStoreStatus,
-} from '@/services/adminStoreService';
+import { queryStores, updateStoreStatus } from '@/services/adminStoreService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* ==============================
  * Router / Stores
@@ -326,7 +332,10 @@ const navigateToEdit = (item: any) => {
   router.push({ name: 'StoreEdit', params: { id: item.id } });
 };
 const goToProducts = (item: any) => {
-  router.push({ path: '/home/lottery-with-prizes', query: { storeId: item.id } });
+  router.push({
+    path: '/home/lottery-with-prizes',
+    query: { storeId: item.id },
+  });
 };
 
 /* ==============================
@@ -353,14 +362,14 @@ const submitDisable = async () => {
   try {
     await updateStoreStatus(targetStore.value.id, 'INACTIVE');
     targetStore.value.status = 'DISABLED';
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '店家已停用',
       iconType: 'success',
     });
     closeDisableModal();
   } catch {
-    dialogStore.openInfoDialog({
+    openInfoDialog({
       title: '提示訊息',
       message: '停用失敗，請重試',
       iconType: 'warning',
@@ -381,7 +390,7 @@ const submitEnable = async () => {
   try {
     await updateStoreStatus(targetStore.value.id, 'ACTIVE');
     targetStore.value.status = 'ENABLED';
-    await dialogStore.openInfoDialog({
+    await openInfoDialog({
       title: '提示訊息',
       message: '店家已啟用，請提醒管理員手動重新上架商品',
       iconType: 'success',
@@ -389,7 +398,7 @@ const submitEnable = async () => {
     enableModalOpen.value = false;
     targetStore.value = null;
   } catch {
-    dialogStore.openInfoDialog({
+    openInfoDialog({
       title: '提示訊息',
       message: '啟用失敗，請重試',
       iconType: 'warning',

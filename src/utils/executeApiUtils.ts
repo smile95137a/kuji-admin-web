@@ -1,6 +1,7 @@
 import { useDialogStore } from '@/stores/dialogStore';
 import { getErrorMessage } from './ErrorUtils';
 import { withLoading } from './loadingUtils';
+import { openInfoDialog } from './dialog/infoDialog';
 
 interface ExecuteApiOptions<T> {
   fn: () => Promise<ApiResponse<T> | T>;
@@ -9,7 +10,7 @@ interface ExecuteApiOptions<T> {
   errorTitle?: string;
   errorMessage?: string;
   onSuccess?: (res: T, full?: ApiResponse<T>) => void | Promise<void>;
-  onFail?: (res: T | undefined) => void | Promise<void>;
+  onFail?: (res: T | undefined, full?: ApiResponse<T>) => void | Promise<void>;
   showCatchDialog?: boolean;
   showFailDialog?: boolean;
   showSuccessDialog?: boolean;
@@ -20,7 +21,7 @@ interface ExecuteApiOptions<T> {
 export async function executeApi<T = any>({
   fn,
   successTitle = '提示訊息',
-  successMessage = '操作成功',
+  successMessage = '操作成功！',
   errorTitle = '錯誤',
   errorMessage = '操作失敗，請稍後再試。',
   onSuccess,
@@ -42,12 +43,10 @@ export async function executeApi<T = any>({
         : { success: true, code: '', data: res as T, message: '' };
 
     const { success, data, message } = normalized;
-    const failMessage =
-      (normalized as any)?.error?.message || message || errorMessage;
 
     if (success) {
       if (showSuccessDialog) {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: successTitle,
           message: useDefaultSuccessMessage
             ? successMessage
@@ -58,18 +57,18 @@ export async function executeApi<T = any>({
       if (onSuccess) await onSuccess(data!, normalized);
     } else {
       if (showFailDialog) {
-        await dialogStore.openInfoDialog({
+        await openInfoDialog({
           title: errorTitle,
-          message: failMessage,
+          message: message || errorMessage,
           iconType: 'warning',
         });
       }
-      if (onFail) await onFail(data);
+      if (onFail) await onFail(data!, normalized);
     }
     return normalized;
   } catch (error) {
     if (showCatchDialog) {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: errorTitle,
         message: getErrorMessage(error),
         iconType: 'warning',

@@ -8,74 +8,74 @@ export const categoryOptions = [
 ];
 
 export const playModeOptions = [
-  { label: '抽籤型（LOTTERY_MODE）', value: 'LOTTERY_MODE' },
-  { label: '刮刮樂型（SCRATCH_MODE）', value: 'SCRATCH_MODE' },
+  { label: '抽籤型', value: 'LOTTERY_MODE' },
+  { label: '刮刮樂型', value: 'SCRATCH_MODE' },
 ];
 
 /** 僅 CUSTOM_GACHA 顯示，前端傳給後端，後端用來推算 playMode */
 export const subCategoryOptions = [
-  { label: '抽籤型（LOTTERY_MODE）', value: 'LOTTERY_MODE' },
-  { label: '刮刮樂型（SCRATCH_MODE）', value: 'SCRATCH_MODE' },
+  { label: '抽籤型', value: 'LOTTERY_MODE' },
+  { label: '刮刮樂型', value: 'SCRATCH_MODE' },
 ];
 
 export const gameModeOptions = [
-  { label: '隨機（RANDOM）', value: 'RANDOM' },
-  { label: '店家指定（SCRATCH_STORE）', value: 'SCRATCH_STORE' },
-  { label: '玩家指定（SCRATCH_PLAYER）', value: 'SCRATCH_PLAYER' },
+  { label: '隨機指定', value: 'RANDOM' },
+  { label: '店家指定', value: 'SCRATCH_STORE' },
+  { label: '玩家指定', value: 'SCRATCH_PLAYER' },
 ];
 
 export const statusOptions = [
-  { label: '草稿（DRAFT）', value: 'DRAFT' },
-  { label: '上架（ON_SHELF）', value: 'ON_SHELF' },
-  { label: '下架（OFF_SHELF）', value: 'OFF_SHELF' },
+  { label: '草稿', value: 'DRAFT' },
+  { label: '上架', value: 'ON_SHELF' },
+  { label: '下架', value: 'OFF_SHELF' },
 ];
 
 export const levelOptions = [
-  { label: 'A', value: 'A' },
-  { label: 'B', value: 'B' },
-  { label: 'C', value: 'C' },
-  { label: 'D', value: 'D' },
-  { label: 'E', value: 'E' },
-  { label: 'F', value: 'F' },
-  { label: 'G', value: 'G' },
-  { label: 'H', value: 'H' },
-  { label: 'I', value: 'I' },
-  { label: 'J', value: 'J' },
-  { label: 'K', value: 'K' },
-  { label: 'L', value: 'L' },
-  { label: 'M', value: 'M' },
-  { label: 'N', value: 'N' },
-  { label: 'O', value: 'O' },
-  { label: 'P', value: 'P' },
-  { label: 'Q', value: 'Q' },
-  { label: 'R', value: 'R' },
-  { label: 'S', value: 'S' },
-  { label: 'T', value: 'T' },
-  { label: 'U', value: 'U' },
-  { label: 'V', value: 'V' },
-  { label: 'W', value: 'W' },
-  { label: 'X', value: 'X' },
-  { label: 'Y', value: 'Y' },
-  { label: 'Z', value: 'Z' },
-  { label: 'LAST', value: 'LAST' },
-  { label: 'GRAND', value: 'GRAND' },
+  { label: 'A賞', value: 'A' },
+  { label: 'B賞', value: 'B' },
+  { label: 'C賞', value: 'C' },
+  { label: 'D賞', value: 'D' },
+  { label: 'E賞', value: 'E' },
+  { label: 'F賞', value: 'F' },
+  { label: 'G賞', value: 'G' },
+  { label: 'H賞', value: 'H' },
+  { label: 'I賞', value: 'I' },
+  { label: 'J賞', value: 'J' },
+  { label: 'K賞', value: 'K' },
+  { label: 'L賞', value: 'L' },
+  { label: 'M賞', value: 'M' },
+  { label: 'N賞', value: 'N' },
+  { label: 'O賞', value: 'O' },
+  { label: 'P賞', value: 'P' },
+  { label: 'Q賞', value: 'Q' },
+  { label: 'R賞', value: 'R' },
+  { label: 'S賞', value: 'S' },
+  { label: 'T賞', value: 'T' },
+  { label: 'U賞', value: 'U' },
+  { label: 'V賞', value: 'V' },
+  { label: 'W賞', value: 'W' },
+  { label: 'X賞', value: 'X' },
+  { label: 'Y賞', value: 'Y' },
+  { label: 'Z賞', value: 'Z' },
+  { label: '最後賞', value: 'LAST' },
+  { label: '大獎', value: 'GRAND' },
 ];
 
 export const prizeTypeOptions = [
-  { label: '實體（physical）', value: 'physical' },
-  { label: '數位（digital）', value: 'digital' },
-  { label: '點數（point）', value: 'point' },
+  { label: '實體獎品', value: 'physical' },
+  { label: '數位獎品', value: 'digital' },
+  { label: '點數獎品', value: 'point' },
 ];
 
 export const delistStrategyOptions = [
-  { label: '最後大獎抽完即下架（GRAND_PRIZE_DRAWN）', value: 'GRAND_PRIZE_DRAWN' },
-  { label: '所有獎品抽完才下架（ALL_DRAWN）', value: 'ALL_DRAWN' },
-  { label: '抽完後仍保留，需手動下架（MANUAL）', value: 'MANUAL' },
+  { label: '最後大獎抽完即下架', value: 'GRAND_PRIZE_DRAWN' },
+  { label: '所有獎品抽完才下架', value: 'ALL_DRAWN' },
+  { label: '抽完後保留，手動下架', value: 'MANUAL' },
 ];
 
 export const paymentTypeOptions = [
-  { label: '遊戲幣（GOLD）', value: 'GOLD' },
-  { label: '紅利點數（BONUS）', value: 'BONUS' },
+  { label: '遊戲幣', value: 'GOLD' },
+  { label: '紅利點數', value: 'BONUS' },
 ];
 
 export const boolOptions = [

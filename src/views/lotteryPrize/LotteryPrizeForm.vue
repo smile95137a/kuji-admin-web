@@ -81,7 +81,13 @@
             required
             :disabled="isGrandPrize === true"
           />
-          <p v-if="isGrandPrize === true" class="form__text m-t-4" style="color:#888;font-size:12px;">大獎數量固定為 1</p>
+          <p
+            v-if="isGrandPrize === true"
+            class="form__text m-t-4"
+            style="color: #888; font-size: 12px"
+          >
+            大獎數量固定為 1
+          </p>
         </div>
 
         <!-- 權重 -->
@@ -141,6 +147,8 @@ import {
 import { getLotteryWithPrizes } from '@/services/adminLotteryWithPrizesService';
 
 import { levelOptions, boolOptions } from '@/constants/lotteryOptions';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const route = useRoute();
 const router = useRouter();
@@ -155,7 +163,8 @@ const isDev = import.meta.env.DEV;
 /* T007 — gameMode state */
 const gameMode = ref('');
 const isScratch = computed(
-  () => gameMode.value === 'SCRATCH_STORE' || gameMode.value === 'SCRATCH_PLAYER',
+  () =>
+    gameMode.value === 'SCRATCH_STORE' || gameMode.value === 'SCRATCH_PLAYER',
 );
 
 /* T009 — isGrandPrize local ref (not a form field, but passed in payload) */
@@ -175,7 +184,7 @@ const schema = yup.object({
     .typeError('權重必須是數字')
     .nullable()
     .transform((v, o) =>
-      o === '' || o === null || o === undefined ? null : v
+      o === '' || o === null || o === undefined ? null : v,
     ),
 });
 
@@ -221,7 +230,7 @@ const fillMockData = async () => {
 
   imagePreview.value = 'https://picsum.photos/seed/prize/800/600';
 
-  await dialogStore.openInfoDialog({
+  await openInfoDialog({
     title: '提示訊息',
     message: '已帶入測試資料',
     iconType: 'success',
@@ -266,7 +275,7 @@ const loadGameMode = async () => {
 };
 
 const onSubmit = handleSubmit(async (values) => {
-  const ok = await dialogStore.openConfirmDialog({
+  const ok = await openConfirmDialog({
     title: '儲存確認',
     message: `確定要${isEdit.value ? '更新' : '新增'}獎項嗎？`,
   });
@@ -291,7 +300,7 @@ const onSubmit = handleSubmit(async (values) => {
       return createPrize(lotteryId.value, payload);
     },
     onSuccess: async () => {
-      await dialogStore.openInfoDialog({
+      await openInfoDialog({
         title: '提示訊息',
         message: '儲存成功',
         iconType: 'success',

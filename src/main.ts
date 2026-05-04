@@ -18,5 +18,6 @@ Object.values(solidIcons).forEach((icon: any) => {
 const app = createApp(App);
 
 app.component('font-awesome-icon', FontAwesomeIcon);
+window.__APP_CONTEXT__ = app._context;
 
 app.use(createPinia()).use(router).mount('#app');
