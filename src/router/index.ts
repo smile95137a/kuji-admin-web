@@ -13,9 +13,7 @@ import storeRoutes from './storeRoutes';
 import { useAuthStore } from '@/stores';
 import orderRoutes from './orderRoutes';
 import rechargePlanRoutes from './rechargePlanRoutes';
-import walletRoutes from './walletRoutes';
 import frontendUserRoutes from './frontendUserRoutes';
-import prizeBoxRoutes from './prizeBoxRoutes';
 import menuRoutes from './menuRoutes';
 import roleRoutes from './roleRoutes';
 import referralCodeRoutes from './adminReferralCodeRoutes';
@@ -54,9 +52,7 @@ const routes: Array<RouteRecordRaw> = [
       ...lotteryPrizeRoutes,
       ...orderRoutes,
       ...rechargePlanRoutes,
-      ...walletRoutes,
       ...frontendUserRoutes,
-      ...prizeBoxRoutes,
       ...menuRoutes,
       ...roleRoutes,
       ...referralCodeRoutes,

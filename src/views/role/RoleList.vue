@@ -296,7 +296,7 @@ const navigateToEdit = (item: any) => {
 
 const navigateToPermissions = (item: any) => {
   saveListState();
-  router.push(`/home/roles/${item.id}/permissions`);
+  router.push(`/home/roles/permissions/${item.id}`);
 };
 
 /* --------------------------------------

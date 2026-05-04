@@ -68,18 +68,6 @@
           />
         </div>
 
-        <!-- 顯示順序 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="顯示順序（選填）"
-            type="number"
-            v-model="displayOrder"
-            :error="errors.displayOrder"
-            placeholder="預設 0（數字越小越前面）"
-            :disabled="isDetail"
-          />
-        </div>
-
         <!-- 是否啟用 -->
         <div class="w-50 w-md-100 p-6">
           <FormSelect
@@ -105,7 +93,7 @@
         </div>
 
         <!-- 活動開始/結束（只有活動方案才需要） -->
-        <div class="w-50 w-md-100 p-6" v-if="isPromotional === true">
+        <div class="w-50 w-md-100 p-6" v-if="isPromotional">
           <FormInput
             label="活動開始時間"
             type="datetime-local"
@@ -119,7 +107,7 @@
           </p>
         </div>
 
-        <div class="w-50 w-md-100 p-6" v-if="isPromotional === true">
+        <div class="w-50 w-md-100 p-6" v-if="isPromotional">
           <FormInput
             label="活動結束時間"
             type="datetime-local"

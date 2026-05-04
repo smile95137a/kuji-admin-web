@@ -9,20 +9,21 @@
         <!-- 推薦碼 -->
         <div class="w-50 w-md-100 p-6">
           <FormInput
-            label="推薦碼（留空則系統自動生成）"
+            label="推薦碼"
             v-model="code"
             :error="errors.code"
-            placeholder="留空則系統自動生成（6–12 位大寫英數字）"
+            :disabled="!isEdit"
+            placeholder="系統自動生成"
           />
         </div>
 
-        <!-- 店家ID（可不填：店家角色由後端自動帶入） -->
+        <!-- 指定店家 -->
         <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="店家 ID（可不填）"
+          <FormSelect
+            label="指定店家"
             v-model="storeId"
+            :options="storeOptions"
             :error="errors.storeId"
-            placeholder="不填會由後端依登入者帶入"
           />
         </div>
 
@@ -49,10 +50,6 @@
 
       <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12">
-        <MButton type="button" class="mbtn--gray" @click="fillMockData">
-          快速產生資料
-        </MButton>
-
         <MButton type="submit">
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
@@ -66,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -77,19 +74,18 @@ import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useDialogStore } from '@/stores';
 
 import {
   getReferralCodeById,
   createReferralCode,
   updateReferralCode,
 } from '@/services/adminReferralCodeService';
+import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 /* Setup */
 const route = useRoute();
 const router = useRouter();
-const dialogStore = useDialogStore();
 const isEdit = computed(() => Boolean(route.params.id));
 
 const enabledOptions = [
@@ -97,16 +93,18 @@ const enabledOptions = [
   { label: '停用', value: false },
 ];
 
-/** schema（依你的 ReferralCodeCreateReq / UpdateReq 調整） */
+const storeOptions = ref<{ label: string; value: any }[]>([]);
+
+/** schema */
 const schema = yup.object({
   code: yup
     .string()
     .nullable()
     .test('referral-format', '格式需為 6–12 位大寫英數字（A-Z、0-9）', (v) => {
-      if (!v) return true; // 空白 = 系統自動產生，允許
+      if (!v) return true;
       return /^[A-Z0-9]{6,12}$/.test(v);
     }),
-  storeId: yup.string().nullable(),
+  storeId: yup.string().required('請選擇指定店家'),
   enabled: yup.boolean().required('請選擇狀態'),
   remark: yup.string().nullable(),
 });
@@ -126,17 +124,37 @@ const [storeId] = defineField('storeId');
 const [enabled] = defineField('enabled');
 const [remark] = defineField('remark');
 
+/** 產生 6 碼大寫英文字母推薦碼 */
+const generateCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  return Array.from({ length: 6 }, () =>
+    chars[Math.floor(Math.random() * chars.length)],
+  ).join('');
+};
+
 onMounted(async () => {
-  if (!isEdit.value) return;
+  // 載入店家選單
+  await executeApi({
+    fn: async () => getStoreOptions({ activeOnly: true }),
+    onSuccess: (data: any[]) => {
+      storeOptions.value = toSelectOptions(data ?? []);
+    },
+    showSuccessDialog: false,
+  });
+
+  if (!isEdit.value) {
+    // 新增時自動產生推薦碼
+    setValues({ code: generateCode(), storeId: '', enabled: true, remark: '' });
+    return;
+  }
 
   await executeApi({
     fn: async () => getReferralCodeById(route.params.id as string),
     onSuccess: (data) => {
       const d: any = data;
-
       setValues({
         code: d.code ?? '',
-        storeId: d.storeId ?? '',
+        storeId: d.storeId ? String(d.storeId) : '',
         enabled: d.enabled ?? true,
         remark: d.remark ?? '',
       });
@@ -144,27 +162,10 @@ onMounted(async () => {
   });
 });
 
-const fillMockData = async () => {
-  const mock = `RC${Date.now()}`.slice(-10);
-
-  setValues({
-    code: mock,
-    storeId: '',
-    enabled: true,
-    remark: '測試推薦碼',
-  });
-
-  await openInfoDialog({
-    title: '提示訊息',
-    message: '已帶入測試資料',
-    iconType: 'success',
-  });
-};
-
 const onSubmit = handleSubmit(async (values) => {
   const payload = {
     code: values.code,
-    storeId: values.storeId || '',
+    storeId: values.storeId,
     enabled: values.enabled,
     remark: values.remark || '',
   };

@@ -20,9 +20,7 @@
         :value="modelValue"
         :disabled="disabled"
         :aria-required="required ? 'true' : 'false'"
-        @change="
-          $emit('update:modelValue', ($event.target as HTMLSelectElement).value)
-        "
+        @change="onSelectChange($event)"
       >
         <option v-if="showAll" :value="allValue">{{ allLabel }}</option>
         <option v-for="opt in options" :key="opt.value" :value="opt.value">
@@ -67,6 +65,12 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', v: string | number): void;
+  (e: 'update:modelValue', v: any): void;
 }>();
+
+const onSelectChange = (e: Event) => {
+  const strVal = (e.target as HTMLSelectElement).value;
+  const matched = props.options.find((opt) => String(opt.value) === strVal);
+  emit('update:modelValue', matched !== undefined ? matched.value : strVal);
+};
 </script>

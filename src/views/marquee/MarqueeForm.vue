@@ -6,6 +6,7 @@ import * as yup from 'yup';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
+import FormColorPicker from '@/components/common/FormColorPicker.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormSection from '@/components/common/FormSection.vue';
@@ -185,12 +186,6 @@ const [startTime] = defineField('startTime');
 const [endTime] = defineField('endTime');
 
 const isLinkUrlDisabled = computed(() => linkType.value === 'NONE');
-const bgColorPreview = computed(() =>
-  isHexColor(bgColor.value) ? normalizeText(bgColor.value) : '',
-);
-const textColorPreview = computed(() =>
-  isHexColor(textColor.value) ? normalizeText(textColor.value) : '',
-);
 
 watch(linkType, (value) => {
   if (value === 'NONE' && linkUrl.value) {
@@ -357,39 +352,23 @@ onMounted(async () => {
       <FormSection title="樣式設定">
         <div class="flex flex-wrap">
           <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="背景色（HEX 色碼）"
+            <FormColorPicker
+              label="背景色"
               v-model="bgColor"
               :error="displayErrors.bgColor"
               maxlength="20"
-              placeholder="例如：#1a1a2e"
+              placeholder="請選擇背景色"
             />
-
-            <div class="marquee-form__color-preview" v-if="bgColorPreview">
-              <span
-                class="marquee-form__color-dot"
-                :style="{ backgroundColor: bgColorPreview }"
-              />
-              <span>{{ bgColorPreview }}</span>
-            </div>
           </div>
 
           <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="文字色（HEX 色碼）"
+            <FormColorPicker
+              label="文字色"
               v-model="textColor"
               :error="displayErrors.textColor"
               maxlength="20"
-              placeholder="例如：#ffffff"
+              placeholder="請選擇文字色"
             />
-
-            <div class="marquee-form__color-preview" v-if="textColorPreview">
-              <span
-                class="marquee-form__color-dot"
-                :style="{ backgroundColor: textColorPreview }"
-              />
-              <span>{{ textColorPreview }}</span>
-            </div>
           </div>
         </div>
       </FormSection>
@@ -430,24 +409,3 @@ onMounted(async () => {
     </form>
   </MCard>
 </template>
-
-<style scoped lang="scss">
-.marquee-form {
-  &__color-preview {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    color: #4b5563;
-    font-size: 13px;
-  }
-
-  &__color-dot {
-    width: 14px;
-    height: 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-}
-</style>

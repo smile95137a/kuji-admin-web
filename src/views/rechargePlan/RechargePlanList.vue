@@ -17,6 +17,8 @@
       <div class="flex justify-end gap-x-12 flex-wrap">
         <MButton @click="navigateToAdd">新增</MButton>
 
+        <MButton class="mbtn--gray" @click="openSortPanel">排序管理</MButton>
+
         <MButton
           class="mbtn--red"
           :disabled="!canDelete"
@@ -24,6 +26,39 @@
         >
           刪除
         </MButton>
+      </div>
+
+      <!-- 排序管理 Panel -->
+      <div v-if="showSortPanel" class="sort-panel m-t-12">
+        <p class="sort-panel__title">拖曳調整顯示順序（上方 = 最前面）</p>
+        <ul class="sort-list">
+          <li
+            v-for="(item, index) in sortableList"
+            :key="item.id"
+            class="sort-list__item"
+            :class="{ 'sort-list__item--over': dragOverIndex === index }"
+            draggable="true"
+            @dragstart="onDragStart(index)"
+            @dragover.prevent="onDragOver(index)"
+            @dragleave="dragOverIndex = -1"
+            @drop.prevent="onDrop(index)"
+            @dragend="onDragEnd"
+          >
+            <span class="sort-list__handle">⠿</span>
+            <span class="sort-list__order">{{ index + 1 }}</span>
+            <span class="sort-list__name">{{ item.name || '-' }}</span>
+            <span class="sort-list__meta">
+              {{ formatMoney(item.amount) }} 台幣
+              <span v-if="item.isPromotional" class="sort-list__badge">活動</span>
+            </span>
+          </li>
+        </ul>
+        <div class="flex gap-x-12 m-t-12">
+          <MButton @click="saveSortOrder" :disabled="isSaving">
+            {{ isSaving ? '儲存中...' : '儲存排序' }}
+          </MButton>
+          <MButton class="mbtn--gray" @click="showSortPanel = false">取消</MButton>
+        </div>
       </div>
 
       <template v-if="!hasData">
@@ -390,6 +425,71 @@ const navigateToEdit = (item: any) =>
   router.push(`/home/recharge-plan/edit/${item.id}`);
 
 /* ==============================
+ * Sort Panel (drag-and-drop)
+ * ============================== */
+const showSortPanel = ref(false);
+const sortableList = ref<any[]>([]);
+const isSaving = ref(false);
+let dragFromIndex = -1;
+const dragOverIndex = ref(-1);
+
+const openSortPanel = () => {
+  sortableList.value = [...list.value].sort(
+    (a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+  );
+  showSortPanel.value = true;
+};
+
+const onDragStart = (index: number) => {
+  dragFromIndex = index;
+};
+
+const onDragOver = (index: number) => {
+  dragOverIndex.value = index;
+};
+
+const onDrop = (toIndex: number) => {
+  if (dragFromIndex === -1 || dragFromIndex === toIndex) return;
+  const items = [...sortableList.value];
+  const moved = items.splice(dragFromIndex, 1)[0];
+  items.splice(toIndex, 0, moved);
+  sortableList.value = items;
+  dragFromIndex = toIndex;
+  dragOverIndex.value = -1;
+};
+
+const onDragEnd = () => {
+  dragFromIndex = -1;
+  dragOverIndex.value = -1;
+};
+
+const saveSortOrder = async () => {
+  isSaving.value = true;
+  const updates = sortableList.value.map((item: any, index: number) => ({
+    id: item.id,
+    displayOrder: index,
+  }));
+
+  await executeApi({
+    fn: async () =>
+      Promise.all(
+        updates.map((u) => updateRechargePlan(u.id, { displayOrder: u.displayOrder })),
+      ),
+    onSuccess: async () => {
+      await openInfoDialog({
+        title: '提示訊息',
+        message: '排序儲存成功',
+        iconType: 'success',
+      });
+      showSortPanel.value = false;
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+  isSaving.value = false;
+};
+
+/* ==============================
  * Lifecycle
  * ============================== */
 onMounted(async () => {
@@ -441,5 +541,84 @@ onMounted(async () => {
 .recharge__badge--normal {
   background: #f3f4f6;
   color: #6b7280;
+}
+
+/* Sort Panel */
+.sort-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+}
+.sort-panel__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+.sort-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sort-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: grab;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.sort-list__item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.sort-list__item--over {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+.sort-list__handle {
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: grab;
+}
+.sort-list__order {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #6366f1;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sort-list__name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+.sort-list__meta {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sort-list__badge {
+  background: #fef3c7;
+  color: #d97706;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
 }
 </style>

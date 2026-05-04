@@ -3,10 +3,14 @@
   <MCard>
     <FormTitle title="選單管理" />
 
-    <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
-      <MButton @click="navigateToAdd">新增</MButton>
+    <div v-if="isAdmin" class="menuList__notice m-b-12">
+      ⚠ 選單資料須與前端路由對應，新增前請確認已部署對應頁面。
+    </div>
 
-      <MButton :disabled="!canDelete" class="mbtn--red" @click="deleteSelected">
+    <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
+      <MButton v-if="isAdmin" @click="navigateToAdd">新增</MButton>
+
+      <MButton v-if="isAdmin" :disabled="!canDelete" class="mbtn--red" @click="deleteSelected">
         刪除
       </MButton>
 
@@ -95,6 +99,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { useAuthStore } from '@/stores/authStore';
 import { usePagination } from '@/hook/usePagination';
 import { useSearchPage } from '@/hook/useSearchPage';
 import { compareByKeySmart } from '@/utils/sortUtils';
@@ -118,6 +123,11 @@ import { openInfoDialog } from '@/utils/dialog/infoDialog';
 const router = useRouter();
 const dialogStore = useDialogStore();
 const menuStore = useMenuStore();
+const authStore = useAuthStore();
+
+const isAdmin = computed(() =>
+  (authStore.user?.roles ?? []).includes('ROLE_ADMIN'),
+);
 
 /* --------------------------------------
  * 搜尋 + 清單
@@ -319,4 +329,13 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.menuList__notice {
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 13px;
+}
+</style>

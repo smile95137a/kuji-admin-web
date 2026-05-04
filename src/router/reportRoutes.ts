@@ -25,12 +25,6 @@ export const reportRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/report/StorePerformanceReport.vue'),
     meta: { requiresAuth: true },
   },
-  {
-    path: 'report/bonus',
-    name: 'BonusReport',
-    component: () => import('@/views/report/BonusReport.vue'),
-    meta: { requiresAuth: true },
-  },
 ];
 
 export default reportRoutes;

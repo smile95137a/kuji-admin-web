@@ -21,11 +21,14 @@
 
         <!-- storeId（指定店家用） -->
         <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="店家 ID（指定店家用）"
+          <FormSelect
+            label="指定店家"
             :modelValue="values.storeId"
             @update:modelValue="setFieldValue('storeId', $event)"
-            placeholder="輸入 storeId"
+            :options="storeOptions"
+            :showAll="true"
+            allLabel="請選擇店家"
+            :allValue="''"
             :disabled="values.scope !== 'STORE'"
           />
         </div>
@@ -186,7 +189,7 @@
 /* ==============================
  * Imports
  * ============================== */
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Form, FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
@@ -204,7 +207,6 @@ import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import Dialog from '@/components/common/Dialog.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import {
@@ -215,6 +217,7 @@ import {
   deleteReferralCode,
   getReferralCodeRecords,
 } from '@/services/adminReferralCodeService';
+import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
@@ -222,7 +225,6 @@ import { openInfoDialog } from '@/utils/dialog/infoDialog';
  * Router / Store
  * ============================== */
 const router = useRouter();
-const dialogStore = useDialogStore();
 
 /* ==============================
  * Form & InitValues
@@ -258,8 +260,16 @@ const enabledOptions = ref([
   { label: '停用', value: false },
 ]);
 
+const storeOptions = ref<{ label: string; value: any }[]>([]);
+
 const loadSelectOptions = async () => {
-  await nextTick();
+  await executeApi({
+    fn: async () => getStoreOptions({ activeOnly: true }),
+    onSuccess: (data: any[]) => {
+      storeOptions.value = toSelectOptions(data ?? []);
+    },
+    showSuccessDialog: false,
+  });
 };
 
 /* ==============================

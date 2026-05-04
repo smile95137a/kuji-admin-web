@@ -3,10 +3,25 @@
   <MCard>
     <FormTitle title="選單樹狀結構" />
 
-    <div class="flex justify-end gap-x-12 m-b-12">
-      <MButton @click="refresh">重新載入</MButton>
+    <div class="flex justify-end gap-x-12 m-b-12 flex-wrap">
+      <MButton
+        v-if="isDirty"
+        :disabled="isSaving"
+        @click="saveOrder"
+      >
+        {{ isSaving ? '儲存中...' : '儲存排序' }}
+      </MButton>
+      <MButton @click="refresh" :disabled="isDirty">重新載入</MButton>
       <MButton variant="secondary" @click="goBack">返回列表</MButton>
     </div>
+
+    <div v-if="isDirty" class="menuTree__dirtyHint">
+      ⚠ 有未儲存的排序變更，請點擊「儲存排序」確認，或「重新載入」放棄變更。
+    </div>
+
+    <p class="menuTree__tip">
+      拖曳 <span class="menuTree__handle-icon">⠿</span> 可調整同層選單順序，左側數字為目前排序值。
+    </p>
 
     <template v-if="tree.length === 0">
       <NoData message="查無樹狀資料" />
@@ -18,7 +33,6 @@
           v-for="node in tree"
           :key="node.id"
           :node="node"
-          @edit="onEdit"
         />
       </ul>
     </template>
@@ -26,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, provide, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import MCard from '@/components/common/MCard.vue';
@@ -35,22 +49,208 @@ import NoData from '@/components/common/NoData.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { getMenuTree } from '@/services/adminMenuService';
+import {
+  getAllMenus,
+  getMenuTree,
+  updateMenu,
+} from '@/services/adminMenuService';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 import MenuTreeNode from '@/components/menu/MenuTreeNode.vue';
 
 const router = useRouter();
 const tree = ref<any[]>([]);
+const menuMetaMap = ref<Record<string, any>>({});
+const isDirty = ref(false);
+const isSaving = ref(false);
 
 const goBack = () => router.push('/home/menus');
-const onEdit = (id: string) => router.push(`/home/menus/edit/${id}`);
 
+/* -------------------------------------------------------
+ * Drag 共用狀態（透過 provide 傳給所有子孫 MenuTreeNode）
+ * ------------------------------------------------------- */
+const draggingId = ref<string | null>(null);
+const draggingParentId = ref<string | null>(null);
+
+const onDragStart = (id: string, parentId: string | null) => {
+  draggingId.value = id;
+  draggingParentId.value = parentId ?? null;
+};
+
+const onDragEnd = () => {
+  draggingId.value = null;
+  draggingParentId.value = null;
+};
+
+/* -------------------------------------------------------
+ * 尋找節點所在的 siblings 陣列
+ * ------------------------------------------------------- */
+function findSiblings(
+  nodeId: string,
+  nodes: any[],
+  siblings: any[],
+): any[] | null {
+  for (const n of nodes) {
+    if (n.id === nodeId) return siblings;
+    if (n.children?.length) {
+      const found = findSiblings(nodeId, n.children, n.children);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/* -------------------------------------------------------
+ * 拖曳放置：僅允許同層（同 parentId）交換位置
+ * ------------------------------------------------------- */
+const onReorder = (fromId: string, toId: string) => {
+  if (fromId === toId) return;
+
+  const fromSiblings = findSiblings(fromId, tree.value, tree.value);
+  const toSiblings = findSiblings(toId, tree.value, tree.value);
+
+  // 不同父層 → 不做任何事
+  if (!fromSiblings || !toSiblings || fromSiblings !== toSiblings) return;
+
+  const siblings = fromSiblings;
+  const fromIdx = siblings.findIndex((n: any) => n.id === fromId);
+  const toIdx = siblings.findIndex((n: any) => n.id === toId);
+
+  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+
+  // 移位
+  const [moved] = siblings.splice(fromIdx, 1);
+  siblings.splice(toIdx, 0, moved);
+
+  // 重新指派 orderNum（1-based 連續）
+  siblings.forEach((n: any, i: number) => {
+    n.orderNum = i + 1;
+  });
+
+  isDirty.value = true;
+};
+
+provide('menuTreeReorder', {
+  draggingId,
+  draggingParentId,
+  onDragStart,
+  onDragEnd,
+  onReorder,
+});
+
+/* -------------------------------------------------------
+ * 以完整平面資料為底，組出更新 payload
+ * ------------------------------------------------------- */
+const cleanOptionalText = (value: any) => {
+  if (value === null || value === undefined || value === '') return null;
+  const text = String(value).trim();
+  return text || null;
+};
+
+const toBoolean = (value: any) => {
+  if (value === true || value === false) return value;
+
+  const text = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (text === 'true' || text === '1') return true;
+  if (text === 'false' || text === '0') return false;
+
+  return true;
+};
+
+const toMenuUpdatePayload = (node: any, parentId: string | null) => {
+  const original = menuMetaMap.value[String(node?.id)] ?? {};
+
+  return {
+    id: original?.id ?? node?.id,
+    name: String(original?.name ?? node?.name ?? '').trim(),
+    code: String(original?.code ?? node?.code ?? '').trim(),
+    path: cleanOptionalText(original?.path ?? node?.path),
+    parentId,
+    icon: cleanOptionalText(original?.icon ?? node?.icon),
+    orderNum:
+      node?.orderNum === '' ||
+      node?.orderNum === null ||
+      node?.orderNum === undefined
+        ? null
+        : Number(node.orderNum),
+    isVisible: toBoolean(original?.isVisible ?? node?.isVisible),
+  };
+};
+
+function flattenTree(nodes: any[], parentId: string | null = null): any[] {
+  return nodes.flatMap((n) => {
+    const currentId = String(n?.id ?? '');
+    return [
+      toMenuUpdatePayload(n, parentId),
+      ...flattenTree(n.children ?? [], currentId || null),
+    ];
+  });
+}
+
+/* -------------------------------------------------------
+ * 儲存排序
+ * ------------------------------------------------------- */
+const saveOrder = async () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
+
+  const allNodes = flattenTree(tree.value);
+
+  await executeApi({
+    fn: async () =>
+      Promise.allSettled(allNodes.map((n) => updateMenu(n))),
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
+      const failCount = results.filter((r) => r.status === 'rejected').length;
+      if (failCount > 0) {
+        await openInfoDialog({
+          title: '部分失敗',
+          message: `有 ${failCount} 筆更新失敗，請重新整理後確認結果。`,
+          iconType: 'warning',
+        });
+      } else {
+        isDirty.value = false;
+        await openInfoDialog({
+          title: '成功',
+          message: '排序已儲存',
+          iconType: 'success',
+        });
+      }
+    },
+    showSuccessDialog: false,
+    onFinally: () => {
+      isSaving.value = false;
+    },
+  });
+};
+
+/* -------------------------------------------------------
+ * 重新載入
+ * ------------------------------------------------------- */
 const refresh = async () => {
   await executeApi({
-    fn: async () => getMenuTree(),
-    onSuccess: async (res: any) => {
-      const data = res?.data ?? res ?? [];
-      tree.value = Array.isArray(data) ? data : [];
+    fn: async () => {
+      const [treeRes, flatRes] = await Promise.all([
+        getMenuTree(),
+        getAllMenus(),
+      ]);
+
+      return { treeRes, flatRes };
+    },
+    onSuccess: async ({ treeRes, flatRes }: any) => {
+      const treeData = treeRes?.data ?? treeRes ?? [];
+      const flatData = flatRes?.data ?? flatRes ?? [];
+
+      tree.value = Array.isArray(treeData) ? treeData : [];
+      menuMetaMap.value = Array.isArray(flatData)
+        ? flatData.reduce((acc: Record<string, any>, item: any) => {
+            acc[String(item?.id ?? '')] = item;
+            return acc;
+          }, {})
+        : {};
+      isDirty.value = false;
     },
     showSuccessDialog: false,
   });
@@ -63,6 +263,28 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .menuTree {
-  padding-left: 18px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.menuTree__dirtyHint {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 13px;
+}
+
+.menuTree__tip {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.menuTree__handle-icon {
+  font-size: 14px;
+  letter-spacing: 1px;
 }
 </style>

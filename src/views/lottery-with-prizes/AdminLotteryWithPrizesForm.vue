@@ -1,7 +1,14 @@
 <!-- src/views/lottery/LotteryWithPrizesForm.vue -->
 <template>
   <MCard>
-    <FormTitle :title="isEdit ? '編輯一番賞商品設定' : '新增一番賞商品設定'" />
+    <div class="admin-lottery-form__header">
+      <FormTitle :title="isEdit ? '編輯一番賞商品設定' : '新增一番賞商品設定'" />
+      <MButton
+        v-if="isEdit && isScratchStoreEdit"
+        type="button"
+        @click="showDesignateModal = true"
+      >指定大獎號碼</MButton>
+    </div>
 
     <Form
       ref="formRef"
@@ -46,6 +53,16 @@
         </MButton>
       </div>
     </Form>
+
+    <DesignatePrizeModal
+      v-if="isEdit && isScratchStoreEdit && id"
+      :show="showDesignateModal"
+      :lotteryId="String(id)"
+      :lotteryName="loadedTitle"
+      :maxDraws="loadedMaxDraws"
+      @close="showDesignateModal = false"
+      @success="onDesignateSuccess"
+    />
   </MCard>
 </template>
 
@@ -63,6 +80,7 @@ import FormTitle from '@/components/common/FormTitle.vue';
 import TabLotteryBasic from '@/components/lottery/TabLotteryBasic.vue';
 import TabLotteryPrice from '@/components/lottery/TabLotteryPrice.vue';
 import TabLotteryPrizes from '@/components/lottery/TabLotteryPrizes.vue';
+import DesignatePrizeModal from '@/components/lottery-with-prizes/DesignatePrizeModal.vue';
 
 import type { PrizeFormRow } from '@/components/lottery/PrizeFormDialog.vue';
 
@@ -103,6 +121,18 @@ const isEdit = computed(() => !!id.value);
 const formRef = ref<FormContext | null>(null);
 
 const activeTab = ref('basic');
+
+/* ==============================
+ * 指定大獎號碼 Modal
+ * ============================== */
+const showDesignateModal = ref(false);
+const loadedTitle = ref('');
+const loadedMaxDraws = ref(0);
+const isScratchStoreEdit = ref(false);
+
+const onDesignateSuccess = () => {
+  showDesignateModal.value = false;
+};
 
 const updateActiveTab = (value: string) => {
   activeTab.value = value;
@@ -477,6 +507,12 @@ const loadDetail = async () => {
     const res = await getLotteryWithPrizes(id.value);
     const data = (res as any)?.data ?? res;
 
+    loadedTitle.value = data?.title ?? '';
+    loadedMaxDraws.value = Number(data?.maxDraws ?? 0);
+    isScratchStoreEdit.value =
+      String(data?.subCategory ?? '') === 'SCRATCH_MODE' &&
+      String(data?.gameMode ?? '') === 'SCRATCH_STORE';
+
     ensureStoreOptionExists(data?.storeId ?? '');
 
     formRef.value?.setValues?.({
@@ -729,4 +765,12 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.admin-lottery-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+</style>
