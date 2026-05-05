@@ -1,10 +1,19 @@
 // services/adminLotteryWithPrizesService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/admin/lottery-with-prizes';
+const basePath = '/admin/lottery/with-prizes';
 
 interface RequestData {
   [key: string]: any;
+}
+
+interface PrizeDesignation {
+  revealedNumber: number;
+  prizeId: string;
+}
+
+interface DesignatePrizeRequest {
+  designations: PrizeDesignation[];
 }
 
 /** 建立商品與獎品（整合新增） */
@@ -12,7 +21,7 @@ export const createLotteryWithPrizes = async (
   req: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
-    // 後端：POST /admin/lottery-with-prizes
+    // 後端：POST /admin/lottery/with-prizes
     const res = await api.post(`${basePath}`, req ?? null);
     return res.data;
   } catch (e) {
@@ -27,7 +36,7 @@ export const updateLotteryWithPrizes = async (
   req: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
-    // 後端：PUT /admin/lottery-with-prizes/{lotteryId}
+    // 後端：PUT /admin/lottery/with-prizes/{lotteryId}
     const res = await api.put(`${basePath}/${lotteryId}`, req ?? null);
     return res.data;
   } catch (e) {
@@ -41,7 +50,7 @@ export const getLotteryWithPrizes = async (
   lotteryId: string,
 ): Promise<ApiResponse<any>> => {
   try {
-    // 後端：GET /admin/lottery-with-prizes/{lotteryId}
+    // 後端：GET /admin/lottery/with-prizes/{lotteryId}
     const res = await api.get(`${basePath}/${lotteryId}`);
     return res.data;
   } catch (e) {
@@ -66,14 +75,45 @@ export const getAllLotteriesWithPrizes = async (
   }
 };
 
-/** 指定大獎號碼（POST /admin/lottery/{id}/designate-prize） */
+/**
+ * 指定大獎號碼
+ * 相容端點（all map to same handler）：
+ * - POST /admin/lottery/{id}/designate-prize
+ * - POST /admin/lottery/{id}/designate-prize-positions
+ * - POST /admin/lottery/{id}/designate
+ * Body: { designations: [{ revealedNumber, prizeId }] }
+ */
 export const designatePrize = async (
   lotteryId: string,
-  body: { designatedPrizeNumber: number },
+  body: DesignatePrizeRequest,
 ): Promise<ApiResponse<any>> => {
+  const endpointCandidates = [
+    `/admin/lottery/${lotteryId}/designate-prize`,
+    `/admin/lottery/${lotteryId}/designate-prize-positions`,
+    `/admin/lottery/${lotteryId}/designate`,
+  ];
+
   try {
-    const res = await api.post(`/admin/lottery/${lotteryId}/designate-prize`, body);
-    return res.data;
+    let lastError: any;
+
+    for (const endpoint of endpointCandidates) {
+      try {
+        const res = await api.post(endpoint, body);
+        return res.data;
+      } catch (e: any) {
+        lastError = e;
+        const status = e?.response?.status;
+
+        // 只在路由/方法不匹配時切換下一條相容路由
+        if (status === 404 || status === 405) {
+          continue;
+        }
+
+        throw e;
+      }
+    }
+
+    throw lastError;
   } catch (e) {
     console.error('AdminLotteryWithPrizes - designatePrize error:', e);
     throw e;

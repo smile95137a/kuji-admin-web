@@ -579,7 +579,7 @@ const columns = [
 const onSubmit = handleSubmit(async (values: any) => {
   const req = { condition: values };
 
-  // ✅ 真正打後端 /admin/lottery-with-prizes/list
+  // ✅ 真正打後端 /admin/lottery/with-prizes/list
   await query(() => getAllLotteriesWithPrizes(req));
   goToPage(1);
 });

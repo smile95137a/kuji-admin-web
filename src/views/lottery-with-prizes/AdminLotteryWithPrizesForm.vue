@@ -54,6 +54,47 @@
       </div>
     </Form>
 
+    <!-- T021 — 大獎指定狀態資訊列（編輯模式才顯示） -->
+    <template v-if="isEdit">
+      <!-- SCRATCH_STORE + PENDING -->
+      <div
+        v-if="isScratchStoreEdit && lotteryDesignationStatus === 'PENDING'"
+        style="border-left: 4px solid #d46b08; background: #fff7e6; border-radius: 8px; margin-top: 12px;"
+      >
+        <div
+          class="flex items-center justify-between flex-wrap gap-x-12"
+          style="padding: 12px 16px"
+        >
+          <span style="color: #d46b08; font-size: 13px">
+            ⚠️ 此刷刷樂商品（店家指定模式）尚未完成大獎號碼指定。開始抽獎前需先指定大獎號碼。
+          </span>
+          <MButton size="sm" type="button" @click="showDesignateModal = true"
+            >前往指定大獎號碼</MButton
+          >
+        </div>
+      </div>
+
+      <!-- SCRATCH_STORE + DESIGNATED -->
+      <div
+        v-if="isScratchStoreEdit && lotteryDesignationStatus === 'DESIGNATED'"
+        style="border-left: 4px solid #52c41a; background: #f6ffed; border-radius: 8px; margin-top: 12px;"
+      >
+        <div style="padding: 12px 16px; color: #389e0d; font-size: 13px">
+          ✅ 大獎號碼已完成指定，可開始抽獎。
+        </div>
+      </div>
+
+      <!-- SCRATCH_PLAYER -->
+      <div
+        v-if="isScratchPlayerEdit"
+        style="border-left: 4px solid #1890ff; background: #e6f7ff; border-radius: 8px; margin-top: 12px;"
+      >
+        <div style="padding: 12px 16px; color: #005a99; font-size: 13px">
+          ℹ️ 此刷刷樂商品（玩家指定模式）：玩家購票後自行指定大獎號碼，無需店家操作。
+        </div>
+      </div>
+    </template>
+
     <DesignatePrizeModal
       v-if="isEdit && isScratchStoreEdit && id"
       :show="showDesignateModal"
@@ -129,9 +170,16 @@ const showDesignateModal = ref(false);
 const loadedTitle = ref('');
 const loadedMaxDraws = ref(0);
 const isScratchStoreEdit = ref(false);
+const isScratchPlayerEdit = ref(false);
+/** 後端回傳的指定狀態（PENDING / DESIGNATED） */
+const lotteryDesignationStatus = ref<string | null>(null);
+/** 後端當前狀態（不隨 form values 改變），用於編輯時的 ACTIVE 上架封鎖 */
+const originalStatus = ref('');
 
-const onDesignateSuccess = () => {
+const onDesignateSuccess = async () => {
   showDesignateModal.value = false;
+  // 重新載入以更新指定狀態提示列
+  await loadDetail();
 };
 
 const updateActiveTab = (value: string) => {
@@ -509,9 +557,11 @@ const loadDetail = async () => {
 
     loadedTitle.value = data?.title ?? '';
     loadedMaxDraws.value = Number(data?.maxDraws ?? 0);
-    isScratchStoreEdit.value =
-      String(data?.subCategory ?? '') === 'SCRATCH_MODE' &&
-      String(data?.gameMode ?? '') === 'SCRATCH_STORE';
+    originalStatus.value = data?.status ?? '';
+    lotteryDesignationStatus.value = data?.designationStatus ?? null;
+    // 只看 gameMode，與 copy form 行為一致
+    isScratchStoreEdit.value = String(data?.gameMode ?? '') === 'SCRATCH_STORE';
+    isScratchPlayerEdit.value = String(data?.gameMode ?? '') === 'SCRATCH_PLAYER';
 
     ensureStoreOptionExists(data?.storeId ?? '');
 
@@ -588,6 +638,23 @@ const loadDetail = async () => {
  * Submit
  * ============================== */
 const validateBeforeSubmit = async (values: any, payload: any) => {
+  /**
+   * 商品目前在後端為「上架 / 抽獎中」狀態時，後端禁止修改內容。
+   * 前端提早攔截，引導用戶先至列表頁下架後再編輯。
+   */
+  if (isEdit.value && isOnShelfStatus(originalStatus.value)) {
+    activeTab.value = 'basic';
+
+    await openInfoDialog({
+      title: '商品已上架，無法直接儲存',
+      message:
+        '此商品目前狀態為「抽獎中 / 上架中」，無法直接修改內容。\n請先至列表頁將商品下架後，再進行編輯。',
+      iconType: 'warning',
+    });
+
+    return false;
+  }
+
   if (!payload.prizes.length) {
     activeTab.value = 'prizes';
 
@@ -685,9 +752,28 @@ const onSubmitForm = async (values: any, actions: any) => {
         pendingDesignatedPrizeNumber != null &&
         newId
       ) {
+        // 從建立回應取得大獎 prizeId（新 designations 格式必要欄位）
+        const createdGrandPrize = ((createRes?.data?.prizes ?? []) as any[]).find(
+          (p: any) => p.isGrandPrize === true,
+        );
+        const grandPrizeIdForDesignate = createdGrandPrize?.id;
+
+        if (!grandPrizeIdForDesignate) {
+          await openInfoDialog({
+            title: '大獎號碼指定失敗',
+            message: '商品已建立，但無法取得大獎 ID。請至編輯頁手動指定大獎號碼。',
+            iconType: 'warning',
+          });
+          router.push(LIST_PATH);
+          return;
+        }
+
         try {
           await designatePrize(String(newId), {
-            designatedPrizeNumber: pendingDesignatedPrizeNumber,
+            designations: [{
+              revealedNumber: pendingDesignatedPrizeNumber,
+              prizeId: grandPrizeIdForDesignate,
+            }],
           });
         } catch (designateError: any) {
           await openInfoDialog({

@@ -1083,9 +1083,28 @@ const onSubmit = handleSubmit(async (values) => {
         String(pendingNum) !== '' &&
         newId
       ) {
+        // 從建立回應取得大獎 prizeId（新 designations 格式必要欄位）
+        const createdGrandPrize = ((createRes?.data?.prizes ?? []) as any[]).find(
+          (p: any) => p.isGrandPrize === true,
+        );
+        const grandPrizeIdForDesignate = createdGrandPrize?.id;
+
+        if (!grandPrizeIdForDesignate) {
+          await openInfoDialog({
+            title: '大獎號碼指定失敗',
+            message: '商品已建立，但無法取得大獎 ID。請至編輯頁手動指定大獎號碼。',
+            iconType: 'warning',
+          });
+          router.push('/home/lottery-with-prizes');
+          return;
+        }
+
         try {
           await designatePrize(String(newId), {
-            designatedPrizeNumber: Number(pendingNum),
+            designations: [{
+              revealedNumber: Number(pendingNum),
+              prizeId: grandPrizeIdForDesignate,
+            }],
           });
         } catch (designateErr: any) {
           await openInfoDialog({

@@ -9,32 +9,50 @@
 
       <!-- Body -->
       <div class="designate-modal__body">
-        <p class="form__text m-b-12">
-          請選擇大獎對應的籤號（1 ~ {{ maxDraws }}），指定後無法更改。
-        </p>
-
-        <!-- maxDraws=1 auto-select hint -->
+        <!-- 載入大獎資訊中 -->
         <div
-          v-if="maxDraws === 1"
+          v-if="fetchingPrizeId"
           class="designate-modal__hint designate-modal__hint--info m-b-12"
         >
-          僅有 1 個籤號，已自動選取第 1 號。
+          載入獎品資訊中，請稍候…
         </div>
 
-        <!-- Number input (hidden when maxDraws=1) -->
-        <div v-if="maxDraws > 1" class="m-b-8">
-          <label class="form__label">籤號</label>
-          <input
-            type="number"
-            class="designate-modal__input"
-            :min="1"
-            :max="maxDraws"
-            v-model.number="prizeNumber"
-            @input="validateInput"
-            placeholder="請輸入號碼"
-          />
-          <p v-if="inputError" class="error-text m-t-4">{{ inputError }}</p>
+        <!-- 無法取得大獎 prizeId -->
+        <div
+          v-else-if="!resolvedGrandPrizeId"
+          class="designate-modal__hint designate-modal__hint--error m-b-12"
+        >
+          ⚠️ 無法取得大獎資訊，請確認商品已設定「大獎（isGrandPrize）」後重新開啟。
         </div>
+
+        <template v-else>
+          <p class="form__text m-b-12">
+            請選擇大獎對應的籤號（1 ~ {{ maxDraws }}），指定後無法更改。
+          </p>
+
+          <!-- maxDraws=1 auto-select hint -->
+          <div
+            v-if="maxDraws === 1"
+            class="designate-modal__hint designate-modal__hint--info m-b-12"
+          >
+            僅有 1 個籤號，已自動選取第 1 號。
+          </div>
+
+          <!-- Number input (hidden when maxDraws=1) -->
+          <div v-if="maxDraws > 1" class="m-b-8">
+            <label class="form__label">籤號</label>
+            <input
+              type="number"
+              class="designate-modal__input"
+              :min="1"
+              :max="maxDraws"
+              v-model.number="prizeNumber"
+              @input="validateInput"
+              placeholder="請輸入號碼"
+            />
+            <p v-if="inputError" class="error-text m-t-4">{{ inputError }}</p>
+          </div>
+        </template>
       </div>
 
       <!-- Footer -->
@@ -58,7 +76,7 @@ import { ref, computed, watch } from 'vue';
 import MButton from '@/components/common/MButton.vue';
 import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
-import { designatePrize } from '@/services/adminLotteryWithPrizesService';
+import { designatePrize, getLotteryWithPrizes } from '@/services/adminLotteryWithPrizesService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 const props = defineProps<{
@@ -78,11 +96,13 @@ const dialogStore = useDialogStore();
 const prizeNumber = ref<number | null>(null);
 const inputError = ref('');
 const submitting = ref(false);
+const fetchingPrizeId = ref(false);
+const resolvedGrandPrizeId = ref('');
 
 /* T005 — maxDraws=1 auto-select; also reset state on modal open */
 watch(
   () => props.show,
-  (val) => {
+  async (val) => {
     if (val) {
       if (props.maxDraws === 1) {
         prizeNumber.value = 1;
@@ -92,6 +112,21 @@ watch(
         inputError.value = '';
       }
       submitting.value = false;
+
+      // 取得大獎 prizeId（新 designations 格式必要欄位）
+      fetchingPrizeId.value = true;
+      resolvedGrandPrizeId.value = '';
+      try {
+        const res = await getLotteryWithPrizes(props.lotteryId);
+        const data = (res as any)?.data ?? res;
+        const prizes: any[] = Array.isArray(data?.prizes) ? data.prizes : [];
+        const grandPrize = prizes.find((p: any) => p.isGrandPrize === true);
+        resolvedGrandPrizeId.value = grandPrize?.id ?? '';
+      } catch {
+        resolvedGrandPrizeId.value = '';
+      } finally {
+        fetchingPrizeId.value = false;
+      }
     }
   },
 );
@@ -111,6 +146,7 @@ const validateInput = () => {
 };
 
 const canConfirm = computed(() => {
+  if (fetchingPrizeId.value || !resolvedGrandPrizeId.value) return false;
   if (props.maxDraws === 1) return true;
   return prizeNumber.value !== null && !inputError.value;
 });
@@ -129,7 +165,9 @@ const handleConfirm = async () => {
 
   submitting.value = true;
   await executeApi({
-    fn: () => designatePrize(props.lotteryId, { designatedPrizeNumber: num }),
+    fn: () => designatePrize(props.lotteryId, {
+      designations: [{ revealedNumber: num, prizeId: resolvedGrandPrizeId.value }],
+    }),
     onSuccess: () => {
       emit('success');
     },
@@ -211,6 +249,12 @@ const handleConfirm = async () => {
   background: #e6f7ff;
   border-left: 4px solid #1890ff;
   color: #005a99;
+}
+
+.designate-modal__hint--error {
+  background: #fff2f0;
+  border-left: 4px solid #ff4d4f;
+  color: #a8071a;
 }
 
 .error-text {
