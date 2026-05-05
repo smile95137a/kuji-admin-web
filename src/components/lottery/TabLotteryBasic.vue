@@ -5,11 +5,7 @@
       <!-- 左側：主要表單 -->
       <div class="tab-lottery-basic__left">
         <!-- 商品基本資料 -->
-        <section class="tab-lottery-basic__section">
-          <div class="tab-lottery-basic__section-head">
-            <p class="tab-lottery-basic__section-title">商品基本資料</p>
-          </div>
-
+        <FormSection title="商品基本資料">
           <div class="tab-lottery-basic__card">
             <div class="flex flex-wrap">
               <!-- 所屬店家 -->
@@ -32,7 +28,8 @@
                   disabled
                 />
               </div>
-
+            </div>
+            <div class="flex flex-wrap">
               <!-- 商品名稱 -->
               <div class="w-50 w-md-100 p-6">
                 <FormInput
@@ -44,7 +41,8 @@
                   placeholder="請輸入商品名稱"
                 />
               </div>
-
+            </div>
+            <div class="flex flex-wrap">
               <!-- 主題分類 -->
               <div class="w-50 w-md-100 p-6">
                 <FormSelect
@@ -59,30 +57,42 @@
               </div>
             </div>
           </div>
-        </section>
+        </FormSection>
 
         <!-- 商品模式 -->
-        <section class="tab-lottery-basic__section">
-          <div class="tab-lottery-basic__section-head">
-            <p class="tab-lottery-basic__section-title">商品模式</p>
-
-            <span class="tab-lottery-basic__summary-pill">
-              {{ modeSummaryText }}
-            </span>
-          </div>
-
+        <FormSection title="商品模式">
           <div class="tab-lottery-basic__card tab-lottery-basic__card--mode">
+            <!-- 目前模式摘要 -->
+            <div class="tab-lottery-basic__mode-summary">
+              <div class="tab-lottery-basic__mode-summary-content">
+                <p class="tab-lottery-basic__mode-summary-title">
+                  目前商品模式
+                </p>
+
+                <span class="tab-lottery-basic__summary-pill">
+                  {{ modeSummaryText }}
+                </span>
+              </div>
+            </div>
+
             <!-- 分類 -->
-            <div class="tab-lottery-basic__mode-field">
-              <FormRadioTagGroup
-                label="分類"
-                name="category"
-                id-prefix="lottery-category"
-                v-model="category"
-                :options="categoryOptions"
-                :error="showError('category')"
-                required
-              />
+            <div class="tab-lottery-basic__mode-block">
+              <div class="tab-lottery-basic__mode-block-head">
+                <p class="tab-lottery-basic__mode-block-title">商品分類</p>
+              </div>
+
+              <div class="tab-lottery-basic__mode-field">
+                <FormRadioTagGroup
+                  label="分類"
+                  name="category"
+                  id-prefix="lottery-category"
+                  v-model="category"
+                  :options="categoryOptions"
+                  :error="showError('category')"
+                  required
+                  hideLabel
+                />
+              </div>
             </div>
 
             <div
@@ -180,14 +190,9 @@
               </Transition>
             </div>
           </div>
-        </section>
-
+        </FormSection>
         <!-- 狀態與排程 -->
-        <section class="tab-lottery-basic__section">
-          <div class="tab-lottery-basic__section-head">
-            <p class="tab-lottery-basic__section-title">狀態與排程</p>
-          </div>
-
+        <FormSection title="狀態與排程">
           <div
             class="tab-lottery-basic__card tab-lottery-basic__card--schedule"
           >
@@ -213,7 +218,7 @@
                 />
               </div>
 
-              <!-- 活動期間：w-100 -->
+              <!-- 活動期間 -->
               <div class="w-100 p-6">
                 <FormDateRangeField
                   label="活動期間"
@@ -226,18 +231,19 @@
               </div>
             </div>
           </div>
-        </section>
+        </FormSection>
 
         <!-- 文案與標籤 -->
-        <section class="tab-lottery-basic__section">
-          <div class="tab-lottery-basic__section-head">
-            <p class="tab-lottery-basic__section-title">文案與標籤</p>
-          </div>
-
+        <FormSection title="文案與標籤">
           <div class="tab-lottery-basic__copy-card">
             <div class="tab-lottery-basic__copy-grid">
               <!-- 商品描述 -->
               <div class="tab-lottery-basic__copy-block">
+                <div class="tab-lottery-basic__copy-head">
+                  <p class="tab-lottery-basic__copy-title">商品描述</p>
+                  <span class="tab-lottery-basic__copy-badge">前台顯示</span>
+                </div>
+
                 <FormTextarea
                   class="tab-lottery-basic__description-textarea"
                   label="商品描述"
@@ -246,15 +252,19 @@
                   placeholder="請輸入商品描述"
                   :rows="8"
                   :maxlength="500"
+                  hideLabel
                 />
               </div>
 
               <!-- 內部備註 -->
               <div class="tab-lottery-basic__copy-block">
-                <div class="tab-lottery-basic__remark-head">
-                  <p class="tab-lottery-basic__field-title">
-                    內部備註（不對外顯示）
-                  </p>
+                <div class="tab-lottery-basic__copy-head">
+                  <p class="tab-lottery-basic__copy-title">內部備註</p>
+                  <span
+                    class="tab-lottery-basic__copy-badge tab-lottery-basic__copy-badge--muted"
+                  >
+                    不對外顯示
+                  </span>
                 </div>
 
                 <div class="tab-lottery-basic__preset-list">
@@ -291,88 +301,150 @@
                 v-model="selectedTags"
                 :options="tagOptions"
                 :error="showError('tagsText')"
+                hideLabel
               />
             </div>
           </div>
-        </section>
+        </FormSection>
 
         <!-- 商品詳細內容 -->
-        <section class="tab-lottery-basic__section">
-          <div class="tab-lottery-basic__section-head">
-            <p class="tab-lottery-basic__section-title">商品詳細內容</p>
-          </div>
+        <FormSection title="商品詳細內容">
+          <div class="tab-lottery-basic__editor-card">
+            <div class="tab-lottery-basic__editor-head">
+              <p class="tab-lottery-basic__editor-title">前台商品詳情</p>
 
-          <div class="tab-lottery-basic__card tab-lottery-basic__editor-card">
-            <Ckeditor
-              :editor="ckeditorEditor"
-              v-model="content"
-              :config="editorConfig"
-            />
+              <span class="tab-lottery-basic__editor-badge">
+                可插入圖片與格式化文字
+              </span>
+            </div>
+
+            <div class="tab-lottery-basic__editor-main">
+              <Ckeditor
+                :editor="ckeditorEditor"
+                v-model="content"
+                :config="editorConfig"
+              />
+            </div>
 
             <p v-if="showError('content')" class="error-text m-t-8">
               {{ showError('content') }}
             </p>
           </div>
-        </section>
+        </FormSection>
       </div>
 
       <!-- 右側：圖片 -->
       <div class="tab-lottery-basic__right">
-        <section
-          class="tab-lottery-basic__section tab-lottery-basic__image-panel"
-        >
-          <div class="tab-lottery-basic__section-head">
-            <p class="tab-lottery-basic__section-title">商品圖片</p>
-          </div>
-
-          <!-- 主圖 -->
+        <FormSection title="商品圖片">
           <div class="tab-lottery-basic__image-card">
-            <p class="tab-lottery-basic__image-title">商品主圖</p>
+            <!-- 主圖 -->
+            <div class="tab-lottery-basic__image-main-block">
+              <div class="tab-lottery-basic__main-wrap">
+                <button
+                  type="button"
+                  class="tab-lottery-basic__main-upload"
+                  :class="{
+                    'tab-lottery-basic__main-upload--empty': !imageUrl,
+                  }"
+                  :disabled="uploading"
+                  @click="triggerMainUpload"
+                >
+                  <img
+                    v-if="mainImagePreview"
+                    :src="mainImagePreview"
+                    alt="商品主圖預覽"
+                    class="tab-lottery-basic__main-img"
+                  />
 
-            <div class="tab-lottery-basic__main-wrap">
-              <button
-                type="button"
-                class="tab-lottery-basic__main-upload"
-                :class="{ 'tab-lottery-basic__main-upload--empty': !imageUrl }"
-                :disabled="uploading"
-                @click="triggerMainUpload"
+                  <div v-else class="tab-lottery-basic__empty-image">
+                    <font-awesome-icon :icon="['fas', 'image']" />
+                    <span>點擊上傳</span>
+                  </div>
+                </button>
+
+                <button
+                  v-if="imageUrl"
+                  type="button"
+                  class="tab-lottery-basic__main-remove"
+                  :disabled="uploading"
+                  aria-label="清除主圖"
+                  @click.stop="clearMainImage"
+                >
+                  <font-awesome-icon
+                    :icon="['fas', 'xmark']"
+                    class="tab-lottery-basic__main-remove-icon"
+                  />
+                </button>
+              </div>
+
+              <p
+                v-if="mainUploadErrorMessage || showError('imageUrl')"
+                class="error-text m-t-8"
               >
-                <img
-                  v-if="mainImagePreview"
-                  :src="mainImagePreview"
-                  alt="商品主圖預覽"
-                  class="tab-lottery-basic__main-img"
-                />
+                {{ mainUploadErrorMessage || showError('imageUrl') }}
+              </p>
 
-                <div v-else class="tab-lottery-basic__empty-image">
-                  <font-awesome-icon :icon="['fas', 'image']" />
-                  <span>點擊上傳主圖</span>
-                </div>
-              </button>
-
-              <button
-                v-if="imageUrl"
-                type="button"
-                class="tab-lottery-basic__main-remove"
-                :disabled="uploading"
-                aria-label="清除主圖"
-                @click.stop="clearMainImage"
-              >
-                <font-awesome-icon
-                  :icon="['fas', 'xmark']"
-                  class="tab-lottery-basic__main-remove-icon"
-                />
-              </button>
+              <p v-if="uploading" class="form__text m-t-8">上傳中...</p>
             </div>
 
-            <p
-              v-if="mainUploadErrorMessage || showError('imageUrl')"
-              class="error-text m-t-8"
-            >
-              {{ mainUploadErrorMessage || showError('imageUrl') }}
-            </p>
+            <!-- 圖集 -->
+            <div class="tab-lottery-basic__image-gallery-block">
+              <div class="tab-lottery-basic__image-sub-head">
+                <p class="tab-lottery-basic__image-title">
+                  <span v-if="galleryImageUrls.length">
+                    （{{ galleryImageUrls.length }} 張）
+                  </span>
+                </p>
+              </div>
 
-            <p v-if="uploading" class="form__text m-t-8">上傳中...</p>
+              <div class="tab-lottery-basic__gallery">
+                <button
+                  type="button"
+                  class="tab-lottery-basic__gallery-add"
+                  :disabled="uploading"
+                  @click="triggerGalleryUpload"
+                >
+                  <font-awesome-icon :icon="['fas', 'plus']" />
+                  <span>新增</span>
+                </button>
+
+                <div
+                  v-for="(url, index) in galleryImageUrls"
+                  :key="`${url}_${index}`"
+                  class="tab-lottery-basic__gallery-item"
+                >
+                  <img
+                    :src="url"
+                    alt="商品圖集預覽"
+                    class="tab-lottery-basic__gallery-img"
+                  />
+
+                  <button
+                    type="button"
+                    class="tab-lottery-basic__gallery-remove"
+                    :disabled="uploading"
+                    aria-label="移除圖片"
+                    @click="removeGalleryImage(index)"
+                  >
+                    <font-awesome-icon
+                      :icon="['fas', 'xmark']"
+                      class="tab-lottery-basic__gallery-remove-icon"
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <p
+                v-if="
+                  galleryUploadErrorMessage || showError('galleryImagesText')
+                "
+                class="error-text m-t-8"
+              >
+                {{
+                  galleryUploadErrorMessage || showError('galleryImagesText')
+                }}
+              </p>
+            </div>
           </div>
 
           <input
@@ -384,60 +456,6 @@
             @change="onMainFileChange"
           />
 
-          <!-- 圖集 -->
-          <div class="tab-lottery-basic__image-card">
-            <p class="tab-lottery-basic__image-title">
-              商品圖集
-              <span v-if="galleryImageUrls.length">
-                （{{ galleryImageUrls.length }} 張）
-              </span>
-            </p>
-
-            <div class="tab-lottery-basic__gallery">
-              <button
-                type="button"
-                class="tab-lottery-basic__gallery-add"
-                :disabled="uploading"
-                @click="triggerGalleryUpload"
-              >
-                <font-awesome-icon :icon="['fas', 'plus']" />
-                <span>新增</span>
-              </button>
-
-              <div
-                v-for="(url, index) in galleryImageUrls"
-                :key="`${url}_${index}`"
-                class="tab-lottery-basic__gallery-item"
-              >
-                <img
-                  :src="url"
-                  alt="商品圖集預覽"
-                  class="tab-lottery-basic__gallery-img"
-                />
-
-                <button
-                  type="button"
-                  class="tab-lottery-basic__gallery-remove"
-                  :disabled="uploading"
-                  aria-label="移除圖片"
-                  @click="removeGalleryImage(index)"
-                >
-                  <font-awesome-icon
-                    :icon="['fas', 'xmark']"
-                    class="tab-lottery-basic__gallery-remove-icon"
-                  />
-                </button>
-              </div>
-            </div>
-
-            <p
-              v-if="galleryUploadErrorMessage || showError('galleryImagesText')"
-              class="error-text m-t-8"
-            >
-              {{ galleryUploadErrorMessage || showError('galleryImagesText') }}
-            </p>
-          </div>
-
           <input
             ref="galleryFileInput"
             class="tab-lottery-basic__hidden-input"
@@ -446,7 +464,7 @@
             :disabled="uploading"
             @change="onGalleryFileChange"
           />
-        </section>
+        </FormSection>
       </div>
     </div>
   </div>
@@ -462,6 +480,7 @@ import { Ckeditor } from '@ckeditor/ckeditor5-vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormTextarea from '@/components/common/FormTextarea.vue';
+import FormSection from '@/components/common/FormSection.vue';
 import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 import FormRadioTagGroup from '@/components/common/FormRadioTagGroup.vue';
 import FormCheckTagGroup from '@/components/common/FormCheckTagGroup.vue';

@@ -1,0 +1,26 @@
+@use 'sass:color';
+@use '../base/tokens' as *;
+
+.form-section {
+  padding: 12px 0 4px;
+
+  & + & {
+    margin-top: 16px;
+    padding-top: 18px;
+    border-top: 1px solid color.mix($form-border, #fff, 72%);
+  }
+
+  &__title {
+    margin: 0 6px 8px;
+    padding-left: 10px;
+    border-left: 4px solid $brand;
+    color: $form-text;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__content {
+    width: 100%;
+  }
+}

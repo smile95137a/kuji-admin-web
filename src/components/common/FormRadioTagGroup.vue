@@ -7,7 +7,6 @@
       :class="{ 'form-radio-tag-group__label--required': required }"
     >
       {{ label || '\u00A0' }}
-      <span v-if="required" class="form-radio-tag-group__asterisk">*</span>
     </div>
 
     <div class="form-radio-tag-group__list">
