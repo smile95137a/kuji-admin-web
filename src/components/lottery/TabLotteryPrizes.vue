@@ -10,19 +10,6 @@
         </div>
 
         <div class="tab-lottery-prizes__actions">
-          <MButton
-            type="button"
-            size="sm"
-            class="mbtn--gray"
-            @click="generateFakePrizes"
-          >
-            <font-awesome-icon
-              :icon="['fas', 'wand-magic-sparkles']"
-              class="m-r-4"
-            />
-            快速產生假資料
-          </MButton>
-
           <MButton type="button" size="sm" @click="openAddDialog">
             <font-awesome-icon :icon="['fas', 'plus']" class="m-r-4" />
             新增獎品
@@ -30,7 +17,7 @@
         </div>
       </div>
 
-      <div v-if="!fields.length" class="tab-lottery-prizes__empty">
+      <div v-if="!fields.length">
         <NoData message="尚未建立獎品，請點擊「新增獎品」加入獎品" />
       </div>
 
@@ -221,146 +208,6 @@ const getPrizeTypeLabel = (value?: string) => {
   return (
     prizeTypeOptions.find((item) => item.value === value)?.label || value || '-'
   );
-};
-
-/**
- * 測試用假資料
- * 實際串 API 後可移除 generateFakePrizes / fakePrizes / fakePrizeImages。
- */
-const fakePrizeImages = [
-  'https://picsum.photos/seed/prize-a/500/500',
-  'https://picsum.photos/seed/prize-b/500/500',
-  'https://picsum.photos/seed/prize-c/500/500',
-  'https://picsum.photos/seed/prize-d/500/500',
-  'https://picsum.photos/seed/prize-e/500/500',
-  'https://picsum.photos/seed/prize-f/500/500',
-  'https://picsum.photos/seed/prize-g/500/500',
-  'https://picsum.photos/seed/prize-last/500/500',
-];
-
-const fakePrizes: PrizeFormRow[] = [
-  {
-    _key: createKey(),
-    name: '限定模型公仔',
-    quantity: 1,
-    level: 'A',
-    prizeType: 'physical',
-    pointValue: undefined,
-    prizeNumber: 'A-01',
-    isLastPrize: false,
-    isGrandPrize: true,
-    orderNum: 1,
-    imageUrl: fakePrizeImages[0],
-    description: '主打大獎，適合放在最醒目的位置。',
-  },
-  {
-    _key: createKey(),
-    name: '角色抱枕',
-    quantity: 2,
-    level: 'B',
-    prizeType: 'physical',
-    pointValue: undefined,
-    prizeNumber: 'B-01',
-    isLastPrize: false,
-    isGrandPrize: false,
-    orderNum: 2,
-    imageUrl: fakePrizeImages[1],
-    description: '柔軟抱枕，適合作為中高階獎項。',
-  },
-  {
-    _key: createKey(),
-    name: '收藏立牌',
-    quantity: 3,
-    level: 'C',
-    prizeType: 'physical',
-    pointValue: undefined,
-    prizeNumber: 'C-01',
-    isLastPrize: false,
-    isGrandPrize: false,
-    orderNum: 3,
-    imageUrl: fakePrizeImages[2],
-    description: '角色立牌，可搭配系列收藏。',
-  },
-  {
-    _key: createKey(),
-    name: '隨機徽章',
-    quantity: 8,
-    level: 'D',
-    prizeType: 'physical',
-    pointValue: undefined,
-    prizeNumber: 'D-01',
-    isLastPrize: false,
-    isGrandPrize: false,
-    orderNum: 4,
-    imageUrl: fakePrizeImages[3],
-    description: '多款隨機徽章，適合大量配置。',
-  },
-  {
-    _key: createKey(),
-    name: '手機桌布序號',
-    quantity: 10,
-    level: 'E',
-    prizeType: 'digital',
-    pointValue: undefined,
-    prizeNumber: 'E-01',
-    isLastPrize: false,
-    isGrandPrize: false,
-    orderNum: 5,
-    imageUrl: fakePrizeImages[4],
-    description: '數位獎品，抽中後可派發兌換碼。',
-  },
-  {
-    _key: createKey(),
-    name: '會員點數 100 點',
-    quantity: 5,
-    level: 'F',
-    prizeType: 'point',
-    pointValue: 100,
-    prizeNumber: 'F-01',
-    isLastPrize: false,
-    isGrandPrize: false,
-    orderNum: 6,
-    imageUrl: fakePrizeImages[5],
-    description: '點數型獎品，適合補足獎池。',
-  },
-  {
-    _key: createKey(),
-    name: '紀念小卡',
-    quantity: 12,
-    level: 'G',
-    prizeType: 'physical',
-    pointValue: undefined,
-    prizeNumber: 'G-01',
-    isLastPrize: false,
-    isGrandPrize: false,
-    orderNum: 7,
-    imageUrl: fakePrizeImages[6],
-    description: '低階獎項，可增加抽獎豐富度。',
-  },
-  {
-    _key: createKey(),
-    name: '最後賞限定掛軸',
-    quantity: 1,
-    level: 'LAST',
-    prizeType: 'physical',
-    pointValue: undefined,
-    prizeNumber: 'LAST-01',
-    isLastPrize: true,
-    isGrandPrize: false,
-    orderNum: 8,
-    imageUrl: fakePrizeImages[7],
-    description: '最後一抽專屬獎品，提升玩家參與意願。',
-  },
-];
-
-const generateFakePrizes = () => {
-  fakePrizes.forEach((item, index) => {
-    push({
-      ...item,
-      _key: createKey(),
-      orderNum: fields.value.length + index + 1,
-    });
-  });
 };
 </script>
 
