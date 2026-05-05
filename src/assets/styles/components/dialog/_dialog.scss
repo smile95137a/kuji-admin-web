@@ -87,7 +87,25 @@ $root-block-name: '.dialog';
       }
     }
   }
+  &--systemLogSnapshot {
+    #{$p__main} {
+      height: auto;
+      width: calc(100% - 36px);
+      max-width: 960px;
+      max-height: 88vh;
+      min-height: 420px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
 
+      @media (max-width: 767px) {
+        width: calc(100% - 24px);
+        max-width: calc(100% - 24px);
+        max-height: calc(100vh - 24px);
+        min-height: 360px;
+      }
+    }
+  }
   &__overlay {
     position: absolute;
     inset: 0;
