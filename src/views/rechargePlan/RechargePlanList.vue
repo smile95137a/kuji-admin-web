@@ -15,50 +15,19 @@
   <div class="m-t-12">
     <MCard>
       <div class="flex justify-end gap-x-12 flex-wrap">
-        <MButton @click="navigateToAdd">新增</MButton>
-
-        <MButton class="mbtn--gray" @click="openSortPanel">排序管理</MButton>
+        <MButton @click="navigateToAdd">
+          <font-awesome-icon icon="fa-plus" class="m-r-4" />
+          新增
+        </MButton>
 
         <MButton
           class="mbtn--red"
           :disabled="!canDelete"
           @click="deleteSelected"
         >
+          <font-awesome-icon icon="fa-trash" class="m-r-4" />
           刪除
         </MButton>
-      </div>
-
-      <!-- 排序管理 Panel -->
-      <div v-if="showSortPanel" class="sort-panel m-t-12">
-        <p class="sort-panel__title">拖曳調整顯示順序（上方 = 最前面）</p>
-        <ul class="sort-list">
-          <li
-            v-for="(item, index) in sortableList"
-            :key="item.id"
-            class="sort-list__item"
-            :class="{ 'sort-list__item--over': dragOverIndex === index }"
-            draggable="true"
-            @dragstart="onDragStart(index)"
-            @dragover.prevent="onDragOver(index)"
-            @dragleave="dragOverIndex = -1"
-            @drop.prevent="onDrop(index)"
-            @dragend="onDragEnd"
-          >
-            <span class="sort-list__handle">⠿</span>
-            <span class="sort-list__order">{{ index + 1 }}</span>
-            <span class="sort-list__name">{{ item.name || '-' }}</span>
-            <span class="sort-list__meta">
-              {{ formatMoney(item.amount) }} 台幣
-              <span v-if="item.isPromotional" class="sort-list__badge">活動</span>
-            </span>
-          </li>
-        </ul>
-        <div class="flex gap-x-12 m-t-12">
-          <MButton @click="saveSortOrder" :disabled="isSaving">
-            {{ isSaving ? '儲存中...' : '儲存排序' }}
-          </MButton>
-          <MButton class="mbtn--gray" @click="showSortPanel = false">取消</MButton>
-        </div>
       </div>
 
       <template v-if="!hasData">
@@ -111,7 +80,7 @@
               "
               @click="toggleActive(item)"
             >
-              {{ item.isActive ? '啟用' : '停用' }}
+              {{ statusText(item.isActive) }}
             </button>
           </template>
 
@@ -120,52 +89,32 @@
               v-if="item.isPromotional"
               class="recharge__badge recharge__badge--promo"
             >
-              活動方案
+              活動
+
               <span
                 v-if="item.isInPeriod"
                 class="recharge__badge recharge__badge--active"
-                >進行中</span
               >
+                進行中
+              </span>
             </span>
-            <span v-else class="recharge__badge recharge__badge--normal"
-              >一般</span
-            >
-          </template>
 
-          <template #cell-displayOrder="{ item }">
-            <span>{{ item.displayOrder ?? '-' }}</span>
-          </template>
-
-          <template #cell-startTime="{ item }">
-            <DateFormatter
-              v-if="item.startTime"
-              :date="item.startTime"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else>-</span>
-          </template>
-
-          <template #cell-endTime="{ item }">
-            <DateFormatter
-              v-if="item.endTime"
-              :date="item.endTime"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else>-</span>
+            <span v-else class="recharge__badge recharge__badge--normal">
+              一般
+            </span>
           </template>
 
           <template #cell-updatedAt="{ item }">
             <DateFormatter
-              v-if="item.updatedAt"
               :date="item.updatedAt"
               format="YYYY-MM-DD HH:mm:ss"
             />
-            <span v-else>-</span>
           </template>
 
           <template #cell-actions="{ item }">
             <div class="flex gap-x-8 flex-wrap">
-              <MButton size="sm" @click="navigateToEdit(item)">編輯</MButton>
+              <MButton size="sm" @click="navigateToEdit(item)"> 編輯 </MButton>
+
               <MButton size="sm" variant="danger" @click="deleteOne(item)">
                 刪除
               </MButton>
@@ -183,7 +132,7 @@
             :goToPage="goToPage"
             :pageLimitSize="pageLimitSize"
             :totalItems="list.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+            @update:pageLimitSize="handlePageLimitSizeChange"
           />
         </div>
       </template>
@@ -192,10 +141,7 @@
 </template>
 
 <script setup lang="ts">
-/* ==============================
- * Imports
- * ============================== */
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { Form, FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
@@ -213,36 +159,33 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import RechargePlanSearchForm from '@/components/rechargePlan/RechargePlanSearchForm.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useRechargePlanStore } from '@/stores/rechargePlan/useRechargePlanStore';
 
 import {
   queryRechargePlans,
   deleteRechargePlan,
   updateRechargePlan,
 } from '@/services/adminRechargePlanService';
+
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
-/* ==============================
- * Router / Store
- * ============================== */
 const router = useRouter();
-const dialogStore = useDialogStore();
+const rechargePlanStore = useRechargePlanStore();
 
-/* ==============================
- * Form & InitValues
- * ============================== */
+/* --------------------------------------
+ * Form
+ * -------------------------------------- */
 const formRef = ref<FormContext | null>(null);
 
-// 後端目前 list 是全查：先保留給 UI（之後你要做前端過濾也可）
-const initValues = ref<any>({
+const initValues = ref({
   keyword: '',
 });
 
-/* ==============================
- * Search Hook (local list)
- * ============================== */
+/* --------------------------------------
+ * Search list
+ * -------------------------------------- */
 const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
   useLocalList: true,
 });
@@ -251,9 +194,9 @@ const loadSelectOptions = async () => {
   await nextTick();
 };
 
-/* ==============================
+/* --------------------------------------
  * Utils
- * ============================== */
+ * -------------------------------------- */
 const formatMoney = (n: any) => {
   const num = Number(n);
   if (Number.isNaN(num)) return n ?? '-';
@@ -262,13 +205,39 @@ const formatMoney = (n: any) => {
 
 const statusText = (isActive?: boolean) => (isActive ? '啟用' : '停用');
 
-/* ==============================
+const filterByKeyword = (rows: any[], keyword?: string) => {
+  const text = String(keyword || '')
+    .trim()
+    .toLowerCase();
+
+  if (!text) return rows;
+
+  return rows.filter((row: any) =>
+    String(row?.name || '')
+      .toLowerCase()
+      .includes(text),
+  );
+};
+
+const normalizeRechargePlanList = (res: any) => {
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res)) return res;
+  return [];
+};
+
+/* --------------------------------------
  * Sorting
- * ============================== */
+ * -------------------------------------- */
 const sortKey = ref('');
 const sortOrder = ref<'asc' | 'desc' | ''>('asc');
 
-const handleSort = ({ key, order }: any) => {
+const handleSort = ({
+  key,
+  order,
+}: {
+  key: string;
+  order: 'asc' | 'desc' | '';
+}) => {
   sortKey.value = key;
   sortOrder.value = order;
   goToPage(1);
@@ -278,6 +247,7 @@ const sortedList = computed(() => {
   if (!sortKey.value || !sortOrder.value) return list.value;
 
   const arr = [...list.value];
+
   arr.sort((a: any, b: any) =>
     compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
@@ -285,12 +255,13 @@ const sortedList = computed(() => {
       locale: 'zh-TW',
     }),
   );
+
   return arr;
 });
 
-/* ==============================
+/* --------------------------------------
  * Pagination
- * ============================== */
+ * -------------------------------------- */
 const pageLimitSize = ref(10);
 
 const {
@@ -303,38 +274,65 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
-/* ==============================
- * Table Columns（對齊你回傳的欄位）
- * ============================== */
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
+
+/* --------------------------------------
+ * Table Columns
+ * 依照目前 API response 精簡顯示
+ * -------------------------------------- */
 const columns = [
-  { field: 'displayOrder', label: '排序', width: 80, sortable: true },
-  { field: 'name', label: '方案名稱', width: 200, sortable: true },
-  { field: 'amount', label: '儲值金額', width: 120, sortable: true },
-  { field: 'goldCoins', label: '金幣', width: 100, sortable: true },
-  { field: 'bonusCoins', label: '贈送', width: 100, sortable: true },
-  { field: 'bonusPercentage', label: '加碼%', width: 100, sortable: true },
-  { field: 'isActive', label: '狀態', width: 100, sortable: true },
-  { field: 'isPromotional', label: '活動方案', width: 110, sortable: true },
-  { field: 'startTime', label: '開始時間', width: 170, sortable: true },
-  { field: 'endTime', label: '結束時間', width: 170, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
-  { field: 'actions', label: '操作', width: 200 },
+  { field: 'name', label: '方案名稱', width: 50, sortable: true },
+  { field: 'amount', label: '金額', width: 50, sortable: true },
+  { field: 'goldCoins', label: '金幣', width: 50, sortable: true },
+  { field: 'bonusCoins', label: '贈送', width: 50, sortable: true },
+  { field: 'bonusPercentage', label: '加碼%', width: 50, sortable: true },
+  { field: 'isActive', label: '狀態', width: 50, sortable: true },
+  { field: 'isPromotional', label: '類型', width: 50, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 50, sortable: true },
+  { field: 'actions', label: '操作', width: 50 },
 ];
 
-/* ==============================
- * Submit (Query)
- * ============================== */
-const onSubmit = async (_values: any) => {
-  // 後端：GET /admin/recharge-plan/list
-  await query(() => queryRechargePlans());
+/* --------------------------------------
+ * Query
+ * -------------------------------------- */
+const onSubmit = async (values: any) => {
+  const condition = {
+    keyword: values.keyword ?? '',
+  };
+
+  await query(async () => {
+    const res = await queryRechargePlans();
+    const rows = normalizeRechargePlanList(res);
+
+    return filterByKeyword(rows, condition.keyword);
+  });
+
+  rechargePlanStore.setSearchCondition(condition);
+  selectedIds.value = [];
   goToPage(1);
   isSearch.value = true;
 };
 
-/* ==============================
- * Selection / Delete
- * ============================== */
+const refresh = async () => {
+  const values = formRef.value?.values || initValues.value;
+  await onSubmit(values);
+};
+
+/* --------------------------------------
+ * Selection
+ * -------------------------------------- */
 const selectedIds = ref<string[]>([]);
+
+watch(
+  selectedIds,
+  (value) => {
+    rechargePlanStore.setSelectedIds([...value]);
+  },
+  { deep: true },
+);
 
 const selectedRows = computed(() =>
   list.value.filter((row: any) => selectedIds.value.includes(row.id)),
@@ -342,17 +340,15 @@ const selectedRows = computed(() =>
 
 const canDelete = computed(() => selectedRows.value.length > 0);
 
-const refresh = async () => {
-  const values = formRef.value?.values || initValues.value;
-  await onSubmit(values);
-  selectedIds.value = [];
-};
-
+/* --------------------------------------
+ * Delete
+ * -------------------------------------- */
 const deleteOne = async (item: any) => {
   const ok = await openConfirmDialog({
     title: '刪除確認',
     message: `確定要刪除「${item?.name || '-'}」嗎？（刪除後無法復原）`,
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -363,6 +359,8 @@ const deleteOne = async (item: any) => {
         message: '刪除成功',
         iconType: 'success',
       });
+
+      rechargePlanStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -376,12 +374,13 @@ const deleteSelected = async () => {
     title: '刪除確認',
     message: `確定要刪除選中的 ${selectedIds.value.length} 筆儲值方案嗎？（刪除後無法復原）`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteRechargePlan(id))),
-    onSuccess: async (results: any[]) => {
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
 
@@ -394,231 +393,151 @@ const deleteSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      rechargePlanStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
   });
 };
 
-/* ==============================
- * Navigation
- * ============================== */
+/* --------------------------------------
+ * Toggle active
+ * -------------------------------------- */
 const toggleActive = async (item: any) => {
   const newState = !item.isActive;
+
   const ok = await openConfirmDialog({
     title: `${newState ? '啟用' : '停用'}確認`,
     message: `確定要將「${item.name || item.id}」${newState ? '啟用' : '停用'}？`,
   });
+
   if (!ok) return;
 
   await executeApi({
     fn: async () => updateRechargePlan(item.id, { isActive: newState }),
     onSuccess: async () => {
       item.isActive = newState;
+      rechargePlanStore.setList([...list.value]);
     },
     showSuccessDialog: false,
   });
 };
 
-const navigateToAdd = () => router.push('/home/recharge-plan/add');
-const navigateToEdit = (item: any) =>
-  router.push(`/home/recharge-plan/edit/${item.id}`);
-
-/* ==============================
- * Sort Panel (drag-and-drop)
- * ============================== */
-const showSortPanel = ref(false);
-const sortableList = ref<any[]>([]);
-const isSaving = ref(false);
-let dragFromIndex = -1;
-const dragOverIndex = ref(-1);
-
-const openSortPanel = () => {
-  sortableList.value = [...list.value].sort(
-    (a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+/* --------------------------------------
+ * Save state / Navigation
+ * -------------------------------------- */
+const saveListState = () => {
+  rechargePlanStore.setList([...list.value]);
+  rechargePlanStore.setSearchCondition(
+    formRef.value?.values || initValues.value,
   );
-  showSortPanel.value = true;
+  rechargePlanStore.setSort(sortKey.value, sortOrder.value);
+  rechargePlanStore.setCurrentPage(currentPage.value);
+  rechargePlanStore.setPageLimitSize(pageLimitSize.value);
+  rechargePlanStore.setSelectedIds([...selectedIds.value]);
 };
 
-const onDragStart = (index: number) => {
-  dragFromIndex = index;
+const navigateToAdd = () => {
+  saveListState();
+  router.push('/home/recharge-plan/add');
 };
 
-const onDragOver = (index: number) => {
-  dragOverIndex.value = index;
+const navigateToEdit = (item: any) => {
+  saveListState();
+  router.push(`/home/recharge-plan/edit/${item.id}`);
 };
 
-const onDrop = (toIndex: number) => {
-  if (dragFromIndex === -1 || dragFromIndex === toIndex) return;
-  const items = [...sortableList.value];
-  const moved = items.splice(dragFromIndex, 1)[0];
-  items.splice(toIndex, 0, moved);
-  sortableList.value = items;
-  dragFromIndex = toIndex;
-  dragOverIndex.value = -1;
-};
-
-const onDragEnd = () => {
-  dragFromIndex = -1;
-  dragOverIndex.value = -1;
-};
-
-const saveSortOrder = async () => {
-  isSaving.value = true;
-  const updates = sortableList.value.map((item: any, index: number) => ({
-    id: item.id,
-    displayOrder: index,
-  }));
-
-  await executeApi({
-    fn: async () =>
-      Promise.all(
-        updates.map((u) => updateRechargePlan(u.id, { displayOrder: u.displayOrder })),
-      ),
-    onSuccess: async () => {
-      await openInfoDialog({
-        title: '提示訊息',
-        message: '排序儲存成功',
-        iconType: 'success',
-      });
-      showSortPanel.value = false;
-      await refresh();
-    },
-    showSuccessDialog: false,
-  });
-  isSaving.value = false;
-};
-
-/* ==============================
+/* --------------------------------------
  * Lifecycle
- * ============================== */
+ * -------------------------------------- */
 onMounted(async () => {
   await loadSelectOptions();
-  await onSubmit(initValues.value);
+
+  if (rechargePlanStore.list.length > 0 && !rechargePlanStore.shouldRefresh) {
+    list.value = [...rechargePlanStore.list];
+    initValues.value = { ...rechargePlanStore.searchCondition };
+
+    await nextTick();
+    formRef.value?.setValues(rechargePlanStore.searchCondition);
+
+    sortKey.value = rechargePlanStore.sortKey || '';
+    sortOrder.value = rechargePlanStore.sortOrder || 'asc';
+    pageLimitSize.value = rechargePlanStore.pageLimitSize;
+    selectedIds.value = [...rechargePlanStore.selectedIds];
+
+    await nextTick();
+    goToPage(rechargePlanStore.currentPage);
+
+    isSearch.value = true;
+    rechargePlanStore.resetAll();
+    return;
+  }
+
+  const condition = rechargePlanStore.shouldRefresh
+    ? { ...rechargePlanStore.searchCondition }
+    : { ...initValues.value };
+
+  initValues.value = { ...condition };
+
+  await nextTick();
+  formRef.value?.setValues(condition);
+
+  await onSubmit(condition);
+  rechargePlanStore.resetAll();
 });
 </script>
 
-<style scoped>
-.recharge__toggle {
-  border: none;
-  border-radius: 12px;
-  padding: 3px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.15s;
-}
-.recharge__toggle--on {
-  background: #d1fae5;
-  color: #065f46;
-}
-.recharge__toggle--off {
-  background: #f3f4f6;
-  color: #6b7280;
-}
+<style scoped lang="scss">
+.recharge {
+  &__toggle {
+    border: none;
+    border-radius: 12px;
+    padding: 3px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition:
+      background 0.15s,
+      opacity 0.15s;
 
-.recharge__toggle:hover {
-  opacity: 0.8;
-}
+    &:hover {
+      opacity: 0.8;
+    }
 
-.recharge__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 500;
-}
-.recharge__badge--promo {
-  background: #fef3c7;
-  color: #d97706;
-}
-.recharge__badge--active {
-  background: #d1fae5;
-  color: #065f46;
-}
-.recharge__badge--normal {
-  background: #f3f4f6;
-  color: #6b7280;
-}
+    &--on {
+      background: #d1fae5;
+      color: #065f46;
+    }
 
-/* Sort Panel */
-.sort-panel {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  background: #fafafa;
-}
-.sort-panel__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 12px;
-}
-.sort-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.sort-list__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  cursor: grab;
-  transition: box-shadow 0.15s, border-color 0.15s;
-  user-select: none;
-}
-.sort-list__item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-.sort-list__item--over {
-  border-color: #6366f1;
-  background: #eef2ff;
-}
-.sort-list__handle {
-  font-size: 18px;
-  color: #9ca3af;
-  cursor: grab;
-}
-.sort-list__order {
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #6366f1;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 700;
-}
-.sort-list__name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-  color: #111827;
-}
-.sort-list__meta {
-  font-size: 12px;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.sort-list__badge {
-  background: #fef3c7;
-  color: #d97706;
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 600;
+    &--off {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+
+    &--promo {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    &--active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    &--normal {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+  }
 }
 </style>
