@@ -2,25 +2,12 @@
 <template>
   <div class="flex flex-wrap">
     <!-- 狀態 -->
-    <div class="w-25 w-md-50 w-sm-100 p-6">
+    <div class="w-50 w-md-100 p-6">
       <FormSelect
         label="狀態"
         v-model="status"
         :options="statusOptions"
         :error="errors.status"
-        :showAll="true"
-        allLabel="全部"
-        :allValue="''"
-      />
-    </div>
-
-    <!-- 店家 -->
-    <div class="w-25 w-md-50 w-sm-100 p-6">
-      <FormSelect
-        label="店家"
-        v-model="storeId"
-        :options="storeOptions"
-        :error="errors.storeId"
         :showAll="true"
         allLabel="全部"
         :allValue="''"
@@ -84,13 +71,11 @@ import FormInput from '@/components/common/FormInput.vue';
 
 defineProps<{
   statusOptions: SelectOption[];
-  storeOptions: SelectOption[];
 }>();
 
 const { defineField, errors } = useFormContext();
 
 const [status] = defineField('status');
-const [storeId] = defineField('storeId');
 const [title] = defineField('title');
 const [keyword] = defineField('keyword');
 const [createdAtStart] = defineField('createdAtStart');

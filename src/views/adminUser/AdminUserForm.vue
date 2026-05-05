@@ -1,332 +1,508 @@
 <!-- src/views/adminUser/AdminUserForm.vue -->
 <template>
   <MCard>
-    <form @submit.prevent="onSubmit">
-      <p class="form__text form__text--title">{{ pageTitle }}</p>
+    <div class="admin-user-form__header">
+      <FormTitle :title="pageTitle" />
 
-      <!-- Step indicator for add-owner -->
-      <div v-if="mode === 'add-owner' && !isDetail" class="adminUser__steps">
-        <div
-          class="adminUser__step"
-          :class="{
-            'adminUser__step--active': currentStep === 1,
-            'adminUser__step--done': currentStep > 1,
-          }"
-        >
-          <span class="adminUser__stepNum">1</span>
-          <span>帳號資訊</span>
-        </div>
-        <div class="adminUser__stepDivider">→</div>
-        <div
-          class="adminUser__step"
-          :class="{ 'adminUser__step--active': currentStep === 2 }"
-        >
-          <span class="adminUser__stepNum">2</span>
-          <span>店家資訊</span>
-        </div>
-      </div>
+      <MButton
+        v-if="isDev && !isDetail"
+        type="button"
+        class="mbtn--gray"
+        @click="fillMockData"
+      >
+        快速產生資料
+      </MButton>
+    </div>
 
-      <div class="flex flex-wrap">
-        <!-- ===================== 帳號資訊 (Step 1 for add-owner; always for others) ===================== -->
-        <template v-if="currentStep === 1 || mode !== 'add-owner' || isDetail">
-          <div class="w-100 p-6">
-            <p class="form__text form__text--red">帳號資訊</p>
-          </div>
-
-          <!-- Email -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="Email（登入帳號）"
-              v-model="email"
-              :error="errors.email"
-              placeholder="store@example.com"
-              :disabled="isDetail"
-            />
-          </div>
-
-          <!-- 顯示名稱 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="顯示名稱"
-              v-model="displayName"
-              :error="errors.displayName"
-              placeholder="王小明 / 小編A"
-              :disabled="isDetail"
-            />
-          </div>
-
-          <!-- 電話 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="聯絡電話（可選）"
-              v-model="phone"
-              :error="errors.phone"
-              placeholder="0912345678"
-              :disabled="isDetail"
-            />
-          </div>
-
-          <!-- 備註 -->
-          <div class="w-50 w-md-100 p-6" v-if="!isDetail">
-            <FormInput
-              label="備註（可選）"
-              v-model="remark"
-              :error="errors.remark"
-              placeholder="可留空"
-            />
-          </div>
-
-          <!-- ===================== add-editor: 店家 checkbox 列表 ===================== -->
+    <form class="admin-user-form" @submit.prevent="onSubmit">
+      <Tabs :active-tab="activeTab" @update:active-tab="updateActiveTab">
+        <template #headers="{ activeTab, setActiveTab }">
           <div
-            class="w-100 w-md-100 p-6"
-            v-if="mode === 'add-editor' && !isDetail"
+            v-for="tab in tabList"
+            :key="tab.code"
+            class="tab-button"
+            :class="{ active: activeTab === tab.code }"
+            @click="setActiveTab(tab.code)"
           >
-            <p class="form__text">
-              關聯店家（可多選，至少一間）<span class="form__text--red">
-                *</span
-              >
-            </p>
-            <div class="adminUser__storeCheckboxList">
-              <label
-                v-for="store in storeOptions"
-                :key="store.value"
-                class="adminUser__storeCheckbox"
-              >
-                <input
-                  type="checkbox"
-                  :value="store.value"
-                  v-model="storeIds"
-                />
-                <span>{{ store.label }}</span>
-              </label>
+            {{ tab.label }}
+          </div>
+        </template>
+
+        <!-- 帳號資訊 -->
+        <Tab name="account">
+          <template v-if="!isDetail">
+            <FormSection title="帳號資訊">
+              <div class="admin-user-form__card">
+                <div class="flex flex-wrap">
+                  <!-- Email -->
+                  <div class="w-50 w-md-100 p-6">
+                    <FormInput
+                      label="Email（登入帳號）"
+                      v-model="email"
+                      :error="displayErrors.email"
+                      required
+                      maxlength="100"
+                      placeholder="store@example.com"
+                    />
+                  </div>
+
+                  <!-- 顯示名稱 -->
+                  <div class="w-50 w-md-100 p-6">
+                    <FormInput
+                      label="顯示名稱"
+                      v-model="displayName"
+                      :error="displayErrors.displayName"
+                      required
+                      maxlength="50"
+                      placeholder="王小明 / 小編A"
+                    />
+                  </div>
+
+                  <!-- 電話 -->
+                  <div class="w-50 w-md-100 p-6">
+                    <FormInput
+                      label="聯絡電話"
+                      v-model="phone"
+                      :error="displayErrors.phone"
+                      maxlength="30"
+                      placeholder="0912345678"
+                    />
+                  </div>
+
+                  <!-- 備註 -->
+                  <div class="w-50 w-md-100 p-6">
+                    <FormTextarea
+                      label="備註"
+                      v-model="remark"
+                      :error="displayErrors.remark"
+                      :maxlength="200"
+                      :rows="4"
+                      placeholder="可輸入內部備註"
+                    />
+                  </div>
+                </div>
+              </div>
+            </FormSection>
+          </template>
+        </Tab>
+
+        <!-- 新增負責人：店家資訊 -->
+        <Tab v-if="mode === 'add-owner' && !isDetail" name="store">
+          <div class="admin-user-form__layout">
+            <!-- 左側：店家基本資料 -->
+            <div class="admin-user-form__left">
+              <FormSection title="店家基本資料">
+                <div class="admin-user-form__card">
+                  <div class="flex flex-wrap">
+                    <!-- 店家名稱 -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="店家名稱"
+                        v-model="storeName"
+                        :error="displayErrors.storeName"
+                        required
+                        maxlength="100"
+                        placeholder="KUJI 官方商店"
+                      />
+                    </div>
+
+                    <!-- 店家短描述 -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="店家短描述"
+                        v-model="shortDescription"
+                        :error="displayErrors.shortDescription"
+                        required
+                        maxlength="120"
+                        placeholder="專營一番賞、扭蛋精品"
+                      />
+                    </div>
+
+                    <!-- 店家詳細介紹 -->
+                    <div class="w-100 p-6">
+                      <FormTextarea
+                        label="店家詳細介紹"
+                        v-model="longDescription"
+                        :error="displayErrors.longDescription"
+                        :maxlength="500"
+                        :rows="6"
+                        placeholder="可輸入店家詳細介紹"
+                      />
+                    </div>
+
+                    <!-- Logo URL -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="Logo URL"
+                        v-model="logoUrl"
+                        :error="displayErrors.logoUrl"
+                        required
+                        maxlength="500"
+                        placeholder="https://.../logo.png"
+                      />
+                    </div>
+
+                    <!-- 封面圖片 URL -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="封面圖片 URL"
+                        v-model="coverImageUrl"
+                        :error="displayErrors.coverImageUrl"
+                        maxlength="500"
+                        placeholder="https://.../cover.jpg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+
+              <FormSection title="店家聯絡資訊">
+                <div class="admin-user-form__card">
+                  <div class="flex flex-wrap">
+                    <!-- 店家聯絡 Email -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="店家聯絡 Email"
+                        v-model="storeEmail"
+                        :error="displayErrors.storeEmail"
+                        required
+                        maxlength="100"
+                        placeholder="shop@example.com"
+                      />
+                    </div>
+
+                    <!-- 店家聯絡電話 -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="店家聯絡電話"
+                        v-model="storePhone"
+                        :error="displayErrors.storePhone"
+                        required
+                        maxlength="30"
+                        placeholder="02-1234-5678"
+                      />
+                    </div>
+
+                    <!-- 店家地址 -->
+                    <div class="w-100 p-6">
+                      <FormInput
+                        label="店家地址"
+                        v-model="storeAddress"
+                        :error="displayErrors.storeAddress"
+                        required
+                        maxlength="200"
+                        placeholder="台北市…（無實體店可填「無」）"
+                      />
+                    </div>
+
+                    <!-- 營業時間 -->
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="營業時間"
+                        v-model="businessHours"
+                        :error="displayErrors.businessHours"
+                        required
+                        maxlength="100"
+                        placeholder="每日 10:00~22:00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
             </div>
-            <p class="error-text m-t-4" v-if="errors.storeIds">
-              {{ errors.storeIds }}
-            </p>
-          </div>
-        </template>
 
-        <!-- ===================== add-owner: 店家資訊 (Step 2) ===================== -->
-        <template v-if="mode === 'add-owner' && !isDetail && currentStep === 2">
-          <div class="w-100 p-6">
-            <p class="form__text form__text--red">店家資訊</p>
-          </div>
+            <!-- 右側：社群資訊 -->
+            <div class="admin-user-form__right">
+              <FormSection title="社群資訊">
+                <div class="admin-user-form__card">
+                  <div class="flex flex-wrap">
+                    <!-- Facebook -->
+                    <div class="w-100 p-6">
+                      <FormInput
+                        label="Facebook 連結"
+                        v-model="facebookUrl"
+                        :error="displayErrors.facebookUrl"
+                        maxlength="500"
+                        placeholder="https://facebook.com/..."
+                      />
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="店家名稱"
-              v-model="storeName"
-              :error="errors.storeName"
-              placeholder="KUJI 官方商店"
-            />
-          </div>
+                    <!-- Instagram -->
+                    <div class="w-100 p-6">
+                      <FormInput
+                        label="Instagram 連結"
+                        v-model="instagramUrl"
+                        :error="displayErrors.instagramUrl"
+                        maxlength="500"
+                        placeholder="https://instagram.com/..."
+                      />
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="店家短描述（列表用）"
-              v-model="shortDescription"
-              :error="errors.shortDescription"
-              placeholder="專營一番賞、扭蛋精品"
-            />
-          </div>
+                    <!-- LINE ID -->
+                    <div class="w-100 p-6">
+                      <FormInput
+                        label="LINE ID"
+                        v-model="lineId"
+                        :error="displayErrors.lineId"
+                        maxlength="100"
+                        placeholder="kuji_official"
+                      />
+                    </div>
+                  </div>
 
-          <div class="w-100 p-6">
-            <FormInput
-              label="店家詳細介紹（可選）"
-              type="textarea"
-              v-model="longDescription"
-              :error="errors.longDescription"
-              placeholder="可留空"
-            />
+                  <div class="admin-user-form__info-box">
+                    建立負責人時，會同時建立一間店家並將此帳號綁定為店家負責人。
+                  </div>
+                </div>
+              </FormSection>
+            </div>
           </div>
+        </Tab>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="Logo URL"
-              v-model="logoUrl"
-              :error="errors.logoUrl"
-              placeholder="https://.../logo.png"
-            />
-          </div>
+        <!-- 新增編輯：關聯店家 -->
+        <Tab v-if="mode === 'add-editor' && !isDetail" name="stores">
+          <FormSection title="關聯店家">
+            <div class="admin-user-form__card">
+              <div class="admin-user-form__store-panel">
+                <div class="admin-user-form__store-head">
+                  <p class="admin-user-form__store-title">可管理店家</p>
+                  <span class="admin-user-form__store-badge">
+                    至少選擇一間
+                  </span>
+                </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="封面圖片 URL（可選）"
-              v-model="coverImageUrl"
-              :error="errors.coverImageUrl"
-              placeholder="https://.../cover.jpg"
-            />
-          </div>
+                <FormCheckTagGroup
+                  label="關聯店家"
+                  name="admin-user-store-ids"
+                  id-prefix="admin-user-store"
+                  v-model="storeIds"
+                  :options="storeOptions"
+                  :error="displayErrors.storeIds"
+                  hideLabel
+                />
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="店家聯絡 Email"
-              v-model="storeEmail"
-              :error="errors.storeEmail"
-              placeholder="shop@example.com"
-            />
-          </div>
+                <p v-if="!storeOptions.length" class="admin-user-form__empty">
+                  目前沒有可選擇的店家。
+                </p>
+              </div>
+            </div>
+          </FormSection>
+        </Tab>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="店家聯絡電話"
-              v-model="storePhone"
-              :error="errors.storePhone"
-              placeholder="02-1234-5678"
-            />
-          </div>
+        <!-- 詳情 -->
+        <Tab v-if="isDetail" name="detail">
+          <div class="admin-user-form__layout">
+            <div class="admin-user-form__left">
+              <FormSection title="帳號資訊">
+                <div class="admin-user-form__card">
+                  <div class="flex flex-wrap">
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="帳號"
+                        :modelValue="detail?.username || detail?.email || '-'"
+                        disabled
+                      />
+                    </div>
 
-          <div class="w-100 p-6">
-            <FormInput
-              label="店家地址（無實體店可填「無」）"
-              v-model="storeAddress"
-              :error="errors.storeAddress"
-              placeholder="台北市…（或填 無）"
-            />
-          </div>
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="顯示名稱"
+                        :modelValue="detail?.displayName || '-'"
+                        disabled
+                      />
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="營業時間"
-              v-model="businessHours"
-              :error="errors.businessHours"
-              placeholder="每日 10:00~22:00"
-            />
-          </div>
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="Email"
+                        :modelValue="detail?.email || '-'"
+                        disabled
+                      />
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="Facebook 連結（可選）"
-              v-model="facebookUrl"
-              :error="errors.facebookUrl"
-              placeholder="https://facebook.com/..."
-            />
-          </div>
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="聯絡電話"
+                        :modelValue="detail?.phone || '-'"
+                        disabled
+                      />
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="Instagram 連結（可選）"
-              v-model="instagramUrl"
-              :error="errors.instagramUrl"
-              placeholder="https://instagram.com/..."
-            />
-          </div>
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="狀態"
+                        :modelValue="statusText(detail)"
+                        disabled
+                      />
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="LINE ID（可選）"
-              v-model="lineId"
-              :error="errors.lineId"
-              placeholder="kuji_official"
-            />
-          </div>
-        </template>
+                    <div class="w-50 w-md-100 p-6">
+                      <FormInput
+                        label="角色"
+                        :modelValue="roleText(detail)"
+                        disabled
+                      />
+                    </div>
 
-        <!-- ===================== detail 區 ===================== -->
-        <template v-if="isDetail">
-          <div class="w-100 p-6">
-            <p class="form__text form__text--red">帳號資訊（檢視）</p>
-          </div>
+                    <div class="w-100 p-6">
+                      <FormTextarea
+                        label="備註"
+                        :modelValue="detail?.remark || ''"
+                        disabled
+                        :rows="4"
+                        placeholder="-"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+            </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="帳號"
-              :modelValue="detail?.username || '-'"
-              disabled
-            />
-          </div>
+            <div class="admin-user-form__right">
+              <FormSection title="系統資訊">
+                <div class="admin-user-form__card">
+                  <div class="admin-user-form__detail-list">
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">店家</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ storeText(detail) }}
+                      </span>
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput label="狀態" :modelValue="statusText(detail)" disabled />
-          </div>
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">
+                        最後登入
+                      </span>
+                      <span class="admin-user-form__detail-value">
+                        <DateFormatter
+                          v-if="detail?.lastLoginAt"
+                          :date="detail.lastLoginAt"
+                          format="YYYY-MM-DD HH:mm:ss"
+                        />
+                        <template v-else>-</template>
+                      </span>
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput label="角色" :modelValue="roleText(detail)" disabled />
-          </div>
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">
+                        建立時間
+                      </span>
+                      <span class="admin-user-form__detail-value">
+                        <DateFormatter
+                          v-if="detail?.createdAt"
+                          :date="detail.createdAt"
+                          format="YYYY-MM-DD HH:mm:ss"
+                        />
+                        <template v-else>-</template>
+                      </span>
+                    </div>
 
-          <div class="w-50 w-md-100 p-6">
-            <FormInput label="店家" :modelValue="storeText(detail)" disabled />
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">
+                        更新時間
+                      </span>
+                      <span class="admin-user-form__detail-value">
+                        <DateFormatter
+                          v-if="detail?.updatedAt"
+                          :date="detail.updatedAt"
+                          format="YYYY-MM-DD HH:mm:ss"
+                        />
+                        <template v-else>-</template>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+            </div>
           </div>
-
-          <!-- ✅ 日期改用 DateFormatter（不再用 formatDateTime） -->
-          <div class="w-50 w-md-100 p-6">
-            <p class="form__text">最後登入</p>
-            <DateFormatter
-              v-if="detail?.lastLoginAt"
-              :date="detail.lastLoginAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else>-</span>
-          </div>
-
-          <div class="w-50 w-md-100 p-6">
-            <p class="form__text">建立時間</p>
-            <DateFormatter
-              v-if="detail?.createdAt"
-              :date="detail.createdAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else>-</span>
-          </div>
-        </template>
-      </div>
+        </Tab>
+      </Tabs>
 
       <!-- bottom button -->
-      <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
+      <div class="flex justify-end m-y-8 gap-x-12 flex-wrap">
         <template v-if="!isDetail">
-          <MButton type="button" class="mbtn--gray" @click="fillMockData">
-            快速產生資料
+          <MButton
+            v-if="mode === 'add-owner' && activeTab === 'account'"
+            type="button"
+            @click="goNextTab"
+          >
+            下一步
           </MButton>
 
-          <template v-if="mode === 'add-owner'">
-            <MButton
-              v-if="currentStep === 1"
-              type="button"
-              @click="currentStep = 2"
-              >下一步</MButton
-            >
-            <template v-if="currentStep === 2">
-              <MButton type="button" class="mbtn--gray" @click="currentStep = 1"
-                >上一步</MButton
-              >
-              <MButton type="submit">建立負責人</MButton>
-            </template>
-          </template>
-          <MButton v-else type="submit">建立編輯</MButton>
+          <MButton
+            v-if="mode === 'add-owner' && activeTab === 'store'"
+            type="button"
+            class="mbtn--gray"
+            @click="activeTab = 'account'"
+          >
+            上一步
+          </MButton>
+
+          <MButton type="submit">
+            <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
+            {{ submitButtonText }}
+          </MButton>
+
+          <MButton type="button" class="mbtn--gray" @click="resetFormValues">
+            清除
+          </MButton>
         </template>
 
         <template v-else>
-          <MButton :disabled="isActive(detail)" @click="doActivate"
-            >啟用</MButton
+          <MButton
+            type="button"
+            :disabled="isActive(detail)"
+            @click="doActivate"
           >
-          <MButton :disabled="!isActive(detail)" @click="doDeactivate"
-            >停用</MButton
+            啟用
+          </MButton>
+
+          <MButton
+            type="button"
+            :disabled="!isActive(detail)"
+            @click="doDeactivate"
           >
-          <MButton @click="doResetPassword">重設密碼</MButton>
-          <MButton class="mbtn--red" @click="doDelete">刪除</MButton>
+            停用
+          </MButton>
+
+          <MButton type="button" class="mbtn--gray" @click="doResetPassword">
+            重設密碼
+          </MButton>
+
+          <MButton type="button" class="mbtn--red" @click="doDelete">
+            刪除
+          </MButton>
         </template>
 
-        <MButton type="button" class="mbtn--red" @click="router.back()"
-          >返回</MButton
-        >
+        <MButton type="button" class="mbtn--gray" @click="goBack">
+          <font-awesome-icon icon="fa-arrow-left" class="m-r-4" />
+          返回
+        </MButton>
       </div>
     </form>
   </MCard>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
 
+import Tabs from '@/components/common/Tabs.vue';
+import Tab from '@/components/common/Tab.vue';
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
+import FormTitle from '@/components/common/FormTitle.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormTextarea from '@/components/common/FormTextarea.vue';
+import FormSection from '@/components/common/FormSection.vue';
+import FormCheckTagGroup from '@/components/common/FormCheckTagGroup.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useDialogStore } from '@/stores';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 import {
   createStoreOwner,
@@ -339,57 +515,179 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions } from '@/services/adminStoreService';
-import { openInfoDialog } from '@/utils/dialog/infoDialog';
-import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 interface SelectOption {
   label: string;
   value: any;
+  disabled?: boolean;
   description?: string;
 }
 
-/* Setup */
+const LIST_PATH = '/home/admin-users';
+
 const route = useRoute();
 const router = useRouter();
-const dialogStore = useDialogStore();
+
+const isDev = import.meta.env.DEV;
 
 const mode = computed<'add-owner' | 'add-editor' | 'detail'>(() => {
   if (route.name === 'AdminUserAddOwner') return 'add-owner';
   if (route.name === 'AdminUserAddEditor') return 'add-editor';
+
   return 'detail';
 });
+
 const isDetail = computed(() => mode.value === 'detail');
-const currentStep = ref(1);
 const userId = computed(() => String(route.params.id || ''));
 
 const pageTitle = computed(() => {
   if (mode.value === 'add-owner') return '新增店家負責人帳號';
   if (mode.value === 'add-editor') return '新增店家編輯帳號';
+
   return '帳號詳情';
 });
 
-/* 店家選項 */
+const submitButtonText = computed(() => {
+  if (mode.value === 'add-owner') return '建立負責人';
+  if (mode.value === 'add-editor') return '建立編輯';
+
+  return '送出';
+});
+
+/* ==============================
+ * Tabs
+ * ============================== */
+const activeTab = ref('account');
+
+const tabList = computed(() => {
+  if (isDetail.value) {
+    return [{ code: 'detail', label: '帳號詳情' }];
+  }
+
+  if (mode.value === 'add-owner') {
+    return [
+      { code: 'account', label: '帳號資訊' },
+      { code: 'store', label: '店家資訊' },
+    ];
+  }
+
+  return [
+    { code: 'account', label: '帳號資訊' },
+    { code: 'stores', label: '關聯店家' },
+  ];
+});
+
+const updateActiveTab = (value: string) => {
+  activeTab.value = value;
+};
+
+const fieldTabMap: Record<string, string> = {
+  email: 'account',
+  displayName: 'account',
+  phone: 'account',
+  remark: 'account',
+
+  storeIds: 'stores',
+
+  storeName: 'store',
+  shortDescription: 'store',
+  longDescription: 'store',
+  logoUrl: 'store',
+  coverImageUrl: 'store',
+  storeEmail: 'store',
+  storePhone: 'store',
+  storeAddress: 'store',
+  businessHours: 'store',
+  facebookUrl: 'store',
+  instagramUrl: 'store',
+  lineId: 'store',
+};
+
+const jumpToErrorTab = (errorMap: Record<string, any>) => {
+  const firstField = Object.keys(errorMap || {})[0];
+  if (!firstField) return;
+
+  activeTab.value = fieldTabMap[firstField] || 'account';
+};
+
+const goNextTab = () => {
+  if (mode.value === 'add-owner') {
+    activeTab.value = 'store';
+    return;
+  }
+
+  if (mode.value === 'add-editor') {
+    activeTab.value = 'stores';
+  }
+};
+
+/* ==============================
+ * Store options
+ * ============================== */
 const storeOptions = ref<SelectOption[]>([]);
 
-const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] =>
-  list.map((x) => ({
-    label: x?.label ?? '',
-    value: x?.value ?? '',
-    ...(x?.description ? { description: x.description } : {}),
+const normalizeStoreOptions = (res: any) => {
+  const data = res?.data ?? res ?? [];
+  return Array.isArray(data) ? data : [];
+};
+
+const mapEnumOptionsToSelect = (list: any[] = []): SelectOption[] => {
+  return list.map((item) => ({
+    label:
+      item?.label ??
+      item?.storeName ??
+      item?.name ??
+      item?.title ??
+      String(item?.value ?? item?.id ?? ''),
+    value: item?.value ?? item?.id ?? item?.storeId ?? '',
+    ...(item?.description ? { description: item.description } : {}),
   }));
+};
 
 const loadStoreOptions = async () => {
-  await executeApi<any[]>({
+  await executeApi({
     fn: async () => getStoreOptions({ activeOnly: true }),
-    onSuccess: (data) => {
-      storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : [],
-      );
+    onSuccess: (res: any) => {
+      storeOptions.value = mapEnumOptionsToSelect(normalizeStoreOptions(res));
     },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
-/* schema */
+/* ==============================
+ * Form
+ * ============================== */
+const isSubmitted = ref(false);
+
+const displayErrors = computed<Record<string, string | undefined>>(() => {
+  if (!isSubmitted.value) return {};
+  return errors.value;
+});
+
+const initialValues = {
+  email: '',
+  displayName: '',
+  phone: '',
+  remark: '',
+
+  storeIds: [] as string[],
+
+  storeName: '',
+  shortDescription: '',
+  longDescription: '',
+  logoUrl: '',
+  coverImageUrl: '',
+  storeEmail: '',
+  storePhone: '',
+  storeAddress: '',
+  businessHours: '',
+  facebookUrl: '',
+  instagramUrl: '',
+  lineId: '',
+};
+
 const schema = computed(() => {
   if (isDetail.value) {
     return yup.object({
@@ -415,13 +713,30 @@ const schema = computed(() => {
     });
   }
 
+  const common = {
+    email: yup
+      .string()
+      .trim()
+      .required('Email 不可為空')
+      .email('Email 格式不正確')
+      .max(100, 'Email 最多 100 字'),
+
+    displayName: yup
+      .string()
+      .trim()
+      .required('顯示名稱不可為空')
+      .max(50, '顯示名稱最多 50 字'),
+
+    phone: yup.string().nullable().max(30, '聯絡電話最多 30 字'),
+
+    remark: yup.string().nullable().max(200, '備註最多 200 字'),
+  };
+
   if (mode.value === 'add-editor') {
     return yup.object({
+      ...common,
+
       storeIds: yup.array().of(yup.string()).min(1, '請至少選擇一間店家'),
-      email: yup.string().required('Email 不可為空').email('Email 格式不正確'),
-      displayName: yup.string().required('顯示名稱不可為空'),
-      phone: yup.string().nullable(),
-      remark: yup.string().nullable(),
 
       storeName: yup.string().nullable(),
       shortDescription: yup.string().nullable(),
@@ -439,60 +754,74 @@ const schema = computed(() => {
   }
 
   return yup.object({
-    email: yup.string().required('Email 不可為空').email('Email 格式不正確'),
-    displayName: yup.string().required('顯示名稱不可為空'),
-    phone: yup.string().nullable(),
-    remark: yup.string().nullable(),
+    ...common,
 
-    storeName: yup.string().required('店家名稱不可為空'),
-    shortDescription: yup.string().required('店家短描述不可為空'),
-    longDescription: yup.string().nullable(),
-    logoUrl: yup.string().required('Logo URL 不可為空'),
-    coverImageUrl: yup.string().nullable(),
+    storeName: yup
+      .string()
+      .trim()
+      .required('店家名稱不可為空')
+      .max(100, '店家名稱最多 100 字'),
+
+    shortDescription: yup
+      .string()
+      .trim()
+      .required('店家短描述不可為空')
+      .max(120, '店家短描述最多 120 字'),
+
+    longDescription: yup
+      .string()
+      .nullable()
+      .max(500, '店家詳細介紹最多 500 字'),
+
+    logoUrl: yup
+      .string()
+      .trim()
+      .required('Logo URL 不可為空')
+      .max(500, 'Logo URL 最多 500 字'),
+
+    coverImageUrl: yup.string().nullable().max(500, '封面圖片 URL 最多 500 字'),
 
     storeEmail: yup
       .string()
+      .trim()
       .required('店家聯絡 Email 不可為空')
-      .email('Email 格式不正確'),
-    storePhone: yup.string().required('店家聯絡電話不可為空'),
-    storeAddress: yup.string().required('店家地址不可為空'),
-    businessHours: yup.string().required('營業時間不可為空'),
+      .email('Email 格式不正確')
+      .max(100, '店家聯絡 Email 最多 100 字'),
 
-    facebookUrl: yup.string().nullable(),
-    instagramUrl: yup.string().nullable(),
-    lineId: yup.string().nullable(),
+    storePhone: yup
+      .string()
+      .trim()
+      .required('店家聯絡電話不可為空')
+      .max(30, '店家聯絡電話最多 30 字'),
+
+    storeAddress: yup
+      .string()
+      .trim()
+      .required('店家地址不可為空')
+      .max(200, '店家地址最多 200 字'),
+
+    businessHours: yup
+      .string()
+      .trim()
+      .required('營業時間不可為空')
+      .max(100, '營業時間最多 100 字'),
+
+    facebookUrl: yup.string().nullable().max(500, 'Facebook 連結最多 500 字'),
+
+    instagramUrl: yup.string().nullable().max(500, 'Instagram 連結最多 500 字'),
+
+    lineId: yup.string().nullable().max(100, 'LINE ID 最多 100 字'),
 
     storeIds: yup.array().nullable(),
   });
 });
 
-/* useForm */
-const { errors, handleSubmit, setValues, defineField } = useForm({
+const { errors, handleSubmit, setValues, resetForm, defineField } = useForm({
   validationSchema: schema,
-  initialValues: {
-    email: '',
-    displayName: '',
-    phone: '',
-    remark: '',
-
-    storeIds: [] as string[],
-
-    storeName: '',
-    shortDescription: '',
-    longDescription: '',
-    logoUrl: '',
-    coverImageUrl: '',
-    storeEmail: '',
-    storePhone: '',
-    storeAddress: '',
-    businessHours: '',
-    facebookUrl: '',
-    instagramUrl: '',
-    lineId: '',
-  },
+  initialValues,
+  validateOnMount: false,
 });
 
-/* defineField */
 const [email] = defineField('email');
 const [displayName] = defineField('displayName');
 const [phone] = defineField('phone');
@@ -513,110 +842,178 @@ const [facebookUrl] = defineField('facebookUrl');
 const [instagramUrl] = defineField('instagramUrl');
 const [lineId] = defineField('lineId');
 
-/* detail */
+/* ==============================
+ * Detail
+ * ============================== */
 const detail = ref<any>(null);
 
-const roleText = (u: any) => {
-  const roles = u?.roles;
+const roleText = (user: any) => {
+  const roles = user?.roles;
+
   if (!Array.isArray(roles) || roles.length === 0) return '-';
+
   return roles
-    .map((r: any) => r?.name || r?.code)
+    .map((role: any) => role?.name || role?.code)
     .filter(Boolean)
     .join(', ');
 };
 
-const storeText = (u: any) => {
-  const stores = u?.stores;
+const storeText = (user: any) => {
+  const stores = user?.stores;
+
   if (!Array.isArray(stores) || stores.length === 0) return '-';
+
   return stores
-    .map((s: any) => {
-      const name = s?.storeName || s?.id || '';
-      const roleType = s?.roleType ? `(${s.roleType})` : '';
+    .map((store: any) => {
+      const name = store?.storeName || store?.name || store?.id || '';
+      const roleType = store?.roleType ? `（${store.roleType}）` : '';
+
       return `${name}${roleType}`;
     })
     .filter(Boolean)
-    .join(', ');
+    .join('、');
 };
 
-const statusText = (u: any) => {
-  const s = u?.status;
-  if (!s) return '-';
-  return s === 'ACTIVE' ? '啟用' : s === 'INACTIVE' ? '停用' : String(s);
+const statusText = (user: any) => {
+  const status = user?.status;
+
+  if (status === 'ACTIVE') return '啟用';
+  if (status === 'INACTIVE') return '停用';
+  if (status === 'DELETED') return '已刪除';
+
+  return status ? String(status) : '-';
 };
 
-const isActive = (u: any) => u?.status === 'ACTIVE';
+const isActive = (user: any) => user?.status === 'ACTIVE';
 
 const reloadDetail = async () => {
   if (!isDetail.value || !userId.value) return;
 
   await executeApi({
     fn: async () => getAdminUserById(userId.value),
-    onSuccess: (data) => {
-      const d = (data as any)?.data ?? data;
-      detail.value = d;
+    onSuccess: (res: any) => {
+      const data = res?.data ?? res;
 
-      setValues({
-        email: d?.email ?? '',
-        displayName: d?.displayName ?? '',
-        phone: d?.phone ?? '',
-        remark: d?.remark ?? '',
-        storeIds: [],
-        storeName: '',
-        shortDescription: '',
-        longDescription: '',
-        logoUrl: '',
-        coverImageUrl: '',
-        storeEmail: '',
-        storePhone: '',
-        storeAddress: '',
-        businessHours: '',
-        facebookUrl: '',
-        instagramUrl: '',
-        lineId: '',
-      });
+      detail.value = data;
+
+      setValues(
+        {
+          email: data?.email ?? '',
+          displayName: data?.displayName ?? '',
+          phone: data?.phone ?? '',
+          remark: data?.remark ?? '',
+          storeIds: [],
+
+          storeName: '',
+          shortDescription: '',
+          longDescription: '',
+          logoUrl: '',
+          coverImageUrl: '',
+          storeEmail: '',
+          storePhone: '',
+          storeAddress: '',
+          businessHours: '',
+          facebookUrl: '',
+          instagramUrl: '',
+          lineId: '',
+        },
+        false,
+      );
     },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
-onMounted(async () => {
-  if (mode.value === 'add-editor') await loadStoreOptions();
-  if (isDetail.value) await reloadDetail();
+/* ==============================
+ * Helpers
+ * ============================== */
+const emptyToNull = (value: any) => {
+  const text = String(value ?? '').trim();
+
+  return text ? text : null;
+};
+
+const normalizeText = (value: any) => String(value ?? '').trim();
+
+const buildOwnerPayload = (values: any) => ({
+  email: normalizeText(values.email),
+  displayName: normalizeText(values.displayName),
+  phone: emptyToNull(values.phone),
+  remark: emptyToNull(values.remark),
+
+  storeName: normalizeText(values.storeName),
+  shortDescription: normalizeText(values.shortDescription),
+  longDescription: emptyToNull(values.longDescription),
+  logoUrl: normalizeText(values.logoUrl),
+  coverImageUrl: emptyToNull(values.coverImageUrl),
+
+  storeEmail: normalizeText(values.storeEmail),
+  storePhone: normalizeText(values.storePhone),
+  storeAddress: normalizeText(values.storeAddress),
+  businessHours: normalizeText(values.businessHours),
+
+  facebookUrl: emptyToNull(values.facebookUrl),
+  instagramUrl: emptyToNull(values.instagramUrl),
+  lineId: emptyToNull(values.lineId),
 });
 
-/* mock */
+const buildEditorPayload = (values: any) => ({
+  storeIds: Array.isArray(values.storeIds) ? values.storeIds : [],
+  email: normalizeText(values.email),
+  displayName: normalizeText(values.displayName),
+  phone: emptyToNull(values.phone),
+  remark: emptyToNull(values.remark),
+});
+
+/* ==============================
+ * Mock
+ * ============================== */
 const fillMockData = async () => {
   const ts = Date.now();
 
   if (mode.value === 'add-owner') {
-    setValues({
-      email: `owner_${ts}@example.com`,
-      displayName: `店家老闆_${ts}`,
-      phone: '0912345678',
-      remark: '測試建立店家負責人',
+    setValues(
+      {
+        email: `owner_${ts}@example.com`,
+        displayName: `店家老闆_${ts}`,
+        phone: '0912345678',
+        remark: '測試建立店家負責人',
 
-      storeName: `KUJI 測試商店_${ts}`,
-      shortDescription: '專營一番賞、扭蛋精品',
-      longDescription: '店家詳細介紹（可留空）',
-      logoUrl: 'https://picsum.photos/seed/logo/300/300',
-      coverImageUrl: 'https://picsum.photos/seed/cover/1200/600',
-      storeEmail: `shop_${ts}@example.com`,
-      storePhone: '02-1234-5678',
-      storeAddress: '無',
-      businessHours: '每日 10:00~22:00',
-      facebookUrl: '',
-      instagramUrl: '',
-      lineId: '',
-      storeIds: [],
-    });
-  } else {
-    const firstStoreId =
-      storeOptions.value.find((o) => o.value)?.value || 'STORE_ID_HERE';
-    setValues({
+        storeIds: [],
+
+        storeName: `KUJI 測試商店_${ts}`,
+        shortDescription: '專營一番賞、扭蛋精品',
+        longDescription: '這是一間開發測試用店家，可用來確認負責人建立流程。',
+        logoUrl: 'https://picsum.photos/seed/kuji-logo/300/300',
+        coverImageUrl: 'https://picsum.photos/seed/kuji-cover/1200/600',
+        storeEmail: `shop_${ts}@example.com`,
+        storePhone: '02-1234-5678',
+        storeAddress: '無',
+        businessHours: '每日 10:00~22:00',
+        facebookUrl: '',
+        instagramUrl: '',
+        lineId: 'kuji_official',
+      },
+      false,
+    );
+
+    activeTab.value = 'account';
+    return;
+  }
+
+  const firstStoreId =
+    storeOptions.value.find((option) => option.value)?.value || '';
+
+  setValues(
+    {
       email: `editor_${ts}@example.com`,
       displayName: `店家小編_${ts}`,
       phone: '0912345678',
       remark: '測試建立店家編輯',
-      storeIds: [firstStoreId],
+
+      storeIds: firstStoreId ? [firstStoreId] : [],
 
       storeName: '',
       shortDescription: '',
@@ -630,77 +1027,66 @@ const fillMockData = async () => {
       facebookUrl: '',
       instagramUrl: '',
       lineId: '',
-    });
-  }
+    },
+    false,
+  );
 
-  await openInfoDialog({
-    title: '提示訊息',
-    message: '已帶入測試資料',
-    iconType: 'success',
-  });
+  activeTab.value = 'account';
 };
 
-/* submit */
-const onSubmit = handleSubmit(async (values) => {
-  if (isDetail.value) return;
+/* ==============================
+ * Submit
+ * ============================== */
+const onSubmit = handleSubmit(
+  async (values) => {
+    isSubmitted.value = true;
 
-  if (mode.value === 'add-owner') {
+    if (isDetail.value) return;
+
+    const ok = await openConfirmDialog({
+      title: '儲存確認',
+      message:
+        mode.value === 'add-owner'
+          ? '確定要建立店家負責人帳號嗎？'
+          : '確定要建立店家編輯帳號嗎？',
+    });
+
+    if (!ok) return;
+
     await executeApi({
-      fn: async () =>
-        createStoreOwner({
-          email: values.email,
-          displayName: values.displayName,
-          phone: values.phone || null,
-          remark: values.remark || null,
+      fn: async () => {
+        if (mode.value === 'add-owner') {
+          return createStoreOwner(buildOwnerPayload(values));
+        }
 
-          storeName: values.storeName,
-          shortDescription: values.shortDescription,
-          longDescription: values.longDescription || null,
-          logoUrl: values.logoUrl,
-          coverImageUrl: values.coverImageUrl || null,
-
-          storeEmail: values.storeEmail,
-          storePhone: values.storePhone,
-          storeAddress: values.storeAddress,
-          businessHours: values.businessHours,
-
-          facebookUrl: values.facebookUrl || null,
-          instagramUrl: values.instagramUrl || null,
-          lineId: values.lineId || null,
-        }),
+        return createStoreEditor(buildEditorPayload(values));
+      },
       onSuccess: async () => {
         await openInfoDialog({
           title: '提示訊息',
-          message: `建立店家負責人成功，初始密碼已發送至 ${values.email}`,
+          message:
+            mode.value === 'add-owner'
+              ? `建立店家負責人成功，初始密碼已發送至 ${values.email}`
+              : `建立店家編輯成功，初始密碼已發送至 ${values.email}`,
           iconType: 'success',
         });
-        router.push('/home/admin-users');
+
+        router.push(LIST_PATH);
       },
+      showSuccessDialog: false,
+      showFailDialog: true,
+      showCatchDialog: true,
     });
-    return;
-  }
+  },
+  (ctx) => {
+    isSubmitted.value = true;
+    jumpToErrorTab(ctx.errors || {});
+  },
+);
 
-  await executeApi({
-    fn: async () =>
-      createStoreEditor({
-        storeIds: values.storeIds,
-        email: values.email,
-        displayName: values.displayName,
-        phone: values.phone || null,
-        remark: values.remark || null,
-      }),
-    onSuccess: async () => {
-      await openInfoDialog({
-        title: '提示訊息',
-        message: `建立店家編輯成功，初始密碼已發送至 ${values.email}`,
-        iconType: 'success',
-      });
-      router.push('/home/admin-users');
-    },
-  });
-});
-
-/* detail actions */
+/* ==============================
+ * Detail actions
+ * ============================== */
 const doActivate = async () => {
   if (!userId.value) return;
 
@@ -708,6 +1094,7 @@ const doActivate = async () => {
     title: '啟用確認',
     message: '確定要啟用此帳號嗎？',
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -718,8 +1105,10 @@ const doActivate = async () => {
         message: '啟用成功',
         iconType: 'success',
       });
+
       await reloadDetail();
     },
+    showSuccessDialog: false,
   });
 };
 
@@ -730,6 +1119,7 @@ const doDeactivate = async () => {
     title: '停用確認',
     message: '確定要停用此帳號嗎？',
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -740,8 +1130,10 @@ const doDeactivate = async () => {
         message: '停用成功',
         iconType: 'success',
       });
+
       await reloadDetail();
     },
+    showSuccessDialog: false,
   });
 };
 
@@ -752,14 +1144,17 @@ const doResetPassword = async () => {
     title: '重設密碼確認',
     message: '確定要重設此帳號密碼嗎？',
   });
+
   if (!ok) return;
 
-  await executeApi<{ newPassword: string }>({
+  await executeApi<{ newPassword?: string }>({
     fn: async () => resetAdminUserPassword(userId.value),
-    onSuccess: async (data) => {
+    onSuccess: async (res: any) => {
+      const data = res?.data ?? res;
       const extra = data?.newPassword
         ? `（臨時密碼：${data.newPassword}，請告知用戶）`
         : '';
+
       await openInfoDialog({
         title: '重設成功',
         message: `密碼已重設，新密碼已發送至用戶 Email。${extra}`,
@@ -767,6 +1162,8 @@ const doResetPassword = async () => {
       });
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
@@ -775,8 +1172,9 @@ const doDelete = async () => {
 
   const ok = await openConfirmDialog({
     title: '刪除確認',
-    message: '確定要刪除此帳號嗎？（後端為軟刪除＝停用）',
+    message: '確定要刪除此帳號嗎？（刪除後無法復原）',
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -787,68 +1185,214 @@ const doDelete = async () => {
         message: '刪除成功',
         iconType: 'success',
       });
-      router.push('/home/admin-users');
+
+      router.push(LIST_PATH);
     },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
+
+/* ==============================
+ * Reset / Navigation
+ * ============================== */
+const resetFormValues = async () => {
+  if (isDetail.value) {
+    await reloadDetail();
+    activeTab.value = 'detail';
+    return;
+  }
+
+  resetForm({
+    values: {
+      ...initialValues,
+      storeIds: [],
+    },
+  });
+
+  activeTab.value = 'account';
+  isSubmitted.value = false;
+};
+
+const goBack = () => {
+  router.push(LIST_PATH);
+};
+
+/* ==============================
+ * Mounted
+ * ============================== */
+onMounted(async () => {
+  if (mode.value === 'add-editor') {
+    await loadStoreOptions();
+  }
+
+  if (isDetail.value) {
+    activeTab.value = 'detail';
+    await reloadDetail();
+  }
+});
 </script>
 
-<style scoped>
-.adminUser__steps {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 8px;
-}
-.adminUser__step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #6b7280;
-}
-.adminUser__step--active {
-  color: #6366f1;
-  font-weight: 600;
-}
-.adminUser__step--done {
-  color: #10b981;
-}
-.adminUser__stepNum {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-.adminUser__stepDivider {
-  color: #d1d5db;
-}
-.adminUser__storeCheckboxList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  min-height: 40px;
-}
-.adminUser__storeCheckbox {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: #f9fafb;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
-.adminUser__storeCheckbox input {
-  cursor: pointer;
+<style scoped lang="scss">
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+
+.admin-user-form {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
+    gap: 18px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  &__left,
+  &__right {
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 14px;
+    background: $form-bg;
+  }
+
+  &__info-box {
+    margin: 8px 6px 4px;
+    padding: 10px 14px;
+    border-left: 4px solid $brand;
+    border-radius: $form-radius;
+    background: color.mix($brand-light, #fff, 35%);
+    color: $brand-dark;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__store-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__store-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    margin-bottom: 12px;
+  }
+
+  &__store-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  &__store-badge {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color.mix($brand-light, #fff, 15%);
+    color: $brand;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+
+  &__empty {
+    margin: 10px 0 0;
+    color: $form-muted;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__detail-item {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  &__detail-label {
+    color: $form-muted;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  &__detail-value {
+    min-width: 0;
+    color: $form-text;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  @media (max-width: 1180px) {
+    &__layout {
+      grid-template-columns: 1fr;
+    }
+
+    &__right {
+      position: static;
+    }
+  }
+
+  @media (max-width: 576px) {
+    &__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    &__card {
+      padding: 12px;
+    }
+
+    &__store-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    &__store-badge {
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    &__detail-item {
+      grid-template-columns: 1fr;
+    }
+  }
 }
 </style>

@@ -6,261 +6,218 @@
         最新消息{{ isEdit ? '編輯' : '新增' }}
       </p>
 
-      <!-- 基本資料 -->
-      <FormSection title="基本資料">
-        <div class="flex flex-wrap">
-          <!-- 標題 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormInput
-              label="標題"
-              v-model="title"
-              :error="displayErrors.title"
-              required
-              maxlength="100"
-              placeholder="請輸入最新消息標題"
-            />
-          </div>
+      <div class="news-form__layout">
+        <!-- 左側：主要表單 -->
+        <div class="news-form__left">
+          <!-- 基本資料 -->
+          <FormSection title="基本資料">
+            <div class="news-form__card">
+              <div class="flex flex-wrap">
+                <!-- 標題 -->
+                <div class="w-50 w-md-100 p-6">
+                  <FormInput
+                    label="標題"
+                    v-model="title"
+                    :error="displayErrors.title"
+                    required
+                    maxlength="100"
+                    placeholder="請輸入最新消息標題"
+                  />
+                </div>
 
-          <!-- 分類 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="分類"
-              v-model="category"
-              :options="categoryOptions"
-              :error="displayErrors.category"
-              required
-            />
-          </div>
+                <!-- 分類 -->
+                <div class="w-50 w-md-100 p-6">
+                  <FormRadioTagGroup
+                    label="分類"
+                    name="news-category"
+                    id-prefix="news-category"
+                    v-model="category"
+                    :options="categoryOptions"
+                    :error="displayErrors.category"
+                    required
+                  />
+                </div>
 
-          <!-- 狀態 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormSelect
-              label="狀態"
-              v-model="status"
-              :options="statusOptions"
-              :error="displayErrors.status"
-              required
-            />
-          </div>
+                <!-- 重要消息 -->
+                <div class="w-100 p-6">
+                  <FormCheckboxField
+                    label="重要程度"
+                    checkbox-label="標記為重要消息"
+                    v-model="isImportant"
+                    :trueValue="true"
+                    :falseValue="false"
+                    :error="displayErrors.isImportant"
+                    hint="勾選後，列表會顯示重要消息標記。"
+                  />
+                </div>
+              </div>
+            </div>
+          </FormSection>
 
-          <!-- 重要消息 -->
-          <div class="w-50 w-md-100 p-6">
-            <FormCheckboxField
-              label="重要程度"
-              checkbox-label="標記為重要消息"
-              v-model="isImportant"
-              :trueValue="true"
-              :falseValue="false"
-              :error="displayErrors.isImportant"
-              hint="勾選後，列表會顯示重要消息標記。"
-            />
-          </div>
+          <!-- 狀態與排程 -->
+          <FormSection title="狀態與排程">
+            <div class="news-form__card news-form__card--schedule">
+              <div class="news-form__status-panel">
+                <FormRadioTagGroup
+                  label="狀態"
+                  name="news-status"
+                  id-prefix="news-status"
+                  v-model="status"
+                  :options="statusOptions"
+                  :error="displayErrors.status"
+                  required
+                />
+              </div>
+
+              <div class="news-form__schedule-layout">
+                <div class="w-100 p-6">
+                  <FormDateRangeField
+                    label="發布 / 下架時間"
+                    type="datetime-local"
+                    v-model:start="scheduledAt"
+                    v-model:end="endTime"
+                    :start-error="displayErrors.scheduledAt"
+                    :end-error="displayErrors.endTime"
+                    hint="發布時間留空代表立即發布；下架時間可不填。"
+                  />
+                </div>
+              </div>
+            </div>
+          </FormSection>
+
+          <!-- 內容 -->
+          <FormSection title="內容">
+            <div class="news-form__editor-card">
+              <div class="news-form__editor-head">
+                <p class="news-form__editor-title">消息內容</p>
+
+                <span class="news-form__editor-badge">
+                  可插入圖片與格式化文字
+                </span>
+              </div>
+
+              <div class="news-form__editor-main">
+                <Ckeditor
+                  :editor="ckeditorEditor"
+                  v-model="content"
+                  :config="editorConfig"
+                />
+              </div>
+
+              <p class="error-text m-t-8" v-if="displayErrors.content">
+                {{ displayErrors.content }}
+              </p>
+            </div>
+          </FormSection>
         </div>
-      </FormSection>
 
-      <!-- 上下架時間 -->
-      <FormSection title="上下架時間">
-        <div class="flex flex-wrap">
-          <div class="w-100 p-6">
-            <FormDateRangeField
-              label="發布 / 下架時間"
-              type="datetime-local"
-              v-model:start="scheduledAt"
-              v-model:end="endTime"
-              :start-error="displayErrors.scheduledAt"
-              :end-error="displayErrors.endTime"
-              hint="發布時間留空代表立即發布；下架時間可不填。"
-            />
-          </div>
-        </div>
-      </FormSection>
+        <!-- 右側：封面圖片 -->
+        <div class="news-form__right">
+          <FormSection title="封面圖片">
+            <div class="news-form__image-card">
+              <div class="news-form__image-main-block">
+                <div class="news-form__image-main-wrap">
+                  <button
+                    type="button"
+                    class="news-form__image-upload"
+                    :class="{
+                      'news-form__image-upload--empty': !imagePreview,
+                    }"
+                    :disabled="uploading || cropping"
+                    @click="triggerCoverUpload"
+                  >
+                    <img
+                      v-if="imagePreview"
+                      :src="imagePreview"
+                      alt="最新消息封面預覽"
+                      class="news-form__image"
+                    />
 
-      <!-- 封面圖片 -->
-      <FormSection title="封面圖片">
-        <div class="flex flex-wrap">
-          <div class="w-50 w-md-100 p-6">
-            <UploadDropzone
-              label="封面圖片"
-              accept="image/*"
-              :disabled="uploading || bulkCreating || cropOpen"
-              :fileName="uploadFileName"
-              :errorMessage="uploadErrorMessage"
-              :statusText="
-                uploading ? '上傳中...' : cropOpen ? '裁切中...' : ''
-              "
-              :showDecorIcons="true"
-              :showClear="true"
-              @select="handleSelectedFile"
-              @clear="clearSelectedFileUi"
-            />
+                    <div v-else class="news-form__empty-image">
+                      <font-awesome-icon :icon="['fas', 'image']" />
+                      <span>點擊上傳封面圖片</span>
+                    </div>
+                  </button>
 
-            <div class="m-t-12">
-              <FormInput
-                label="封面圖片 URL"
-                v-model="imageUrl"
-                :error="displayErrors.imageUrl"
-                maxlength="500"
-                placeholder="https://example.com/news.jpg（或上方上傳會自動回填）"
-                @blur="syncPreviewFromUrl"
+                  <button
+                    v-if="imageUrl"
+                    type="button"
+                    class="news-form__image-remove"
+                    :disabled="uploading || cropping"
+                    aria-label="清除圖片"
+                    @click.stop="clearImage"
+                  >
+                    <font-awesome-icon
+                      :icon="['fas', 'xmark']"
+                      class="news-form__image-remove-icon"
+                    />
+                  </button>
+                </div>
+
+                <p v-if="displayErrors.imageUrl" class="error-text m-t-8">
+                  {{ displayErrors.imageUrl }}
+                </p>
+              </div>
+
+              <input
+                ref="coverFileInput"
+                class="news-form__hidden-input"
+                type="file"
+                accept="image/*"
+                :disabled="uploading || cropping"
+                @change="onCoverFileChange"
               />
             </div>
-
-            <div class="flex gap-x-12 m-t-12" v-if="imageUrl">
-              <MButton
-                type="button"
-                class="mbtn--gray"
-                :disabled="uploading || bulkCreating || cropOpen"
-                @click="clearImage"
-              >
-                <font-awesome-icon icon="fa-trash" class="m-r-4" />
-                清除圖片
-              </MButton>
-
-              <p class="form__text" v-if="uploading">上傳中...</p>
-            </div>
-
-            <div v-if="imagePreview" class="news-form__image-preview m-t-12">
-              <img :src="imagePreview" alt="preview" />
-            </div>
-          </div>
+          </FormSection>
         </div>
-      </FormSection>
-
-      <!-- 內容 -->
-      <FormSection title="內容">
-        <div class="flex flex-wrap">
-          <div class="w-100 p-6">
-            <div class="news-form__editor-toolbar" v-if="editor">
-              <button
-                type="button"
-                @click="editor.chain().focus().toggleBold().run()"
-                :class="{ 'is-active': editor.isActive('bold') }"
-              >
-                B
-              </button>
-
-              <button
-                type="button"
-                @click="editor.chain().focus().toggleItalic().run()"
-                :class="{ 'is-active': editor.isActive('italic') }"
-              >
-                I
-              </button>
-
-              <button
-                type="button"
-                @click="
-                  editor.chain().focus().toggleHeading({ level: 2 }).run()
-                "
-                :class="{
-                  'is-active': editor.isActive('heading', { level: 2 }),
-                }"
-              >
-                H2
-              </button>
-
-              <button
-                type="button"
-                @click="
-                  editor.chain().focus().toggleHeading({ level: 3 }).run()
-                "
-                :class="{
-                  'is-active': editor.isActive('heading', { level: 3 }),
-                }"
-              >
-                H3
-              </button>
-
-              <button
-                type="button"
-                @click="editor.chain().focus().toggleBulletList().run()"
-                :class="{ 'is-active': editor.isActive('bulletList') }"
-              >
-                <font-awesome-icon icon="fa-list-ul" class="m-r-4" />
-                List
-              </button>
-
-              <button
-                type="button"
-                @click="editor.chain().focus().toggleOrderedList().run()"
-                :class="{ 'is-active': editor.isActive('orderedList') }"
-              >
-                <font-awesome-icon icon="fa-list-ol" class="m-r-4" />
-                List
-              </button>
-
-              <button type="button" @click="setLink">
-                <font-awesome-icon icon="fa-link" class="m-r-4" />
-                Link
-              </button>
-            </div>
-
-            <EditorContent :editor="editor" />
-
-            <p class="error-text m-t-8" v-if="displayErrors.content">
-              {{ displayErrors.content }}
-            </p>
-          </div>
-        </div>
-      </FormSection>
+      </div>
 
       <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
         <MButton
-          type="submit"
-          :disabled="uploading || bulkCreating || cropOpen"
+          v-if="isDev"
+          type="button"
+          class="mbtn--gray"
+          :disabled="uploading || cropping"
+          @click="fillMockData"
         >
+          快速帶入假資料
+        </MButton>
+
+        <MButton type="submit" :disabled="uploading || cropping">
           <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
 
-        <MButton type="button" class="mbtn--red" @click="navigateBack">
+        <MButton type="button" class="mbtn--gray" @click="navigateBack">
           <font-awesome-icon icon="fa-arrow-left" class="m-r-4" />
           返回
         </MButton>
       </div>
     </form>
-
-    <ImageCropDialog
-      v-model="cropOpen"
-      :src="cropSrc"
-      title="裁切 最新消息 封面圖"
-      :aspectRatio="16 / 9"
-      :outputWidth="1200"
-      mimeType="image/jpeg"
-      :quality="0.9"
-      :fileName="cropFileName"
-      @cancel="onCropCancel"
-      @confirm="onCropConfirm"
-    />
   </MCard>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
 
-/* TipTap */
-import { useEditor, EditorContent } from '@tiptap/vue-3';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { Ckeditor } from '@ckeditor/ckeditor5-vue';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
 import FormSection from '@/components/common/FormSection.vue';
 import FormCheckboxField from '@/components/common/FormCheckboxField.vue';
 import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
-import UploadDropzone from '@/components/common/UploadDropzone.vue';
-import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
+import FormRadioTagGroup from '@/components/common/FormRadioTagGroup.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useDialogStore } from '@/stores';
 import { useNewsStore } from '@/stores/news/useNewsStore';
+import { openImageCropDialog } from '@/utils/dialog/openImageCropDialog';
 
 import {
   getNewsById,
@@ -273,11 +230,12 @@ import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 const route = useRoute();
 const router = useRouter();
-const dialogStore = useDialogStore();
 const newsStore = useNewsStore();
 
 const isEdit = computed(() => Boolean(route.params.id));
 const id = computed(() => String(route.params.id || ''));
+
+const isDev = import.meta.env.DEV;
 
 /** 是否已按過送出 */
 const isSubmitted = ref(false);
@@ -288,10 +246,16 @@ const displayErrors = computed<Record<string, string | undefined>>(() => {
   return errors.value;
 });
 
+type SelectOption = {
+  label: string;
+  value: any;
+  disabled?: boolean;
+};
+
 /** 選項 */
 const statusOptions: SelectOption[] = [
-  { label: '草稿（DRAFT）', value: 'DRAFT' },
-  { label: '上架（PUBLISHED）', value: 'PUBLISHED' },
+  { label: '草稿', value: 'DRAFT' },
+  { label: '上架', value: 'PUBLISHED' },
 ];
 
 const categoryOptions: SelectOption[] = [
@@ -332,13 +296,29 @@ const normalizeBoolean = (value: any) => {
 /** schema */
 const schema = yup.object({
   title: yup.string().required('請輸入標題').max(100, '標題最多100字'),
+
   category: yup.string().required('請選擇分類'),
+
   isImportant: yup.mixed().nullable(),
+
   status: yup.string().required('請選擇狀態'),
+
   imageUrl: yup.string().nullable().max(500, '封面圖片 URL 最多500字'),
+
   content: yup.string().required('請輸入內容'),
+
   scheduledAt: yup.string().nullable(),
-  endTime: yup.string().nullable(),
+
+  endTime: yup
+    .string()
+    .nullable()
+    .test('endAfterStart', '下架時間必須晚於發布時間', function (endValue) {
+      const start = this.parent.scheduledAt;
+
+      if (!start || !endValue) return true;
+
+      return endValue > start;
+    }),
 });
 
 const { errors, handleSubmit, setValues, defineField } = useForm({
@@ -365,68 +345,92 @@ const [content] = defineField('content');
 const [scheduledAt] = defineField('scheduledAt');
 const [endTime] = defineField('endTime');
 
-/** TipTap editor */
-const editor = useEditor({
-  extensions: [StarterKit, Link.configure({ openOnClick: false }), Image],
-  content: '',
-  onUpdate({ editor: instance }) {
-    content.value = instance.getHTML();
-  },
-});
+/* --------------------------------------
+ * CKEditor
+ * -------------------------------------- */
+const ckeditorEditor = ClassicEditor as unknown as {
+  create(...args: any[]): Promise<any>;
+};
 
-const setLink = () => {
-  const previousUrl = editor.value?.getAttributes('link').href ?? '';
-  const url = window.prompt('請輸入連結 URL', previousUrl);
+class NewsCustomUploadAdapter {
+  loader: any;
 
-  if (url === null) return;
-
-  if (url === '') {
-    editor.value?.chain().focus().extendMarkRange('link').unsetLink().run();
-    return;
+  constructor(loader: any) {
+    this.loader = loader;
   }
 
-  editor.value
-    ?.chain()
-    .focus()
-    .extendMarkRange('link')
-    .setLink({ href: url })
-    .run();
+  upload() {
+    return this.loader.file.then(async (file: File) => {
+      const res: any = await uploadNewsImage(file);
+      const url = res?.data?.imageUrl || res?.imageUrl || '';
+
+      if (!url) {
+        throw new Error('上傳成功但未取得 imageUrl');
+      }
+
+      return {
+        default: url,
+      };
+    });
+  }
+
+  abort() {
+    console.log('CKEditor 圖片上傳被中止');
+  }
+}
+
+function CustomUploadAdapterPlugin(editor: any) {
+  editor.plugins.get('FileRepository').createUploadAdapter = (loader: any) => {
+    return new NewsCustomUploadAdapter(loader);
+  };
+}
+
+const editorConfig: any = {
+  toolbar: [
+    'heading',
+    '|',
+    'bold',
+    'italic',
+    'link',
+    'bulletedList',
+    'numberedList',
+    'blockQuote',
+    'imageUpload',
+    '|',
+    'undo',
+    'redo',
+  ],
+  language: 'zh-tw',
+  image: {
+    toolbar: ['imageStyle:full', 'imageStyle:side'],
+  },
+  extraPlugins: [CustomUploadAdapterPlugin],
 };
+
+/* --------------------------------------
+ * Image state
+ * -------------------------------------- */
+const coverFileInput = ref<HTMLInputElement | null>(null);
 
 const imagePreview = ref('');
 const uploading = ref(false);
-const bulkCreating = ref(false);
+const cropping = ref(false);
 
-/* UploadDropzone UI */
-const uploadFileName = ref('');
-const uploadErrorMessage = ref<string | null>(null);
-
-const clearSelectedFileUi = () => {
-  uploadFileName.value = '';
-  uploadErrorMessage.value = null;
+const triggerCoverUpload = () => {
+  if (uploading.value || cropping.value) return;
+  coverFileInput.value?.click();
 };
 
-/* crop */
-const cropOpen = ref(false);
-const cropSrc = ref('');
-const cropFileName = ref('cropped.jpg');
+const onCoverFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
 
-const revokeCropSrc = () => {
-  if (cropSrc.value) {
-    URL.revokeObjectURL(cropSrc.value);
-    cropSrc.value = '';
-  }
+  input.value = '';
+
+  if (!file) return;
+
+  await handleSelectedFile(file);
 };
-
-const onCropCancel = () => {
-  cropOpen.value = false;
-  revokeCropSrc();
-};
-
-onBeforeUnmount(() => {
-  revokeCropSrc();
-  editor.value?.destroy();
-});
 
 /* 編輯模式載入 */
 const loadDetail = async () => {
@@ -452,10 +456,6 @@ const loadDetail = async () => {
       );
 
       imagePreview.value = data?.imageUrl ?? '';
-
-      if (editor.value && data?.content) {
-        editor.value.commands.setContent(data.content, { emitUpdate: false });
-      }
     },
     showSuccessDialog: false,
     showFailDialog: true,
@@ -464,87 +464,77 @@ const loadDetail = async () => {
 };
 
 watch(
-  () => editor.value,
-  (instance) => {
-    if (instance && content.value) {
-      instance.commands.setContent(content.value, { emitUpdate: false });
-    }
+  imageUrl,
+  (value) => {
+    imagePreview.value = String(value || '');
   },
-  { once: true },
+  { immediate: true },
 );
-
-const syncPreviewFromUrl = () => {
-  imagePreview.value = imageUrl.value || '';
-};
 
 const clearImage = () => {
   imageUrl.value = '';
   imagePreview.value = '';
-  clearSelectedFileUi();
 };
 
-/* 選檔：先驗檔 -> 開裁切 */
-const handleSelectedFile = async (file: File) => {
-  uploadErrorMessage.value = null;
-
+const validateImageFile = async (file: File) => {
   const maxSize = 5 * 1024 * 1024;
 
   if (file.size > maxSize) {
-    uploadErrorMessage.value = '圖片大小不可超過 5MB';
-
-    await openInfoDialog({
-      title: '提示訊息',
-      message: '圖片大小不可超過 5MB',
-      iconType: 'warning',
-    });
-
-    clearSelectedFileUi();
-    return;
+    return '圖片大小不可超過 5MB';
   }
 
   if (!file.type.startsWith('image/')) {
-    uploadErrorMessage.value = '請選擇圖片檔案';
-
-    await openInfoDialog({
-      title: '提示訊息',
-      message: '請選擇圖片檔案',
-      iconType: 'warning',
-    });
-
-    clearSelectedFileUi();
-    return;
+    return '請選擇圖片檔案';
   }
 
-  uploadFileName.value = file.name;
-
-  revokeCropSrc();
-  cropSrc.value = URL.createObjectURL(file);
-
-  const base = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
-  cropFileName.value = `${base}-cropped.jpg`;
-
-  cropOpen.value = true;
+  return '';
 };
 
-/* 裁切確認 -> 上傳 */
-const onCropConfirm = async (croppedFile: File) => {
-  cropOpen.value = false;
-  revokeCropSrc();
+const handleSelectedFile = async (file: File) => {
+  const errorMessage = await validateImageFile(file);
 
-  if (bulkCreating.value) {
+  if (errorMessage) {
     await openInfoDialog({
       title: '提示訊息',
-      message: '批量新增進行中，請稍後再上傳圖片',
+      message: errorMessage,
       iconType: 'warning',
     });
 
     return;
   }
 
+  const objectUrl = URL.createObjectURL(file);
+  const baseName = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  const croppedFileName = `${baseName}-cropped.jpg`;
+
+  try {
+    cropping.value = true;
+
+    const croppedFile = await openImageCropDialog({
+      src: objectUrl,
+      title: '裁切最新消息封面圖',
+      hint: '請裁切成 16:9 圖片比例',
+      aspectRatio: 16 / 9,
+      outputWidth: 1200,
+      mimeType: 'image/jpeg',
+      quality: 0.9,
+      fileName: croppedFileName,
+    });
+
+    if (!croppedFile) return;
+
+    await uploadCroppedNewsImage(croppedFile);
+  } finally {
+    cropping.value = false;
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+const uploadCroppedNewsImage = async (file: File) => {
   uploading.value = true;
 
   await executeApi<{ imageUrl: string }>({
-    fn: async () => uploadNewsImage(croppedFile),
+    fn: async () => uploadNewsImage(file),
     onSuccess: async (data: any) => {
       const url = data?.imageUrl || data?.data?.imageUrl || '';
 
@@ -571,7 +561,52 @@ const onCropConfirm = async (croppedFile: File) => {
       uploading.value = false;
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
+};
+
+/* --------------------------------------
+ * Dev mock
+ * -------------------------------------- */
+const fillMockData = () => {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  const yyyy = now.getFullYear();
+  const mm = pad(now.getMonth() + 1);
+  const dd = pad(now.getDate());
+  const hh = pad(now.getHours());
+  const mi = pad(now.getMinutes());
+
+  const scheduledAtValue = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+
+  const mockContent = `
+    <h2>最新活動公告</h2>
+    <p>這是一筆開發環境快速帶入的測試內容，可用來確認最新消息前台顯示效果。</p>
+    <p>內容包含活動說明、注意事項與相關連結，可依實際需求調整。</p>
+    <ul>
+      <li>活動期間請以後台設定為準</li>
+      <li>封面圖可點擊右側圖片區塊上傳</li>
+      <li>上架後將顯示於最新消息列表</li>
+    </ul>
+  `.trim();
+
+  setValues(
+    {
+      title: `測試消息_${Date.now()}`,
+      category: 'ANNOUNCEMENT',
+      isImportant: true,
+      status: 'DRAFT',
+      imageUrl: '',
+      content: mockContent,
+      scheduledAt: scheduledAtValue,
+      endTime: '',
+    },
+    false,
+  );
+
+  imagePreview.value = '';
 };
 
 /* submit */
@@ -579,12 +614,12 @@ const onSubmit = handleSubmit(
   async (values) => {
     isSubmitted.value = true;
 
-    if (uploading.value || bulkCreating.value || cropOpen.value) {
+    if (uploading.value || cropping.value) {
       await openInfoDialog({
         title: '提示訊息',
-        message: cropOpen.value
+        message: cropping.value
           ? '圖片裁切中，請先完成裁切再送出'
-          : '操作進行中，請稍後再送出',
+          : '圖片上傳中，請稍後再送出',
         iconType: 'warning',
       });
 
@@ -647,46 +682,286 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+
 .news-form {
-  &__image-preview {
-    img {
-      max-width: 240px;
-      border-radius: 8px;
-    }
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
+    gap: 18px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
   }
 
-  &__editor-toolbar {
+  &__left,
+  &__right {
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__card,
+  &__image-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 14px;
+    background: $form-bg;
+  }
+
+  &__card--schedule {
+    padding: 14px 8px;
+  }
+
+  &__status-panel {
+    padding: 0 6px 14px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed $form-border;
+  }
+
+  &__schedule-layout {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 4px;
+    min-width: 0;
+  }
 
-    button {
-      padding: 4px 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      background: #f9fafb;
-      cursor: pointer;
-      font-size: 13px;
+  &__image-card {
+    overflow: hidden;
+  }
 
-      &.is-active {
-        background: #6366f1;
-        color: #ffffff;
-        border-color: #6366f1;
-      }
+  &__image-main-block {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__image-main-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__image-upload {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px dashed $form-border;
+    border-radius: 14px;
+    background: color.mix($form-border, #fff, 28%);
+    cursor: pointer;
+    padding: 0;
+    line-height: 0;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      transform 0.12s ease;
+
+    &:hover:not(:disabled) {
+      border-color: $brand;
+      background: $brand-light;
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.995);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    &--empty {
+      align-items: center;
+      justify-content: center;
+      line-height: normal;
     }
   }
 
-  :deep(.ProseMirror) {
-    min-height: 260px;
-    padding: 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    outline: none;
+  &__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
   }
 
-  :deep(.ProseMirror:focus) {
-    border-color: #6366f1;
+  &__empty-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    color: $form-muted;
+    text-align: center;
+
+    svg {
+      color: $brand;
+      font-size: 26px;
+      opacity: 0.85;
+    }
+
+    span {
+      color: $form-text;
+      font-size: 13px;
+      font-weight: 700;
+    }
+  }
+
+  &__image-remove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 999px;
+    background: $danger;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba($ink-900, 0.18);
+    transition:
+      background-color 0.12s ease,
+      transform 0.12s ease,
+      opacity 0.12s ease;
+
+    &:hover {
+      background: color.adjust($danger, $lightness: -6%);
+      transform: scale(1.06);
+    }
+
+    &:active {
+      background: color.adjust($danger, $lightness: -12%);
+      transform: scale(0.96);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+
+  &__hidden-input {
+    display: none;
+  }
+
+  &__editor-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 16px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 18px;
+    background: $form-bg;
+    box-shadow: 0 8px 20px rgba($ink-900, 0.035);
+    overflow: hidden;
+  }
+
+  &__editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    min-width: 0;
+  }
+
+  &__editor-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  &__editor-badge {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: color.mix($brand-light, #fff, 28%);
+    color: $brand-dark;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__editor-main {
+    overflow: hidden;
+    background: #fff;
+
+    :deep(.ck.ck-toolbar) {
+      background: color.mix($brand-light, #fff, 12%);
+    }
+
+    :deep(.ck.ck-editor__main > .ck-editor__editable) {
+      box-shadow: none;
+    }
+
+    :deep(.ck-editor__editable_inline) {
+      min-height: 560px;
+      padding: 18px 20px;
+      line-height: 1.8;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    &__layout {
+      grid-template-columns: 1fr;
+    }
+
+    &__right {
+      position: static;
+    }
+  }
+
+  @media (max-width: 960px) {
+    &__editor-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 576px) {
+    &__card,
+    &__image-card,
+    &__editor-card {
+      padding: 12px;
+    }
+
+    &__image-remove {
+      top: 8px;
+      right: 8px;
+    }
+
+    &__editor-badge {
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    &__editor-main {
+      :deep(.ck-editor__editable_inline) {
+        min-height: 420px;
+        padding: 14px;
+      }
+    }
   }
 }
 </style>

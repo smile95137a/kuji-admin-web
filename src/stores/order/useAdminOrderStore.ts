@@ -30,23 +30,24 @@ export const useAdminOrderStore = defineStore('adminOrder', () => {
   /** 返回列表後是否重新查詢 */
   const shouldRefresh = ref(false);
 
-  const setSearchCondition = (value: any) => {
+  /** setters */
+  const setSearchCondition = (v: any) => {
     searchCondition.value = {
       ...searchCondition.value,
-      ...(value ?? {}),
+      ...(v ?? {}),
     };
   };
 
-  const setList = (value: any[]) => {
-    list.value = value ?? [];
+  const setList = (v: any[]) => {
+    list.value = v ?? [];
   };
 
-  const setCurrentPage = (value: number) => {
-    currentPage.value = value;
+  const setCurrentPage = (v: number) => {
+    currentPage.value = v;
   };
 
-  const setPageLimitSize = (value: number) => {
-    pageLimitSize.value = value;
+  const setPageLimitSize = (v: number) => {
+    pageLimitSize.value = v;
   };
 
   const setSort = (key: string, order: 'asc' | 'desc' | '') => {
@@ -54,18 +55,19 @@ export const useAdminOrderStore = defineStore('adminOrder', () => {
     sortOrder.value = order;
   };
 
-  const setSelectedIds = (value: string[]) => {
-    selectedIds.value = value ?? [];
+  const setSelectedIds = (v: string[]) => {
+    selectedIds.value = v ?? [];
   };
 
-  const setShouldRefresh = (value: boolean) => {
-    shouldRefresh.value = value;
+  const setShouldRefresh = (v: boolean) => {
+    shouldRefresh.value = v;
   };
 
   const clearSelectedIds = () => {
     selectedIds.value = [];
   };
 
+  /** Reset */
   const resetAll = () => {
     searchCondition.value = {
       orderNo: '',

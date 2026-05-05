@@ -15,7 +15,7 @@ interface RequestData {
  */
 export const uploadImage = async (
   type: 'news' | 'banner' | 'lottery' | 'prize',
-  file: File
+  file: File,
 ): Promise<ApiResponse<{ imageUrl: string }>> => {
   try {
     const formData = new FormData();
@@ -34,28 +34,28 @@ export const uploadImage = async (
 
 /** 上傳 News 圖片 */
 export const uploadNewsImage = async (
-  file: File
-): Promise<ApiResponse<{ imageUrl: string }>> => {
+  file: File,
+): Promise<ApiResponse<any>> => {
   return uploadImage('news', file);
 };
 
 /** 上傳 Banner 圖片 */
 export const uploadBannerImage = async (
-  file: File
+  file: File,
 ): Promise<ApiResponse<{ imageUrl: string }>> => {
   return uploadImage('banner', file);
 };
 
 /** 上傳 Lottery 商品圖片 */
 export const uploadLotteryImage = async (
-  file: File
+  file: File,
 ): Promise<ApiResponse<{ imageUrl: string }>> => {
   return uploadImage('lottery', file);
 };
 
 /** 上傳 Prize 獎品圖片 */
 export const uploadPrizeImage = async (
-  file: File
+  file: File,
 ): Promise<ApiResponse<{ imageUrl: string }>> => {
   return uploadImage('prize', file);
 };
@@ -65,7 +65,7 @@ export const uploadPrizeImage = async (
  * 後端：@DeleteMapping + @RequestParam("imageUrl")
  */
 export const deleteImage = async (
-  imageUrl: string
+  imageUrl: string,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.delete(`${basePath}`, { params: { imageUrl } });

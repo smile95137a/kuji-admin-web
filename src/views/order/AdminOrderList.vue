@@ -454,30 +454,31 @@ const handlePageLimitSizeChange = (value: number) => {
 
 /* --------------------------------------
  * Columns
+ * 每個欄位寬度都設為 50
  * -------------------------------------- */
 const columns = computed(() => [
-  { field: 'orderNo', label: '訂單編號', width: 180, sortable: true },
-  { field: 'user', label: '玩家', width: 240, sortable: true },
+  { field: 'orderNo', label: '訂單編號', width: 50, sortable: true },
+  { field: 'user', label: '玩家', width: 50, sortable: true },
   ...(isAdmin.value
-    ? [{ field: 'store', label: '店家', width: 180, sortable: true }]
+    ? [{ field: 'store', label: '店家', width: 50, sortable: true }]
     : []),
-  { field: 'recipient', label: '收件人', width: 200, sortable: true },
+  { field: 'recipient', label: '收件人', width: 50, sortable: true },
   {
     field: 'shippingMethodName',
     label: '配送方式',
-    width: 150,
+    width: 50,
     sortable: true,
   },
   {
     field: 'shippingStatusName',
     label: '狀態',
-    width: 130,
+    width: 50,
     sortable: true,
   },
-  { field: 'prizeCount', label: '獎品數量', width: 100, sortable: true },
-  { field: 'totalAmount', label: '金額', width: 110, sortable: true },
-  { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
-  { field: 'actions', label: '操作', width: 440 },
+  { field: 'prizeCount', label: '獎品數量', width: 50, sortable: true },
+  { field: 'totalAmount', label: '金額', width: 50, sortable: true },
+  { field: 'createdAt', label: '建立時間', width: 50, sortable: true },
+  { field: 'actions', label: '操作', width: 50 },
 ]);
 
 /* --------------------------------------
