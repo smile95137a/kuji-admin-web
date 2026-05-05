@@ -4,10 +4,7 @@
     <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
       <FormTitle title="最新消息管理" />
 
-      <NewsSearchForm
-        :status-options="statusOptions"
-        :store-options="storeOptions"
-      />
+      <NewsSearchForm :status-options="statusOptions" />
 
       <div class="flex justify-center m-y-8">
         <MButton type="submit">查詢</MButton>
@@ -62,31 +59,6 @@
           :sort-order="sortOrder"
           @sort="handleSort"
         >
-          <!-- 標題 -->
-          <template #cell-title="{ item }">
-            <span class="clickable" @click="navigateToEdit(item)">
-              <font-awesome-icon
-                v-if="item.isImportant"
-                icon="fa-star"
-                class="nl__important-icon m-r-4"
-                title="重要消息"
-              />
-              {{ item.title || '-' }}
-            </span>
-          </template>
-
-          <!-- 店家 -->
-          <template #cell-storeName="{ item }">
-            <span>{{ item.storeName || item.storeId || '-' }}</span>
-          </template>
-
-          <!-- 分類 -->
-          <template #cell-category="{ item }">
-            <span :class="categoryBadgeClass(item.category)">
-              {{ categoryText(item.category) }}
-            </span>
-          </template>
-
           <!-- 封面 -->
           <template #cell-imageUrl="{ item }">
             <img
@@ -98,6 +70,26 @@
             <span v-else>-</span>
           </template>
 
+          <!-- 標題 -->
+          <template #cell-title="{ item }">
+            <span class="clickable" @click="navigateToEdit(item)">
+              <font-awesome-icon
+                v-if="item.important"
+                icon="fa-star"
+                class="nl__important-icon m-r-4"
+                title="重要消息"
+              />
+              {{ item.title || '-' }}
+            </span>
+          </template>
+
+          <!-- 分類 -->
+          <template #cell-category="{ item }">
+            <span :class="categoryBadgeClass(item.category)">
+              {{ item.categoryName || categoryText(item.category) }}
+            </span>
+          </template>
+
           <!-- 狀態 -->
           <template #cell-status="{ item }">
             <span :class="statusBadgeClass(item.status)">
@@ -105,17 +97,12 @@
             </span>
           </template>
 
-          <!-- 上架時間 -->
+          <!-- 發布時間 -->
           <template #cell-scheduledAt="{ item }">
             <DateFormatter
               :date="item.scheduledAt"
               format="YYYY-MM-DD HH:mm:ss"
             />
-          </template>
-
-          <!-- 下架時間 -->
-          <template #cell-endTime="{ item }">
-            <DateFormatter :date="item.endTime" format="YYYY-MM-DD HH:mm:ss" />
           </template>
 
           <!-- 更新時間 -->
@@ -126,17 +113,15 @@
             />
           </template>
 
-          <!-- 建立時間 -->
-          <template #cell-createdAt="{ item }">
-            <DateFormatter
-              :date="item.createdAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-          </template>
+          <!-- 操作 -->
+          <template #cell-actions="{ item }">
+            <div class="flex gap-x-8 flex-wrap">
+              <MButton size="sm" @click="navigateToEdit(item)"> 編輯 </MButton>
 
-          <!-- 建立者 -->
-          <template #cell-createdBy="{ item }">
-            <span>{{ item.createdBy || '-' }}</span>
+              <MButton size="sm" variant="danger" @click="deleteOne(item)">
+                刪除
+              </MButton>
+            </div>
           </template>
         </ReportTable>
 
@@ -177,7 +162,6 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import NewsSearchForm from '@/components/news/NewsSearchForm.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useNewsStore } from '@/stores/news/useNewsStore';
 
@@ -188,12 +172,10 @@ import {
   deleteNews,
 } from '@/services/adminNewsService';
 
-import { getStoreOptions } from '@/services/adminStoreService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
-const dialogStore = useDialogStore();
 const newsStore = useNewsStore();
 
 /* --------------------------------------
@@ -203,7 +185,6 @@ const formRef = ref<FormContext | null>(null);
 
 const initValues = ref({
   status: '',
-  storeId: '',
   title: '',
   keyword: '',
   createdAtStart: '',
@@ -221,31 +202,14 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
  * Select options
  * -------------------------------------- */
 const statusOptions = ref<SelectOption[]>([
+  { label: '草稿', value: 'DRAFT' },
   { label: '上架', value: 'PUBLISHED' },
   { label: '下架', value: 'ARCHIVED' },
-  { label: '草稿', value: 'DRAFT' },
   { label: '排程中', value: 'SCHEDULED' },
 ]);
 
-const storeOptions = ref<SelectOption[]>([]);
-
 const loadSelectOptions = async () => {
-  await executeApi<any[]>({
-    fn: () => getStoreOptions({ activeOnly: true }),
-    onSuccess: (data: any) => {
-      const arr = Array.isArray(data?.data)
-        ? data.data
-        : Array.isArray(data)
-          ? data
-          : [];
-
-      storeOptions.value = arr.map((s: any) => ({
-        label: s.label ?? s.storeName ?? s.name ?? '-',
-        value: s.value ?? s.id ?? '',
-      }));
-    },
-    showSuccessDialog: false,
-  });
+  await nextTick();
 };
 
 /* --------------------------------------
@@ -261,6 +225,7 @@ const resolveImageUrl = (url?: string) => {
   if (API_BASE_URL) {
     const base = API_BASE_URL.replace(/\/$/, '');
     const path = url.startsWith('/') ? url : `/${url}`;
+
     return `${base}${path}`;
   }
 
@@ -268,8 +233,8 @@ const resolveImageUrl = (url?: string) => {
 };
 
 const statusText = (status?: string) => {
-  if (status === 'PUBLISHED') return '已發布';
-  if (status === 'ARCHIVED') return '已封存';
+  if (status === 'PUBLISHED') return '已上架';
+  if (status === 'ARCHIVED') return '已下架';
   if (status === 'DRAFT') return '草稿';
   if (status === 'SCHEDULED') return '排程中';
   return '-';
@@ -279,6 +244,7 @@ const statusBadgeClass = (status?: string) => {
   if (status === 'PUBLISHED') return 'badge badge--green';
   if (status === 'SCHEDULED') return 'badge badge--blue';
   if (status === 'ARCHIVED') return 'badge badge--orange';
+  if (status === 'DRAFT') return 'badge badge--gray';
   return 'badge badge--gray';
 };
 
@@ -294,6 +260,12 @@ const categoryBadgeClass = (category?: string) => {
   if (category === 'EVENT') return 'badge badge--purple';
   if (category === 'SYSTEM') return 'badge badge--orange';
   return 'badge badge--gray';
+};
+
+const normalizeNewsList = (res: any) => {
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res)) return res;
+  return [];
 };
 
 /* --------------------------------------
@@ -354,16 +326,13 @@ const handlePageLimitSizeChange = (value: number) => {
  * Columns
  * -------------------------------------- */
 const columns = [
-  { field: 'storeName', label: '店家', width: 160, sortable: true },
-  { field: 'title', label: '標題', width: 260, sortable: true },
-  { field: 'category', label: '分類', width: 110, sortable: true },
-  { field: 'imageUrl', label: '封面', width: 160 },
-  { field: 'status', label: '狀態', width: 110, sortable: true },
-  { field: 'scheduledAt', label: '上架時間', width: 160, sortable: true },
-  { field: 'endTime', label: '下架時間', width: 160, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
-  { field: 'createdAt', label: '建立時間', width: 160, sortable: true },
-  { field: 'createdBy', label: '建立者', width: 180, sortable: true },
+  { field: 'imageUrl', label: '封面', width: 50 },
+  { field: 'title', label: '標題', width: 50, sortable: true },
+  { field: 'category', label: '分類', width: 50, sortable: true },
+  { field: 'status', label: '狀態', width: 50, sortable: true },
+  { field: 'scheduledAt', label: '發布時間', width: 50, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 50, sortable: true },
+  { field: 'actions', label: '操作', width: 50 },
 ];
 
 /* --------------------------------------
@@ -372,14 +341,16 @@ const columns = [
 const onSubmit = async (values: any) => {
   const condition = {
     status: values.status ?? '',
-    storeId: values.storeId ?? '',
     title: values.title ?? '',
     keyword: values.keyword ?? '',
     createdAtStart: values.createdAtStart ?? '',
     createdAtEnd: values.createdAtEnd ?? '',
   };
 
-  await query(() => queryNews({ condition }));
+  await query(async () => {
+    const res = await queryNews({ condition });
+    return normalizeNewsList(res);
+  });
 
   newsStore.setSearchCondition(condition);
   selectedIds.value = [];
@@ -464,6 +435,7 @@ const enableSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      newsStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -503,6 +475,40 @@ const disableSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      newsStore.setShouldRefresh(true);
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+const deleteOne = async (item: any) => {
+  if (item?.status === 'PUBLISHED') {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '此最新消息目前為上架狀態，請先下架後再刪除。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  const ok = await openConfirmDialog({
+    title: '刪除確認',
+    message: `確定要刪除「${item?.title || '-'}」嗎？（刪除後無法復原）`,
+  });
+
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () => deleteNews(item.id),
+    onSuccess: async () => {
+      await openInfoDialog({
+        title: '提示訊息',
+        message: '刪除成功',
+        iconType: 'success',
+      });
+
+      newsStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -548,6 +554,7 @@ const deleteSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      newsStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -619,9 +626,11 @@ onMounted(async () => {
 <style scoped lang="scss">
 .nl {
   &__table-img {
-    width: 120px;
-    height: auto;
-    border-radius: 4px;
+    width: 96px;
+    height: 54px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
   }
 
   &__important-icon {

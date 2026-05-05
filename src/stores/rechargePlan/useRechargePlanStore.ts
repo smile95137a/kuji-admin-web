@@ -1,16 +1,11 @@
-// src/stores/order/useAdminOrderStore.ts
+// src/stores/rechargePlan/useRechargePlanStore.ts
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-export const useAdminOrderStore = defineStore('adminOrder', () => {
+export const useRechargePlanStore = defineStore('rechargePlan', () => {
   /** 搜尋條件 */
   const searchCondition = ref({
-    orderNo: '',
-    userKeyword: '',
-    shippingMethod: '',
-    shippingStatus: '',
-    recipientName: '',
-    recipientPhone: '',
+    keyword: '',
   });
 
   /** 查詢結果 */
@@ -70,12 +65,7 @@ export const useAdminOrderStore = defineStore('adminOrder', () => {
   /** Reset */
   const resetAll = () => {
     searchCondition.value = {
-      orderNo: '',
-      userKeyword: '',
-      shippingMethod: '',
-      shippingStatus: '',
-      recipientName: '',
-      recipientPhone: '',
+      keyword: '',
     };
 
     list.value = [];

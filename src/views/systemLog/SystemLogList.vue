@@ -1,242 +1,283 @@
 <!-- src/views/systemLog/SystemLogList.vue -->
 <template>
-  <!-- Header + 分類切換 -->
-  <MCard>
-    <div class="sl-header">
-      <div>
-        <h2 class="sl-header__title">系統日誌</h2>
-        <p class="sl-header__sub">System Activity Logs</p>
-      </div>
-
-      <span v-if="hasData" class="sl-count">共 {{ list.length }} 筆</span>
-    </div>
-
-    <div class="sl-tabs">
-      <button
-        v-for="tab in LOG_TABS"
-        :key="tab.value"
-        class="sl-tab"
-        :class="[
-          `sl-tab--${tab.value.toLowerCase()}`,
-          {
-            'sl-tab--active': activeTab === tab.value,
-            'sl-tab--disabled': tab.disabled,
-          },
-        ]"
-        :disabled="tab.disabled"
-        :title="tab.disabled ? '後端尚未支援此日誌類型' : undefined"
-        type="button"
-        @click="!tab.disabled && switchTab(tab.value)"
-      >
-        <span class="sl-tab__dot"></span>
-        <span>{{ tab.label }}</span>
-        <span v-if="tab.disabled" class="sl-tab__unsupported">
-          （尚未支援）
-        </span>
-      </button>
-    </div>
-  </MCard>
-
-  <!-- 查詢條件 -->
-  <div class="m-t-12">
+  <div class="system-log-page">
+    <!-- Header + Summary + 分類切換 -->
     <MCard>
-      <div class="sl-filter-grid">
-        <FormInput
-          label="開始時間"
-          type="datetime-local"
-          v-model="startInput"
-        />
+      <div class="sl-page-head">
+        <div class="sl-page-head__main">
+          <p class="sl-page-head__eyebrow">System Management</p>
+          <h2 class="sl-page-head__title">系統日誌</h2>
+          <p class="sl-page-head__sub">
+            查看登入紀錄、後台操作紀錄與系統活動追蹤
+          </p>
+        </div>
 
-        <FormInput label="結束時間" type="datetime-local" v-model="endInput" />
+        <div class="sl-page-head__actions">
+          <span class="sl-current-type">
+            {{ activeTabLabel }}
+          </span>
 
-        <FormInput
-          label="Email 搜尋（選填）"
-          v-model="emailInput"
-          placeholder="輸入 Email 篩選"
-        />
-
-        <FormSelect
-          label="結果狀態"
-          v-model="resultFilter"
-          :options="resultOptions"
-          :showAll="true"
-          allLabel="全部"
-          :allValue="''"
-        />
-
-        <FormInput
-          label="筆數上限"
-          type="number"
-          v-model="limitInput"
-          placeholder="預設 200"
-        />
+          <span v-if="hasData" class="sl-total-count">
+            共 {{ list.length }} 筆
+          </span>
+        </div>
       </div>
 
-      <div class="sl-filter-actions">
-        <MButton type="button" @click="doSearch">查詢</MButton>
+      <div class="sl-summary-row">
+        <div class="sl-summary-card">
+          <span class="sl-summary-card__label">目前分類</span>
+          <strong class="sl-summary-card__value">
+            {{ activeTabLabel }}
+          </strong>
+        </div>
 
-        <MButton type="button" class="mbtn--gray" @click="resetFilters">
-          清除
-        </MButton>
+        <div class="sl-summary-card">
+          <span class="sl-summary-card__label">查詢筆數</span>
+          <strong class="sl-summary-card__value">
+            {{ hasData ? list.length : 0 }}
+          </strong>
+        </div>
 
-        <MButton type="button" class="mbtn--red" @click="cleanupLogs">
-          清除過期日誌
-        </MButton>
+        <div class="sl-summary-card">
+          <span class="sl-summary-card__label">筆數上限</span>
+          <strong class="sl-summary-card__value">
+            {{ limitInput || 200 }}
+          </strong>
+        </div>
+      </div>
+
+      <div class="sl-tab-bar">
+        <button
+          v-for="tab in LOG_TABS"
+          :key="tab.value"
+          class="sl-tab"
+          :class="[
+            `sl-tab--${tab.value.toLowerCase()}`,
+            {
+              'sl-tab--active': activeTab === tab.value,
+              'sl-tab--disabled': tab.disabled,
+            },
+          ]"
+          :disabled="tab.disabled"
+          :title="tab.disabled ? '後端尚未支援此日誌類型' : undefined"
+          type="button"
+          @click="!tab.disabled && switchTab(tab.value)"
+        >
+          <span class="sl-tab__content">
+            <span class="sl-tab__label">{{ tab.label }}</span>
+            <span class="sl-tab__value">{{ tab.value }}</span>
+          </span>
+
+          <span v-if="tab.disabled" class="sl-tab__unsupported">
+            尚未支援
+          </span>
+        </button>
       </div>
     </MCard>
-  </div>
 
-  <!-- 結果列表 -->
-  <div class="m-t-12">
-    <MCard>
-      <template v-if="!hasData">
-        <NoData :message="noDataMessage" />
-      </template>
+    <!-- 查詢條件 -->
+    <div class="m-t-12">
+      <MCard>
+        <div class="sl-card-head">
+          <div>
+            <p class="sl-card-head__title">查詢條件</p>
+            <p class="sl-card-head__sub">
+              可依照時間區間、Email、結果狀態與筆數上限篩選日誌
+            </p>
+          </div>
+        </div>
 
-      <template v-else>
-        <ReportTable
-          class="m-t-12"
-          :columns="columns"
-          :items="currentPageItems"
-          row-key="id"
-          :useWidthClass="true"
-          :sort-key="sortKey"
-          :sort-order="sortOrder"
-          @sort="handleSort"
-        >
-          <!-- 時間 -->
-          <template #cell-createdAt="{ item }">
-            <DateFormatter
-              v-if="item.createdAt"
-              :date="item.createdAt"
-              format="YYYY-MM-DD HH:mm:ss"
-            />
-            <span v-else class="sl-empty">—</span>
-          </template>
+        <div class="sl-filter-grid">
+          <FormInput
+            label="開始時間"
+            type="datetime-local"
+            v-model="startInput"
+          />
 
-          <!-- 結果 badge -->
-          <template #cell-result="{ item }">
-            <span
-              class="sl-result"
-              :class="`sl-result--${String(item.result ?? '').toLowerCase()}`"
-            >
-              {{ RESULT_LABEL[item.result] ?? item.result ?? '-' }}
-            </span>
-          </template>
+          <FormInput
+            label="結束時間"
+            type="datetime-local"
+            v-model="endInput"
+          />
 
-          <!-- errorMessage -->
-          <template #cell-errorMessage="{ item }">
-            <span
-              v-if="item.errorMessage"
-              class="sl-error"
-              :title="item.errorMessage"
-            >
-              {{ truncate(item.errorMessage, 40) }}
-            </span>
-            <span v-else class="sl-empty">—</span>
-          </template>
+          <FormInput
+            label="Email 搜尋"
+            v-model="emailInput"
+            placeholder="輸入 Email 篩選"
+          />
 
-          <!-- LOGIN 專用：userType -->
-          <template #cell-userType="{ item }">
-            <span
-              class="sl-badge"
-              :class="
-                item.userType === 'admin' ? 'sl-badge--admin' : 'sl-badge--user'
-              "
-            >
-              {{ item.userType === 'admin' ? '後台' : '前台' }}
-            </span>
-          </template>
+          <FormSelect
+            label="結果狀態"
+            v-model="resultFilter"
+            :options="resultOptions"
+            :showAll="true"
+            allLabel="全部"
+            :allValue="''"
+          />
 
-          <!-- LOGIN 專用：loginMethod -->
-          <template #cell-loginMethod="{ item }">
-            {{
-              LOGIN_METHOD_LABEL[item.loginMethod] ?? item.loginMethod ?? '-'
-            }}
-          </template>
-
-          <!-- ADMIN_ACTION 專用：action -->
-          <template #cell-action="{ item }">
-            <span
-              class="sl-action"
-              :class="`sl-action--${String(item.action ?? '').toLowerCase()}`"
-            >
-              {{ item.action || '-' }}
-            </span>
-          </template>
-
-          <!-- ADMIN_ACTION 專用：操作對象 -->
-          <template #cell-target="{ item }">
-            <span v-if="item.targetType || item.targetName">
-              <span class="sl-target-type">{{ item.targetType }}</span>
-              <span v-if="item.targetName" class="sl-target-name">
-                — {{ truncate(item.targetName, 30) }}
-              </span>
-            </span>
-            <span v-else class="sl-empty">—</span>
-          </template>
-
-          <!-- ADMIN_ACTION 專用：快照 -->
-          <template #cell-snapshot="{ item }">
-            <button
-              v-if="item.beforeSnapshot || item.afterSnapshot"
-              class="sl-detail-btn"
-              type="button"
-              @click="openSnapshot(item)"
-            >
-              查看
-            </button>
-            <span v-else class="sl-empty">—</span>
-          </template>
-        </ReportTable>
-
-        <div class="flex justify-center m-t-12">
-          <Pagination
-            :totalPages="totalPages"
-            :renderPaginationNums="renderPaginationNums"
-            :currentPage="currentPage"
-            :nextPage="nextPage"
-            :previousPage="previousPage"
-            :goToPage="goToPage"
-            :pageLimitSize="pageLimitSize"
-            :totalItems="list.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+          <FormInput
+            label="筆數上限"
+            type="number"
+            v-model="limitInput"
+            placeholder="預設 200"
           />
         </div>
-      </template>
-    </MCard>
-  </div>
 
-  <!-- Snapshot Dialog -->
-  <Dialog
-    :isOpen="snapshotOpen"
-    customClass="dialog--snapshot"
-    @close="snapshotOpen = false"
-  >
-    <div class="sl-snapshot">
-      <p class="sl-snapshot__title">操作快照</p>
+        <div class="sl-filter-actions">
+          <MButton type="button" @click="doSearch">
+            <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+            查詢
+          </MButton>
 
-      <div class="sl-snapshot__row">
-        <p class="sl-snapshot__label">操作前</p>
-        <pre class="sl-snapshot__code">{{
-          formatJson(selectedSnapshot.before)
-        }}</pre>
-      </div>
+          <MButton type="button" class="mbtn--gray" @click="resetFilters">
+            <font-awesome-icon icon="fa-rotate-left" class="m-r-4" />
+            清除
+          </MButton>
 
-      <div class="sl-snapshot__row m-t-12">
-        <p class="sl-snapshot__label">操作後</p>
-        <pre class="sl-snapshot__code">{{
-          formatJson(selectedSnapshot.after)
-        }}</pre>
-      </div>
-
-      <div class="flex justify-center m-t-12">
-        <MButton type="button" class="mbtn--gray" @click="snapshotOpen = false">
-          關閉
-        </MButton>
-      </div>
+          <MButton type="button" class="mbtn--red" @click="cleanupLogs">
+            <font-awesome-icon icon="fa-trash-can" class="m-r-4" />
+            清除過期日誌
+          </MButton>
+        </div>
+      </MCard>
     </div>
-  </Dialog>
+
+    <!-- 結果列表 -->
+    <div class="m-t-12">
+      <MCard>
+        <div class="sl-card-head sl-card-head--result">
+          <div>
+            <p class="sl-card-head__title">查詢結果</p>
+            <p class="sl-card-head__sub">
+              {{ activeTabLabel }} / 依查詢條件顯示目前日誌資料
+            </p>
+          </div>
+
+          <span v-if="hasData" class="sl-card-head__count">
+            {{ list.length }} 筆資料
+          </span>
+        </div>
+
+        <template v-if="!hasData">
+          <NoData :message="noDataMessage" />
+        </template>
+
+        <template v-else>
+          <ReportTable
+            class="sl-report-table"
+            :columns="columns"
+            :items="currentPageItems"
+            row-key="id"
+            :useWidthClass="true"
+            :sort-key="sortKey"
+            :sort-order="sortOrder"
+            @sort="handleSort"
+          >
+            <!-- 時間 -->
+            <template #cell-createdAt="{ item }">
+              <DateFormatter
+                v-if="item.createdAt"
+                :date="item.createdAt"
+                format="YYYY-MM-DD HH:mm:ss"
+              />
+              <span v-else class="sl-empty">—</span>
+            </template>
+
+            <!-- 結果 badge -->
+            <template #cell-result="{ item }">
+              <span
+                class="sl-result"
+                :class="`sl-result--${String(item.result ?? '').toLowerCase()}`"
+              >
+                {{ RESULT_LABEL[item.result] ?? item.result ?? '-' }}
+              </span>
+            </template>
+
+            <!-- errorMessage -->
+            <template #cell-errorMessage="{ item }">
+              <span
+                v-if="item.errorMessage"
+                class="sl-error"
+                :title="item.errorMessage"
+              >
+                {{ truncate(item.errorMessage, 40) }}
+              </span>
+              <span v-else class="sl-empty">—</span>
+            </template>
+
+            <!-- LOGIN 專用：userType -->
+            <template #cell-userType="{ item }">
+              <span
+                class="sl-badge"
+                :class="
+                  item.userType === 'admin'
+                    ? 'sl-badge--admin'
+                    : 'sl-badge--user'
+                "
+              >
+                {{ item.userType === 'admin' ? '後台' : '前台' }}
+              </span>
+            </template>
+
+            <!-- LOGIN 專用：loginMethod -->
+            <template #cell-loginMethod="{ item }">
+              {{
+                LOGIN_METHOD_LABEL[item.loginMethod] ?? item.loginMethod ?? '-'
+              }}
+            </template>
+
+            <!-- ADMIN_ACTION 專用：action -->
+            <template #cell-action="{ item }">
+              <span
+                class="sl-action"
+                :class="`sl-action--${String(item.action ?? '').toLowerCase()}`"
+              >
+                {{ item.action || '-' }}
+              </span>
+            </template>
+
+            <!-- ADMIN_ACTION 專用：操作對象 -->
+            <template #cell-target="{ item }">
+              <span v-if="item.targetType || item.targetName">
+                <span class="sl-target-type">{{ item.targetType }}</span>
+                <span v-if="item.targetName" class="sl-target-name">
+                  — {{ truncate(item.targetName, 30) }}
+                </span>
+              </span>
+              <span v-else class="sl-empty">—</span>
+            </template>
+
+            <!-- ADMIN_ACTION 專用：快照 -->
+            <template #cell-snapshot="{ item }">
+              <button
+                v-if="item.beforeSnapshot || item.afterSnapshot"
+                class="sl-detail-btn"
+                type="button"
+                @click="openSnapshot(item)"
+              >
+                查看
+              </button>
+              <span v-else class="sl-empty">—</span>
+            </template>
+          </ReportTable>
+
+          <div class="flex justify-center m-t-12">
+            <Pagination
+              :totalPages="totalPages"
+              :renderPaginationNums="renderPaginationNums"
+              :currentPage="currentPage"
+              :nextPage="nextPage"
+              :previousPage="previousPage"
+              :goToPage="goToPage"
+              :pageLimitSize="pageLimitSize"
+              :totalItems="list.length"
+              @update:pageLimitSize="pageLimitSize = $event"
+            />
+          </div>
+        </template>
+      </MCard>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -254,7 +295,6 @@ import ReportTable from '@/components/common/ReportTable.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
-import Dialog from '@/components/common/Dialog.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 
@@ -266,6 +306,7 @@ import {
 
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { openSystemLogSnapshotDialog } from '@/utils/dialog/openSystemLogSnapshotDialog';
 
 /* ==============================
  * Constants
@@ -302,6 +343,10 @@ const resultOptions = [
  * ============================== */
 const activeTab = ref<LogType>('LOGIN');
 
+const activeTabLabel = computed(() => {
+  return LOG_TABS.find((item) => item.value === activeTab.value)?.label ?? '-';
+});
+
 const startInput = ref('');
 const endInput = ref('');
 const emailInput = ref('');
@@ -311,31 +356,11 @@ const limitInput = ref<number | string>(200);
 /* ==============================
  * Snapshot Dialog
  * ============================== */
-const snapshotOpen = ref(false);
-const selectedSnapshot = ref<{
-  before: string | null;
-  after: string | null;
-}>({
-  before: null,
-  after: null,
-});
-
-const openSnapshot = (item: any) => {
-  selectedSnapshot.value = {
-    before: item.beforeSnapshot ?? null,
-    after: item.afterSnapshot ?? null,
-  };
-  snapshotOpen.value = true;
-};
-
-const formatJson = (raw: string | null): string => {
-  if (!raw) return '（無資料）';
-
-  try {
-    return JSON.stringify(JSON.parse(raw), null, 2);
-  } catch {
-    return raw;
-  }
+const openSnapshot = async (item: any) => {
+  await openSystemLogSnapshotDialog({
+    beforeSnapshot: item.beforeSnapshot ?? null,
+    afterSnapshot: item.afterSnapshot ?? null,
+  });
 };
 
 /* ==============================
@@ -549,75 +574,214 @@ onMounted(() => {
 @use 'sass:color';
 @use '@/assets/styles/base/tokens' as tokens;
 
-.sl-header {
+.system-log-page {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ==============================
+ * Page Head
+ * ============================== */
+.sl-page-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 16px;
+  min-width: 0;
+  margin-bottom: 14px;
+
+  &__main {
+    min-width: 0;
+  }
+
+  &__eyebrow {
+    margin: 0 0 4px;
+    color: tokens.$brand;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
 
   &__title {
     margin: 0;
     color: tokens.$form-text;
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.35;
   }
 
   &__sub {
-    margin: 2px 0 0;
-    color: color.mix(tokens.$form-muted, #fff, 68%);
+    margin: 4px 0 0;
+    color: tokens.$form-muted;
     font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 }
 
-.sl-count {
-  color: tokens.$form-muted;
-  font-size: 13px;
+.sl-current-type {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color.mix(tokens.$brand-light, #fff, 18%);
+  color: tokens.$brand-dark;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-/* ── Tabs ── */
-.sl-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.sl-total-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color.mix(tokens.$form-border, #fff, 42%);
+  color: tokens.$form-muted;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ==============================
+ * Summary
+ * ============================== */
+.sl-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sl-summary-card {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
+  border-radius: 14px;
+  background: color.mix(tokens.$brand-light, #fff, 8%);
+
+  &__label {
+    display: block;
+    margin-bottom: 4px;
+    color: tokens.$form-muted;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  &__value {
+    display: block;
+    color: tokens.$form-text;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+}
+
+/* ==============================
+ * Tabs
+ * ============================== */
+.sl-tab-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .sl-tab {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
-  border-radius: tokens.$form-radius;
+  gap: 10px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid color.mix(tokens.$form-border, #fff, 70%);
+  border-radius: 14px;
   background: tokens.$form-bg;
   color: tokens.$ink-700;
-  font-size: 13px;
+  text-align: left;
   cursor: pointer;
   transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 
   &:hover:not(:disabled) {
-    background: color.mix(tokens.$brand-light, #fff, 18%);
     border-color: tokens.$brand;
+    background: color.mix(tokens.$brand-light, #fff, 18%);
     color: tokens.$brand-dark;
+    box-shadow: 0 6px 14px rgba(tokens.$ink-900, 0.06);
+    transform: translateY(-1px);
   }
 
   &__dot {
-    width: 8px;
-    height: 8px;
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: tokens.$form-border;
   }
 
-  &__unsupported {
-    color: color.mix(tokens.$form-muted, #fff, 68%);
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__label {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+
+  &__value {
+    color: tokens.$form-muted;
     font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  &__unsupported {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color.mix(tokens.$form-border, #fff, 45%);
+    color: tokens.$form-muted;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  &--active {
+    border-color: tokens.$brand;
+    background: tokens.$brand-light;
+    color: tokens.$brand-dark;
+    box-shadow: 0 6px 14px rgba(tokens.$brand, 0.1);
+
+    .sl-tab__value {
+      color: tokens.$brand-dark;
+    }
   }
 
   &--disabled {
-    opacity: 0.45;
+    opacity: 0.48;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 }
 
@@ -625,22 +789,8 @@ onMounted(() => {
   background: tokens.$brand;
 }
 
-.sl-tab--login.sl-tab--active {
-  background: tokens.$brand-light;
-  border-color: tokens.$brand;
-  color: tokens.$brand-dark;
-  font-weight: 600;
-}
-
 .sl-tab--admin_action .sl-tab__dot {
   background: tokens.$brand-hover;
-}
-
-.sl-tab--admin_action.sl-tab--active {
-  background: color.mix(tokens.$brand-light-hover, #fff, 42%);
-  border-color: tokens.$brand-hover;
-  color: tokens.$brand-dark;
-  font-weight: 600;
 }
 
 .sl-tab--draw .sl-tab__dot,
@@ -648,31 +798,89 @@ onMounted(() => {
   background: tokens.$form-border;
 }
 
-/* ── Filter ── */
+/* ==============================
+ * Card Head
+ * ============================== */
+.sl-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  &--result {
+    margin-bottom: 12px;
+  }
+
+  &__title {
+    margin: 0;
+    padding-left: 10px;
+    border-left: 4px solid tokens.$brand;
+    color: tokens.$form-text;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+
+  &__sub {
+    margin: 4px 0 0;
+    color: tokens.$form-muted;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__count {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color.mix(tokens.$brand-light, #fff, 18%);
+    color: tokens.$brand;
+    font-size: 12px;
+    font-weight: 800;
+  }
+}
+
+/* ==============================
+ * Filter
+ * ============================== */
 .sl-filter-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 12px;
-
-  @media (max-width: 960px) {
-    grid-template-columns: 1fr;
-  }
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
+  border-radius: 16px;
+  background: color.mix(tokens.$brand-light, #fff, 7%);
 }
 
 .sl-filter-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-/* ── Result Badge ── */
+/* ==============================
+ * ReportTable
+ * ============================== */
+.sl-report-table {
+  margin-top: 0;
+}
+
+/* ==============================
+ * Result Badge
+ * ============================== */
 .sl-result {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
+  line-height: 1.4;
 
   &--success {
     background: color.mix(tokens.$brand-light, #fff, 52%);
@@ -690,12 +898,18 @@ onMounted(() => {
   }
 }
 
-/* ── User Type Badge ── */
+/* ==============================
+ * User Type Badge
+ * ============================== */
 .sl-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border-radius: 999px;
   font-size: 12px;
+  font-weight: 700;
 
   &--admin {
     background: tokens.$brand-light;
@@ -708,15 +922,20 @@ onMounted(() => {
   }
 }
 
-/* ── Action Badge ── */
+/* ==============================
+ * Action Badge
+ * ============================== */
 .sl-action {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border-radius: 999px;
   background: color.mix(tokens.$border-light, #fff, 28%);
   color: tokens.$ink-800;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 
   &--create {
     background: color.mix(tokens.$brand-light, #fff, 52%);
@@ -744,11 +963,13 @@ onMounted(() => {
   }
 }
 
-/* ── Target ── */
+/* ==============================
+ * Target
+ * ============================== */
 .sl-target-type {
   color: tokens.$ink-800;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .sl-target-name {
@@ -756,67 +977,88 @@ onMounted(() => {
   font-size: 12px;
 }
 
-/* ── Detail Button ── */
+/* ==============================
+ * Detail Button
+ * ============================== */
 .sl-detail-btn {
-  padding: 2px 10px;
-  border: 1px solid tokens.$form-border;
-  border-radius: 4px;
+  min-height: 26px;
+  padding: 0 11px;
+  border: 1px solid color.mix(tokens.$form-border, #fff, 52%);
+  border-radius: 999px;
   background: tokens.$form-bg;
   color: tokens.$ink-800;
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 
   &:hover {
     border-color: tokens.$brand;
     background: tokens.$brand-light;
     color: tokens.$brand-dark;
+    box-shadow: 0 4px 10px rgba(tokens.$brand, 0.12);
   }
 }
 
-/* ── Snapshot Dialog ── */
-.sl-snapshot {
-  min-width: 560px;
-  padding: 16px;
-
-  &__title {
-    margin: 0 0 12px;
-    color: tokens.$form-text;
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  &__label {
-    margin: 0 0 4px;
-    color: tokens.$form-muted;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  &__code {
-    max-height: 240px;
-    padding: 10px 14px;
-    overflow-y: auto;
-    border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
-    border-radius: tokens.$form-radius;
-    background: color.mix(tokens.$brand-light, #fff, 10%);
-    font-family: monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-}
-
-/* ── Misc ── */
+/* ==============================
+ * Misc
+ * ============================== */
 .sl-error {
   color: tokens.$danger;
   font-size: 12px;
+  font-weight: 700;
 }
 
 .sl-empty {
   color: tokens.$form-border;
+}
+
+/* ==============================
+ * RWD
+ * ============================== */
+@media (max-width: 1180px) {
+  .sl-tab-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .sl-page-head {
+    flex-direction: column;
+
+    &__actions {
+      justify-content: flex-start;
+    }
+  }
+
+  .sl-summary-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sl-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sl-filter-actions {
+    justify-content: flex-start;
+  }
+
+  .sl-card-head {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .sl-tab-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .sl-tab {
+    min-height: 48px;
+  }
 }
 </style>

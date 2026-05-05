@@ -2,9 +2,7 @@
 <template>
   <div class="tab-lottery-price">
     <!-- 價格設定 -->
-    <div class="tab-lottery-price__section">
-      <p class="tab-lottery-price__section-title">價格設定</p>
-
+    <FormSection title="價格設定">
       <div class="flex flex-wrap">
         <!-- 付款方式 -->
         <div class="w-100 p-6">
@@ -33,8 +31,8 @@
           />
         </div>
 
-        <!-- 免費抽門檻（只有自製賞才開放） -->
-        <div class="w-50 w-md-100 p-6" v-if="isCustomGacha">
+        <!-- 免費抽門檻：只有自製賞才顯示 -->
+        <div v-if="isCustomGacha" class="w-50 w-md-100 p-6">
           <FormInput
             label="免費抽門檻"
             type="number"
@@ -59,9 +57,7 @@
         <div class="w-50 w-md-100 p-6">
           <div class="tab-lottery-price__setting-card">
             <div class="tab-lottery-price__setting-main">
-              <div>
-                <p class="tab-lottery-price__setting-title">自動折扣</p>
-              </div>
+              <p class="tab-lottery-price__setting-title">自動折扣</p>
 
               <span
                 class="tab-lottery-price__status-pill"
@@ -88,12 +84,10 @@
           </div>
         </div>
       </div>
-    </div>
+    </FormSection>
 
     <!-- 抽選設定 -->
-    <div class="tab-lottery-price__section">
-      <p class="tab-lottery-price__section-title">抽選設定</p>
-
+    <FormSection title="抽選設定">
       <div class="flex flex-wrap">
         <!-- 抽數上限 -->
         <div class="w-50 w-md-100 p-6">
@@ -105,18 +99,17 @@
             placeholder="請輸入抽數上限"
           />
         </div>
-
-
       </div>
-    </div>
+    </FormSection>
   </div>
 </template>
 
 <script setup lang="ts">
-import { watch, computed } from 'vue';
+import { computed } from 'vue';
 import { useFormContext } from 'vee-validate';
 
 import FormInput from '@/components/common/FormInput.vue';
+import FormSection from '@/components/common/FormSection.vue';
 import FormRadioTagGroup from '@/components/common/FormRadioTagGroup.vue';
 
 import { paymentTypeOptions, boolOptions } from '@/constants/lotteryOptions';
@@ -135,6 +128,7 @@ const isCustomGacha = computed(() => category.value === 'CUSTOM_GACHA');
 
 const showError = (field: string) => {
   if (!submitCount.value) return '';
+
   return errors.value[field] as string;
 };
 

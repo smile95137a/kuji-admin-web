@@ -4,70 +4,157 @@
 
 .tabs {
   width: 100%;
-  border: 1px solid $form-border;
-  border-radius: $form-radius;
+  min-width: 0;
+  border-radius: 16px;
   background: $form-bg;
+  box-shadow: 0 8px 24px rgba($ink-900, 0.04);
+  overflow: hidden;
 
   .tab-headers {
     display: flex;
-    border-bottom: 1px solid $form-border;
-    background: $bg-light;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 10px 0;
+    border-bottom: 1px solid color.mix($form-border, #fff, 72%);
+    background: linear-gradient(
+      180deg,
+      color.mix($brand-light, #fff, 18%) 0%,
+      $form-bg 100%
+    );
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: color.mix($form-border, $brand, 72%);
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
   }
 
   .tab-content {
-    padding: 12px;
+    min-width: 0;
+    padding: 18px;
     background: $form-bg;
   }
 
   .tab-button {
-    flex: 1;
+    position: relative;
+    flex: 0 0 auto;
     min-width: 120px;
-    max-width: 200px;
-    padding: 12px 16px;
+    max-width: 220px;
+    padding: 11px 18px 13px;
 
-    font-size: $font-lg;
-    text-align: center;
-
-    border: none;
-    border-right: 1px solid $form-border;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
     background: transparent;
 
-    color: $ink-800;
-    font-weight: 500;
+    color: $ink-700;
+    font-size: $font-lg;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
+
     cursor: pointer;
+    user-select: none;
 
-    transition: background-color 0.2s ease, color 0.2s ease,
-      box-shadow 0.2s ease;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.12s ease;
 
-    &:last-child {
-      border-right: none;
+    &::after {
+      content: '';
+      position: absolute;
+      right: 14px;
+      bottom: 0;
+      left: 14px;
+      height: 3px;
+      border-radius: 999px 999px 0 0;
+      background: transparent;
+      transition:
+        background-color 0.18s ease,
+        left 0.18s ease,
+        right 0.18s ease;
     }
 
-    &:hover:not(:disabled) {
-      // 品牌淡色 hover（橘色系）
-      background: $brand-light;
+    &:hover:not(:disabled):not(.active) {
+      background: color.mix($brand-light, #fff, 42%);
       color: $brand-dark;
+      transform: translateY(-1px);
+
+      &::after {
+        right: 22px;
+        left: 22px;
+        background: color.mix($brand, #fff, 45%);
+      }
     }
 
     &.active {
-      // active 也用品牌淡色 + 底線
-      background: $brand-light;
       color: $brand-dark;
-      font-weight: 700;
-      border-bottom: 3px solid $brand;
+      font-weight: 900;
+
+      &::after {
+        right: 12px;
+        left: 12px;
+        background: $brand;
+      }
     }
 
     &:disabled {
       background: color.mix($bg-light, $form-bg, 65%);
       color: $muted;
       cursor: not-allowed;
-      opacity: 0.7;
+      opacity: 0.65;
+      transform: none;
     }
 
-    // 如果你希望鍵盤 focus 有視覺提示（推薦）
     &:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 2px #{color.change($brand, $alpha: 0.25)};
+      box-shadow:
+        0 0 0 2px color.change($brand, $alpha: 0.18),
+        0 -4px 14px rgba($brand, 0.08);
+    }
+  }
+
+  @media (max-width: 768px) {
+    border-radius: 14px;
+
+    .tab-headers {
+      padding: 7px 8px 0;
+    }
+
+    .tab-content {
+      padding: 14px;
+    }
+
+    .tab-button {
+      min-width: 108px;
+      max-width: none;
+      padding: 10px 14px 12px;
+      font-size: $font-md;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .tab-content {
+      padding: 12px;
+    }
+
+    .tab-button {
+      min-width: 96px;
+      padding-inline: 12px;
     }
   }
 }

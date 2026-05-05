@@ -1,3 +1,4 @@
+// src/assets/styles/components/lottery/_tab-lottery-basic.scss
 @use 'sass:color';
 @use '../../base/tokens' as *;
 
@@ -8,7 +9,7 @@
 
   &__layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
     gap: 18px;
     align-items: flex-start;
     width: 100%;
@@ -22,8 +23,7 @@
   }
 
   &__right {
-    position: sticky;
-    top: 12px;
+    min-width: 0;
   }
 
   &__section {
@@ -41,6 +41,7 @@
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 10px;
+    min-width: 0;
   }
 
   &__section-title {
@@ -51,6 +52,7 @@
     font-size: 15px;
     font-weight: 700;
     line-height: 1.4;
+    word-break: break-word;
   }
 
   &__card,
@@ -58,35 +60,92 @@
   &__image-card {
     width: 100%;
     min-width: 0;
+    max-width: 100%;
     padding: 14px;
     border: 1px solid color.mix($form-border, #fff, 72%);
     border-radius: 14px;
     background: $form-bg;
   }
 
-  &__card--mode,
-  &__copy-block {
-    background: color.mix($brand-light, #fff, 10%);
-  }
-
   &__card--schedule {
     padding: 14px 8px;
   }
 
-  &__summary-pill {
-    flex-shrink: 0;
-    max-width: 45%;
-    padding: 5px 12px;
-    border-radius: 999px;
-    background: $brand-light;
-    color: $brand-dark;
-    font-size: 12px;
-    font-weight: 700;
+  /* ==============================
+   * 商品模式
+   * ============================== */
+  &__card--mode {
+    padding: 16px;
+    border-radius: 18px;
+
+    overflow: hidden;
+  }
+
+  &__mode-summary {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 14px;
+  }
+
+  &__mode-summary-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+
+  &__mode-summary-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
     line-height: 1.4;
-    text-align: right;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  &__summary-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    max-width: 60%;
+    min-width: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color.mix($brand-light, #fff, 15%);
+    color: $brand;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &__mode-block {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border: 1px dashed color.mix($form-border, #fff, 36%);
+    border-radius: 16px;
+    background: rgba(#fff, 0.78);
+  }
+
+  &__mode-block-head {
+    margin-bottom: 10px;
+  }
+
+  &__mode-block-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
   }
 
   &__mode-field {
@@ -97,15 +156,19 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
-    margin-top: 12px;
+    margin-top: 14px;
+    min-width: 0;
   }
 
   &__setting-panel {
     min-width: 0;
-    padding: 12px;
+    max-width: 100%;
+    padding: 14px;
     border: 1px solid color.mix($brand-light, $form-border, 56%);
-    border-radius: 12px;
-    background: color.mix($brand-light, #fff, 18%);
+    border-radius: 16px;
+    background: rgba(#fff, 0.86);
+    box-shadow: 0 8px 20px rgba($ink-900, 0.025);
+    overflow: hidden;
 
     &--full {
       grid-column: 1 / -1;
@@ -114,14 +177,17 @@
 
   &__setting-head {
     margin-bottom: 10px;
+    min-width: 0;
   }
 
   &__setting-title {
     margin: 0;
     color: $brand-dark;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &__inline-field {
@@ -130,6 +196,19 @@
     border-top: 1px dashed $form-border;
   }
 
+  &__info-box {
+    padding: 10px 14px;
+    border-left: 4px solid $brand;
+    border-radius: $form-radius;
+    background: color.mix($brand-light, #fff, 35%);
+    color: $brand-dark;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ==============================
+   * 狀態與排程
+   * ============================== */
   &__status-panel {
     padding: 0 6px 14px;
     margin-bottom: 8px;
@@ -139,22 +218,77 @@
   &__schedule-layout {
     display: flex;
     flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  /* ==============================
+   * 文案與標籤
+   * ============================== */
+  &__copy-card {
+    padding: 16px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 18px;
+
+    overflow: hidden;
   }
 
   &__copy-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
     align-items: stretch;
+    min-width: 0;
+    max-width: 100%;
   }
 
   &__copy-block {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding: 12px;
-    border: 1px solid color.mix($form-border, #fff, 62%);
-    border-radius: 12px;
+    max-width: 100%;
+    padding: 14px;
+    border: 1px solid color.mix($form-border, #fff, 58%);
+    border-radius: 16px;
+    background: rgba(#fff, 0.92);
+    box-shadow: 0 8px 20px rgba($ink-900, 0.035);
+    overflow: hidden;
+  }
+
+  &__copy-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    padding: 6px 0;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  &__copy-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  &__copy-badge {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color.mix($brand-light, #fff, 15%);
+    color: $brand;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.4;
+
+    &--muted {
+      background: color.mix($form-border, #fff, 45%);
+      color: $form-muted;
+    }
   }
 
   &__field-title {
@@ -180,21 +314,21 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 10px;
     min-width: 0;
     max-width: 100%;
+    margin-bottom: 10px;
   }
 
   &__preset-btn {
     min-height: 28px;
     max-width: 100%;
     padding: 0 10px;
-    border: 1px solid $form-border;
+    border: 1px solid color.mix($form-border, #fff, 72%);
     border-radius: 999px;
     background: $form-bg;
     color: $form-muted;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     white-space: normal;
     word-break: break-word;
@@ -202,12 +336,14 @@
       background-color 0.15s ease,
       color 0.15s ease,
       border-color 0.15s ease,
+      box-shadow 0.15s ease,
       transform 0.1s ease;
 
     &:hover {
       border-color: $brand;
       background: $brand-light;
       color: $brand-dark;
+      box-shadow: 0 4px 12px rgba($brand, 0.12);
     }
 
     &:active {
@@ -219,45 +355,160 @@
   &__remark-textarea {
     flex: 1;
     height: 100%;
+    display: flex;
+    flex-direction: column;
 
-    :deep(.form-textarea__control),
-    :deep(.form-textarea__field-wrap),
-    :deep(.form-textarea__field) {
+    .form-textarea {
+      height: 100%;
+    }
+
+    .form-textarea__control {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .form-textarea__field-wrap {
+      flex: 1;
+      width: 100%;
       height: 100%;
       min-height: 300px;
+      border-color: color.mix($form-border, #fff, 64%);
+      background: #fff;
+    }
+
+    .form-textarea__field {
+      height: 100%;
+      min-height: 300px;
+      padding: 12px 14px;
+      line-height: 1.7;
     }
   }
 
   &__tag-panel {
     margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px dashed $form-border;
+    padding: 14px;
+    border: 1px dashed color.mix($form-border, #fff, 36%);
+    border-radius: 16px;
+    background: rgba(#fff, 0.86);
+    min-width: 0;
+    max-width: 100%;
   }
 
+  &__tag-head {
+    margin-bottom: 10px;
+  }
+
+  &__tag-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+
+  /* ==============================
+   * 商品詳細內容
+   * ============================== */
   &__editor-card {
-    :deep(.ck-editor__editable_inline) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 16px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 18px;
+    background: $form-bg;
+    box-shadow: 0 8px 20px rgba($ink-900, 0.035);
+    overflow: hidden;
+
+    .ck.ck-toolbar {
+      background: color.mix($brand-light, #fff, 12%);
+    }
+
+    .ck.ck-editor__main > .ck-editor__editable {
+      box-shadow: none;
+    }
+
+    .ck-editor__editable_inline {
       min-height: 420px;
+      padding: 16px 18px;
+      line-height: 1.7;
     }
   }
 
-  &__info-box {
-    padding: 10px 14px;
-    border-left: 4px solid $brand;
-    border-radius: $form-radius;
-    background: color.mix($brand-light, #fff, 35%);
-    color: $brand-dark;
-    font-size: 13px;
-    line-height: 1.5;
+  &__editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    min-width: 0;
   }
 
+  &__editor-title {
+    margin: 0;
+    color: $form-text;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  &__editor-badge {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: color.mix($brand-light, #fff, 28%);
+    color: $brand-dark;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__editor-main {
+    overflow: hidden;
+    background: #fff;
+  }
+
+  /* ==============================
+   * 商品圖片
+   * 商品主圖 + 商品圖集合併為同一張卡片
+   * ============================== */
   &__image-panel {
     padding: 0;
   }
 
   &__image-card {
-    & + & {
-      margin-top: 12px;
-    }
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px;
+    border: 1px solid color.mix($form-border, #fff, 72%);
+    border-radius: 14px;
+    background: $form-bg;
+    overflow: hidden;
+  }
+
+  &__image-main-block {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__image-gallery-block {
+    width: 100%;
+    min-width: 0;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed $form-border;
+  }
+
+  &__image-sub-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
   }
 
   &__image-title {
@@ -277,7 +528,7 @@
   &__main-wrap {
     position: relative;
     width: 100%;
-    max-width: 240px;
+    min-width: 0;
   }
 
   &__main-upload {
@@ -286,7 +537,6 @@
     align-items: stretch;
     justify-content: stretch;
     width: 100%;
-    max-width: 240px;
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border: 1px dashed $form-border;
@@ -399,6 +649,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    min-width: 0;
+    max-width: 100%;
   }
 
   &__gallery-add,
@@ -410,6 +662,7 @@
     width: 74px;
     height: 74px;
     border-radius: 10px;
+    flex: 0 0 auto;
   }
 
   &__gallery-add {
@@ -467,26 +720,32 @@
     }
 
     &__image-panel {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-
-      .tab-lottery-basic__section-head {
-        grid-column: 1 / -1;
-      }
+      display: block;
     }
   }
 
   @media (max-width: 960px) {
     &__mode-grid,
-    &__copy-grid,
-    &__image-panel {
+    &__copy-grid {
       grid-template-columns: 1fr;
+    }
+
+    &__mode-summary-content {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
     }
 
     &__summary-pill {
       max-width: 100%;
-      text-align: left;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    &__editor-head,
+    &__copy-head {
+      align-items: flex-start;
+      flex-direction: column;
     }
 
     &__section-head {
@@ -497,13 +756,36 @@
   @media (max-width: 576px) {
     &__card,
     &__copy-card,
-    &__image-card {
+    &__image-card,
+    &__editor-card {
       padding: 12px;
+    }
+
+    &__card--mode {
+      padding: 12px;
+    }
+
+    &__mode-block,
+    &__setting-panel,
+    &__copy-block,
+    &__tag-panel {
+      padding: 12px;
+    }
+
+    &__mode-summary-content {
+      padding: 8px 10px;
     }
 
     &__main-wrap,
     &__main-upload {
       max-width: 100%;
+    }
+
+    &__editor-badge,
+    &__copy-badge {
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
     }
   }
 }

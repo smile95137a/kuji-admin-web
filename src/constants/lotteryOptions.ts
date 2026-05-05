@@ -66,13 +66,11 @@ export const prizeTypeOptions = [
   { label: '數位獎品', value: 'digital' },
   { label: '點數獎品', value: 'point' },
 ];
-
 export const delistStrategyOptions = [
-  { label: '最後大獎抽完即下架', value: 'GRAND_PRIZE_DRAWN' },
-  { label: '所有獎品抽完才下架', value: 'ALL_DRAWN' },
-  { label: '抽完後保留，手動下架', value: 'MANUAL' },
+  { label: '大獎抽完下架', value: 'GRAND_PRIZE_DRAWN' },
+  { label: '全數抽完下架', value: 'ALL_DRAWN' },
+  { label: '手動下架', value: 'MANUAL' },
 ];
-
 export const paymentTypeOptions = [
   { label: '遊戲幣', value: 'GOLD' },
   { label: '紅利點數', value: 'BONUS' },

@@ -76,16 +76,16 @@
             <span>{{ linkTypeText(item.linkType) }}</span>
           </template>
 
-          <!-- 連結 -->
-          <template #cell-linkUrl="{ item }">
-            <span class="ml__link-text">{{ item.linkUrl || '-' }}</span>
+          <!-- 排序 -->
+          <template #cell-priority="{ item }">
+            <span>{{ item.priority ?? '-' }}</span>
           </template>
 
           <!-- 背景色 -->
           <template #cell-bgColor="{ item }">
             <div class="ml__color-cell">
               <span
-                v-if="item.bgColor"
+                v-if="isValidColor(item.bgColor)"
                 class="ml__color-dot"
                 :style="{ backgroundColor: item.bgColor }"
               />
@@ -97,7 +97,7 @@
           <template #cell-textColor="{ item }">
             <div class="ml__color-cell">
               <span
-                v-if="item.textColor"
+                v-if="isValidColor(item.textColor)"
                 class="ml__color-dot"
                 :style="{ backgroundColor: item.textColor }"
               />
@@ -120,9 +120,23 @@
             />
           </template>
 
-          <!-- 結束時間 -->
-          <template #cell-endTime="{ item }">
-            <DateFormatter :date="item.endTime" format="YYYY-MM-DD HH:mm:ss" />
+          <!-- 更新時間 -->
+          <template #cell-updatedAt="{ item }">
+            <DateFormatter
+              :date="item.updatedAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </template>
+
+          <!-- 操作 -->
+          <template #cell-actions="{ item }">
+            <div class="flex gap-x-8 flex-wrap">
+              <MButton size="sm" @click="navigateToEdit(item)"> 編輯 </MButton>
+
+              <MButton size="sm" variant="danger" @click="deleteOne(item)">
+                刪除
+              </MButton>
+            </div>
           </template>
         </ReportTable>
 
@@ -163,7 +177,6 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import MarqueeSearchForm from '@/components/marquee/MarqueeSearchForm.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useMarqueeStore } from '@/stores/marquee/useMarqueeStore';
 
@@ -173,6 +186,7 @@ import {
   updateMarqueeStatus,
   broadcastMarquees,
 } from '@/services/adminMarqueeService';
+
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
@@ -217,6 +231,12 @@ const normalizeIsActiveNum = (value: any): 1 | 0 => {
   return 0;
 };
 
+const normalizeMarqueeList = (res: any) => {
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res)) return res;
+  return [];
+};
+
 const normalizeRows = (rows: any[]) => {
   return (rows || []).map((row: any) => ({
     ...row,
@@ -227,9 +247,11 @@ const normalizeRows = (rows: any[]) => {
 
 const filterRows = (rows: any[], condition: any) => {
   const active = String(condition?.active ?? '').trim();
+
   const keyword = String(condition?.keyword ?? '')
     .trim()
     .toLowerCase();
+
   const startDate = String(condition?.startDate ?? '').trim();
   const endDate = String(condition?.endDate ?? '').trim();
 
@@ -259,20 +281,28 @@ const activeBadgeClass = (value: any) => {
 
 const linkTypeText = (value?: string) => {
   if (value === 'NONE') return '無連結';
-  if (value === 'URL') return '網址';
+  if (value === 'URL' || value === 'EXTERNAL') return '網址';
   if (value === 'NEWS') return '最新消息';
   if (value === 'BANNER') return 'Banner';
   return value || '-';
+};
+
+const isValidColor = (value?: string) => {
+  const text = String(value || '').trim();
+
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text);
 };
 
 /* --------------------------------------
  * Query
  * -------------------------------------- */
 const doQuery = async (condition: any) => {
-  await query(async () => getAllMarquees());
+  await query(async () => {
+    const res = await getAllMarquees();
+    const rows = normalizeMarqueeList(res);
 
-  const rows = normalizeRows(list.value);
-  list.value = filterRows(rows, condition);
+    return filterRows(normalizeRows(rows), condition);
+  });
 };
 
 const onSubmit = async (values: any) => {
@@ -354,15 +384,15 @@ const handlePageLimitSizeChange = (value: number) => {
  * Columns
  * -------------------------------------- */
 const columns = [
-  { field: 'content', label: '內容', width: 320, sortable: true },
-  { field: 'linkType', label: '連結類型', width: 120, sortable: true },
-  { field: 'linkUrl', label: '連結', width: 220 },
-  { field: 'priority', label: '優先序', width: 90, sortable: true },
-  { field: 'bgColor', label: '背景色', width: 110 },
-  { field: 'textColor', label: '文字色', width: 110 },
-  { field: 'isActive', label: '狀態', width: 90, sortable: true },
-  { field: 'startTime', label: '開始時間', width: 160, sortable: true },
-  { field: 'endTime', label: '結束時間', width: 160, sortable: true },
+  { field: 'content', label: '內容', width: 50, sortable: true },
+  { field: 'linkType', label: '連結類型', width: 50, sortable: true },
+  { field: 'priority', label: '排序', width: 50, sortable: true },
+  { field: 'bgColor', label: '背景色', width: 50 },
+  { field: 'textColor', label: '文字色', width: 50 },
+  { field: 'isActive', label: '狀態', width: 50, sortable: true },
+  { field: 'startTime', label: '開始時間', width: 50, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 50, sortable: true },
+  { field: 'actions', label: '操作', width: 50 },
 ];
 
 /* --------------------------------------
@@ -438,6 +468,7 @@ const enableSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      marqueeStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -479,6 +510,31 @@ const disableSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      marqueeStore.setShouldRefresh(true);
+      await refresh();
+    },
+    showSuccessDialog: false,
+  });
+};
+
+const deleteOne = async (item: any) => {
+  const ok = await openConfirmDialog({
+    title: '刪除確認',
+    message: `確定要刪除「${item?.content || '-'}」嗎？（刪除後無法復原）`,
+  });
+
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () => deleteMarquee(item.id),
+    onSuccess: async () => {
+      await openInfoDialog({
+        title: '提示訊息',
+        message: '刪除成功',
+        iconType: 'success',
+      });
+
+      marqueeStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -511,6 +567,7 @@ const deleteSelected = async () => {
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
+      marqueeStore.setShouldRefresh(true);
       await refresh();
     },
     showSuccessDialog: false,
@@ -613,14 +670,17 @@ onMounted(async () => {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
   }
 
   &__color-dot {
     display: inline-block;
+    flex: 0 0 auto;
     width: 14px;
     height: 14px;
     border: 1px solid #d1d5db;
     border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   }
 }
 </style>

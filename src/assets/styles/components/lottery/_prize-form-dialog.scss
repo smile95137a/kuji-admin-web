@@ -111,8 +111,7 @@
 
   &__image-wrap {
     position: relative;
-    width: 240px;
-    max-width: 100%;
+    width: 100%;
   }
 
   &__image-upload {
@@ -120,8 +119,7 @@
     display: flex;
     align-items: stretch;
     justify-content: stretch;
-    width: 240px;
-    max-width: 100%;
+    width: 100%;
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border: 1px dashed $form-border;
