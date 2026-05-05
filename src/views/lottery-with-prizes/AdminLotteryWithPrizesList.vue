@@ -163,88 +163,82 @@
 
           <template #cell-actions="{ item }">
             <div class="flex gap-x-6 flex-wrap">
-              <!-- DRAFT → 完成配置 -->
+              <!-- DRAFT → 上架 -->
               <MButton
                 v-if="item.status === 'DRAFT'"
                 size="sm"
                 @click="
                   changeStatus(
                     item,
-                    'CONFIGURED',
-                    `確定要將「${item.title}」標記為完成配置？`,
+                    'ON_SHELF',
+                    `確定要將「${item.title}」上架？`,
                   )
                 "
-                >完成配置</MButton
+                >上架</MButton
               >
 
-              <!-- CONFIGURED → 開始抽獎 / 取消 -->
-              <template v-if="item.status === 'CONFIGURED'">
-                <!-- T017 — disable 開始抽獎 if SCRATCH_STORE + PENDING -->
-                <MButton
-                  size="sm"
-                  :disabled="
-                    item.gameMode === 'SCRATCH_STORE' &&
-                    item.designationStatus === 'PENDING'
-                  "
-                  :title="
-                    item.gameMode === 'SCRATCH_STORE' &&
-                    item.designationStatus === 'PENDING'
-                      ? '請先完成大獎號碼指定才能開始抽獎'
-                      : ''
-                  "
-                  @click="
-                    changeStatus(
-                      item,
-                      'ACTIVE',
-                      `確定要開始「${item.title}」的抽獎？`,
-                    )
-                  "
-                  >開始抽獎</MButton
-                >
+              <!-- ON_SHELF → 下架 / 強制下架 -->
+              <template v-if="item.status === 'ON_SHELF'">
                 <MButton
                   size="sm"
                   class="mbtn--gray"
                   @click="
                     changeStatus(
                       item,
-                      'CANCELLED',
-                      `確定要取消「${item.title}」？`,
+                      'OFF_SHELF',
+                      `確定要將「${item.title}」下架？`,
                     )
                   "
-                  >取消</MButton
+                  >下架</MButton
+                >
+                <MButton
+                  size="sm"
+                  class="mbtn--red"
+                  @click="
+                    changeStatus(
+                      item,
+                      'FORCED_OFF',
+                      `確定要強制下架「${item.title}」？`,
+                    )
+                  "
+                  >強制下架</MButton
                 >
               </template>
 
-              <!-- T018 — 指定大獎號碼 button for SCRATCH_STORE + PENDING -->
+              <!-- OFF_SHELF → 重新上架 -->
               <MButton
-                v-if="
-                  item.gameMode === 'SCRATCH_STORE' &&
-                  item.designationStatus === 'PENDING'
-                "
+                v-if="item.status === 'OFF_SHELF'"
                 size="sm"
-                class="mbtn--gray"
-                @click="openDesignateModal(item)"
-                >指定大獎號碼</MButton
+                @click="
+                  changeStatus(
+                    item,
+                    'ON_SHELF',
+                    `確定要將「${item.title}」重新上架？`,
+                  )
+                "
+                >重新上架</MButton
               >
 
-              <!-- ACTIVE → 結束抽獎 -->
+              <!-- FORCED_OFF → 退回草稿 -->
               <MButton
-                v-if="item.status === 'ACTIVE'"
+                v-if="item.status === 'FORCED_OFF'"
                 size="sm"
                 class="mbtn--gray"
                 @click="
                   changeStatus(
                     item,
-                    'ENDED',
-                    `確定要結束「${item.title}」的抽獎？`,
+                    'DRAFT',
+                    `確定要將「${item.title}」退回草稿？`,
                   )
                 "
-                >結束抽獎</MButton
+                >退回草稿</MButton
               >
 
-              <!-- non-ACTIVE → 刪除（ACTIVE 狀態須先結束才能刪除） -->
+              <!-- SOLD_OUT / ENDED → 無按鈕，僅顯示刪除 -->
+
+              <!-- non-ON_SHELF → 刪除（上架中不可直接刪除） -->
               <MButton
-                v-if="item.status !== 'ACTIVE'"
+                v-if="item.status !== 'ON_SHELF'"
                 size="sm"
                 class="mbtn--red"
                 @click="
@@ -377,10 +371,11 @@ const storeOptions = ref<SelectOption[]>([]);
 
 const statusOptions = ref<SelectOption[]>([
   { label: '草稿（DRAFT）', value: 'DRAFT' },
-  { label: '已配置（CONFIGURED）', value: 'CONFIGURED' },
-  { label: '抽獎中（ACTIVE）', value: 'ACTIVE' },
+  { label: '上架中（ON_SHELF）', value: 'ON_SHELF' },
+  { label: '下架（OFF_SHELF）', value: 'OFF_SHELF' },
+  { label: '已售完（SOLD_OUT）', value: 'SOLD_OUT' },
+  { label: '強制下架（FORCED_OFF）', value: 'FORCED_OFF' },
   { label: '已結束（ENDED）', value: 'ENDED' },
-  { label: '已取消（CANCELLED）', value: 'CANCELLED' },
 ]);
 
 const categoryOptions = ref<SelectOption[]>([
@@ -434,18 +429,21 @@ const formatDateTime = (v?: string) => {
 
 const statusText = (s?: string) => {
   if (s === 'DRAFT') return '草稿';
-  if (s === 'CONFIGURED') return '已配置';
-  if (s === 'ACTIVE') return '抽獎中';
+  if (s === 'ON_SHELF') return '上架中';
+  if (s === 'OFF_SHELF') return '下架';
+  if (s === 'SOLD_OUT') return '已售完';
+  if (s === 'FORCED_OFF') return '強制下架';
   if (s === 'ENDED') return '已結束';
-  if (s === 'CANCELLED') return '已取消';
   return s ? String(s) : '-';
 };
 
 const statusBadgeClass = (s?: string) => {
-  if (s === 'ACTIVE') return 'badge badge--green';
-  if (s === 'CONFIGURED') return 'badge badge--blue';
-  if (s === 'CANCELLED') return 'badge badge--red';
-  return 'badge badge--gray'; // DRAFT, ENDED
+  if (s === 'ON_SHELF') return 'badge badge--green';
+  if (s === 'OFF_SHELF') return 'badge badge--gray';
+  if (s === 'SOLD_OUT') return 'badge badge--blue';
+  if (s === 'FORCED_OFF') return 'badge badge--red';
+  if (s === 'ENDED') return 'badge badge--gray';
+  return 'badge badge--gray'; // DRAFT
 };
 
 const categoryText = (c?: string) =>
@@ -604,7 +602,7 @@ const refresh = async () => {
 /** 單列狀態變更 */
 const changeStatus = async (
   item: any,
-  newStatus: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED' | 'DELETED',
+  newStatus: 'ON_SHELF' | 'OFF_SHELF' | 'FORCED_OFF' | 'DRAFT' | 'ENDED' | 'DELETED',
   confirmMsg: string,
 ) => {
   const ok = await openConfirmDialog({
@@ -631,16 +629,16 @@ const changeStatus = async (
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  // 篩出可刪除的（非 ACTIVE）
+  // 篩出可刪除的（非 ON_SHELF）
   const deletable = selectedRows.value.filter(
-    (r: any) => r.status !== 'ACTIVE',
+    (r: any) => r.status !== 'ON_SHELF',
   );
   const activeCount = selectedRows.value.length - deletable.length;
 
   if (deletable.length === 0) {
     await openInfoDialog({
       title: '無法刪除',
-      message: '選中的商品均為「抽獎中」狀態，請先結束抽獎後再刪除。',
+      message: '選中的商品均為「上架中」狀態，請先下架後再刪除。',
       iconType: 'warning',
     });
     return;
@@ -648,7 +646,7 @@ const deleteSelected = async () => {
 
   const warningMsg =
     activeCount > 0
-      ? `共選 ${selectedRows.value.length} 筆，其中 ${activeCount} 筆為「抽獎中」狀態無法刪除，確定要刪除其餘 ${deletable.length} 筆嗎？（刪除後無法復原）`
+      ? `共選 ${selectedRows.value.length} 筆，其中 ${activeCount} 筆為「上架中」狀態無法刪除，確定要刪除其餘 ${deletable.length} 筆嗎？（刪除後無法復原）`
       : `確定要刪除選中的 ${deletable.length} 筆商品嗎？（刪除後無法復原）`;
 
   const ok = await openConfirmDialog({

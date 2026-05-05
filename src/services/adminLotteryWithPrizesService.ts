@@ -123,7 +123,7 @@ export const designatePrize = async (
 /** 變更抽獎商品狀態（PUT /admin/lottery/{id}/status） */
 export const changeLotteryWithPrizesStatus = async (
   lotteryId: string,
-  targetStatus: 'CONFIGURED' | 'ACTIVE' | 'ENDED' | 'CANCELLED' | 'DELETED',
+  targetStatus: 'ON_SHELF' | 'OFF_SHELF' | 'FORCED_OFF' | 'DRAFT' | 'ENDED' | 'DELETED',
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`/admin/lottery/${lotteryId}/status`, { targetStatus });
