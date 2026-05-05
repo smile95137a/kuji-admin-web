@@ -2,16 +2,21 @@
 <template>
   <MCard>
     <div class="admin-lottery-form__header">
-      <FormTitle :title="isEdit ? '編輯一番賞商品設定' : '新增一番賞商品設定'" />
+      <FormTitle
+        :title="isEdit ? '編輯一番賞商品設定' : '新增一番賞商品設定'"
+      />
       <MButton
         v-if="isEdit && isScratchStoreEdit"
         type="button"
         @click="showDesignateModal = true"
-      >指定大獎號碼</MButton>
+      >
+        指定大獎號碼
+      </MButton>
     </div>
 
     <Form
       ref="formRef"
+      keep-values
       :initial-values="lotteryWithPrizesInitialValues"
       :validation-schema="lotteryWithPrizesSchema"
       :validate-on-mount="false"
@@ -59,25 +64,36 @@
       <!-- SCRATCH_STORE + PENDING -->
       <div
         v-if="isScratchStoreEdit && lotteryDesignationStatus === 'PENDING'"
-        style="border-left: 4px solid #d46b08; background: #fff7e6; border-radius: 8px; margin-top: 12px;"
+        style="
+          border-left: 4px solid #d46b08;
+          background: #fff7e6;
+          border-radius: 8px;
+          margin-top: 12px;
+        "
       >
         <div
           class="flex items-center justify-between flex-wrap gap-x-12"
           style="padding: 12px 16px"
         >
           <span style="color: #d46b08; font-size: 13px">
-            ⚠️ 此刷刷樂商品（店家指定模式）尚未完成大獎號碼指定。開始抽獎前需先指定大獎號碼。
+            ⚠️
+            此刷刷樂商品（店家指定模式）尚未完成大獎號碼指定。開始抽獎前需先指定大獎號碼。
           </span>
-          <MButton size="sm" type="button" @click="showDesignateModal = true"
-            >前往指定大獎號碼</MButton
-          >
+          <MButton size="sm" type="button" @click="showDesignateModal = true">
+            前往指定大獎號碼
+          </MButton>
         </div>
       </div>
 
       <!-- SCRATCH_STORE + DESIGNATED -->
       <div
         v-if="isScratchStoreEdit && lotteryDesignationStatus === 'DESIGNATED'"
-        style="border-left: 4px solid #52c41a; background: #f6ffed; border-radius: 8px; margin-top: 12px;"
+        style="
+          border-left: 4px solid #52c41a;
+          background: #f6ffed;
+          border-radius: 8px;
+          margin-top: 12px;
+        "
       >
         <div style="padding: 12px 16px; color: #389e0d; font-size: 13px">
           ✅ 大獎號碼已完成指定，可開始抽獎。
@@ -87,10 +103,16 @@
       <!-- SCRATCH_PLAYER -->
       <div
         v-if="isScratchPlayerEdit"
-        style="border-left: 4px solid #1890ff; background: #e6f7ff; border-radius: 8px; margin-top: 12px;"
+        style="
+          border-left: 4px solid #1890ff;
+          background: #e6f7ff;
+          border-radius: 8px;
+          margin-top: 12px;
+        "
       >
         <div style="padding: 12px 16px; color: #005a99; font-size: 13px">
-          ℹ️ 此刷刷樂商品（玩家指定模式）：玩家購票後自行指定大獎號碼，無需店家操作。
+          ℹ️
+          此刷刷樂商品（玩家指定模式）：玩家購票後自行指定大獎號碼，無需店家操作。
         </div>
       </div>
     </template>
@@ -561,7 +583,8 @@ const loadDetail = async () => {
     lotteryDesignationStatus.value = data?.designationStatus ?? null;
     // 只看 gameMode，與 copy form 行為一致
     isScratchStoreEdit.value = String(data?.gameMode ?? '') === 'SCRATCH_STORE';
-    isScratchPlayerEdit.value = String(data?.gameMode ?? '') === 'SCRATCH_PLAYER';
+    isScratchPlayerEdit.value =
+      String(data?.gameMode ?? '') === 'SCRATCH_PLAYER';
 
     ensureStoreOptionExists(data?.storeId ?? '');
 
@@ -732,6 +755,7 @@ const onSubmitForm = async (values: any, actions: any) => {
 
   try {
     console.log('[LotteryWithPrizesForm] submit values:', values);
+    console.log('[LotteryWithPrizesForm] submit content:', values.content);
     console.log('[LotteryWithPrizesForm] submit payload:', payload);
 
     if (!isEdit.value) {
@@ -753,15 +777,16 @@ const onSubmitForm = async (values: any, actions: any) => {
         newId
       ) {
         // 從建立回應取得大獎 prizeId（新 designations 格式必要欄位）
-        const createdGrandPrize = ((createRes?.data?.prizes ?? []) as any[]).find(
-          (p: any) => p.isGrandPrize === true,
-        );
+        const createdGrandPrize = (
+          (createRes?.data?.prizes ?? []) as any[]
+        ).find((p: any) => p.isGrandPrize === true);
         const grandPrizeIdForDesignate = createdGrandPrize?.id;
 
         if (!grandPrizeIdForDesignate) {
           await openInfoDialog({
             title: '大獎號碼指定失敗',
-            message: '商品已建立，但無法取得大獎 ID。請至編輯頁手動指定大獎號碼。',
+            message:
+              '商品已建立，但無法取得大獎 ID。請至編輯頁手動指定大獎號碼。',
             iconType: 'warning',
           });
           router.push(LIST_PATH);
@@ -770,10 +795,12 @@ const onSubmitForm = async (values: any, actions: any) => {
 
         try {
           await designatePrize(String(newId), {
-            designations: [{
-              revealedNumber: pendingDesignatedPrizeNumber,
-              prizeId: grandPrizeIdForDesignate,
-            }],
+            designations: [
+              {
+                revealedNumber: pendingDesignatedPrizeNumber,
+                prizeId: grandPrizeIdForDesignate,
+              },
+            ],
           });
         } catch (designateError: any) {
           await openInfoDialog({
