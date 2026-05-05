@@ -8,6 +8,19 @@
         <FormSection title="商品基本資料">
           <div class="tab-lottery-basic__card">
             <div class="flex flex-wrap">
+              <!-- 商品名稱 -->
+              <div class="w-50 w-md-100 p-6">
+                <FormInput
+                  label="商品名稱"
+                  v-model="title"
+                  :error="showError('title')"
+                  required
+                  maxlength="100"
+                  placeholder="請輸入商品名稱"
+                />
+              </div>
+            </div>
+            <div class="flex flex-wrap">
               <!-- 所屬店家 -->
               <div class="w-50 w-md-100 p-6">
                 <FormSelect
@@ -28,22 +41,6 @@
                   disabled
                 />
               </div>
-            </div>
-            <div class="flex flex-wrap">
-              <!-- 商品名稱 -->
-              <div class="w-50 w-md-100 p-6">
-                <FormInput
-                  label="商品名稱"
-                  v-model="title"
-                  :error="showError('title')"
-                  required
-                  maxlength="100"
-                  placeholder="請輸入商品名稱"
-                />
-              </div>
-            </div>
-            <div class="flex flex-wrap">
-              <!-- 主題分類 -->
               <div class="w-50 w-md-100 p-6">
                 <FormSelect
                   label="主題分類"
