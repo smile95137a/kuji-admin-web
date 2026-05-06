@@ -1,3 +1,4 @@
+// src/assets/styles/components/_form-section.scss
 @use 'sass:color';
 @use '../base/tokens' as *;
 
@@ -10,14 +11,26 @@
     border-top: 1px solid color.mix($form-border, #fff, 72%);
   }
 
-  &__title {
+  &__header {
     margin: 0 6px 8px;
+  }
+
+  &__title {
+    margin: 0;
     padding-left: 10px;
     border-left: 4px solid $brand;
     color: $form-text;
     font-size: 15px;
     font-weight: 700;
     line-height: 1.4;
+  }
+
+  &__subtitle {
+    margin: 4px 0 0 14px;
+    color: $form-muted;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
   }
 
   &__content {

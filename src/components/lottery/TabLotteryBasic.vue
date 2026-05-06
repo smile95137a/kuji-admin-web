@@ -20,6 +20,7 @@
                 />
               </div>
             </div>
+
             <div class="flex flex-wrap">
               <!-- 所屬店家 -->
               <div class="w-50 w-md-100 p-6">
@@ -41,6 +42,7 @@
                   disabled
                 />
               </div>
+
               <div class="w-50 w-md-100 p-6">
                 <FormSelect
                   label="主題分類"
@@ -188,6 +190,7 @@
             </div>
           </div>
         </FormSection>
+
         <!-- 狀態與排程 -->
         <FormSection title="狀態與排程">
           <div
@@ -318,7 +321,7 @@
             <div class="tab-lottery-basic__editor-main">
               <Ckeditor
                 :editor="ckeditorEditor"
-                v-model="content"
+                v-model="editorContent"
                 :config="editorConfig"
               />
             </div>
@@ -522,7 +525,8 @@ const themeOptions = computed<SelectOption[]>(() => props.themeOptions ?? []);
 const isAdmin = computed(() => props.isAdmin);
 const isEdit = computed(() => props.isEdit);
 
-const { defineField, errors, submitCount } = useFormContext();
+const { defineField, errors, submitCount, setFieldValue, values } =
+  useFormContext();
 
 const [storeId] = defineField('storeId');
 const [title] = defineField('title');
@@ -535,7 +539,6 @@ const [status] = defineField('status');
 const [theme] = defineField('theme');
 const [imageUrl] = defineField('imageUrl');
 const [galleryImagesText] = defineField('galleryImagesText');
-const [content] = defineField('content');
 const [description] = defineField('description');
 const [tagsText] = defineField('tagsText');
 const [remark] = defineField('remark');
@@ -545,6 +548,15 @@ const [endTime] = defineField('endTime');
 const [pendingDesignatedPrizeNumber] = defineField(
   'pendingDesignatedPrizeNumber',
 );
+
+const editorContent = computed<string>({
+  get() {
+    return String((values as any).content || '');
+  },
+  set(value: string) {
+    setFieldValue('content', value || '');
+  },
+});
 
 const showError = (field: string) => {
   if (!submitCount.value) return '';
