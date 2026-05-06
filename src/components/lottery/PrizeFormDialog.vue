@@ -50,6 +50,7 @@
                     v-model="form.level"
                     :options="levelOptions"
                     :error="errors.level"
+                    :disabled="isScratchPrize"
                     required
                   />
                 </div>
@@ -60,6 +61,9 @@
                     type="number"
                     v-model="form.quantity"
                     :error="errors.quantity"
+                    :disabled="isScratchPrize"
+                    :min="1"
+                    :max="isScratchPrize ? 1 : undefined"
                     required
                   />
                 </div>
@@ -75,56 +79,18 @@
               </div>
             </FormSection>
 
-            <!-- 獎品設定 -->
-            <FormSection title="獎品設定">
-              <div class="flex flex-wrap">
-                <div class="w-100 p-6">
-                  <FormRadioTagGroup
-                    label="獎品類型"
-                    name="prizeType"
-                    id-prefix="prize-type"
-                    v-model="form.prizeType"
-                    :options="prizeTypeOptions"
-                    :error="errors.prizeType"
-                    required
-                  />
-                </div>
-
-                <div
-                  v-if="form.prizeType === 'point'"
-                  class="w-50 w-md-100 p-6"
-                >
-                  <FormInput
-                    label="點數價值"
-                    type="number"
-                    v-model="form.pointValue"
-                    :error="errors.pointValue"
-                    placeholder="請輸入點數價值"
-                  />
-                </div>
-
-                <div class="w-50 w-md-100 p-6">
-                  <FormInput
-                    label="獎號"
-                    v-model="form.prizeNumber"
-                    :error="errors.prizeNumber"
-                    placeholder="例如：A-01"
-                  />
-                </div>
-              </div>
-            </FormSection>
-
             <!-- 獎品標記 -->
             <FormSection title="獎品標記">
               <div class="flex flex-wrap">
                 <div class="w-100 p-6">
-                  <FormCheckTagGroup
-                    label="獎品標記"
-                    name="prizeTags"
-                    id-prefix="prize-tags"
-                    v-model="prizeTags"
-                    :options="prizeTagOptions"
-                  />
+            <FormCheckTagGroup
+              label="獎品標記"
+              name="prizeTags"
+              id-prefix="prize-tags"
+              v-model="prizeTags"
+              :options="prizeTagOptions"
+              :disabled="isScratchPrize"
+            />
                 </div>
               </div>
             </FormSection>
@@ -256,7 +222,7 @@ import ImageCropDialog from '@/components/common/ImageCropDialog.vue';
 import { uploadPrizeImage } from '@/services/adminUploadService';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
-import { levelOptions, prizeTypeOptions } from '@/constants/lotteryOptions';
+import { levelOptions } from '@/constants/lotteryOptions';
 
 interface SelectOption {
   label: string;
@@ -305,6 +271,8 @@ const dialogTitle = computed(() =>
   props.data?.mode === 'edit' ? '編輯獎品' : '新增獎品',
 );
 
+const isScratchPrize = computed(() => Boolean(props.data?.isScratchPrize));
+
 const createKey = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
@@ -327,19 +295,31 @@ const createEmptyPrize = (): PrizeFormRow => ({
 
 const source = props.data?.prize ?? createEmptyPrize();
 
+const normalizeScratchPrize = (row: PrizeFormRow): PrizeFormRow => ({
+  ...row,
+  level: 'GRAND',
+  quantity: 1,
+  isGrandPrize: true,
+  isLastPrize: false,
+});
+
 const form = reactive<PrizeFormRow>({
-  _key: source._key || createKey(),
-  name: source.name ?? '',
-  quantity: source.quantity ?? 1,
-  level: source.level ?? 'A',
-  prizeType: source.prizeType ?? 'physical',
-  pointValue: source.pointValue,
-  prizeNumber: source.prizeNumber ?? '',
-  isLastPrize: source.isLastPrize ?? false,
-  isGrandPrize: source.isGrandPrize ?? false,
-  orderNum: source.orderNum,
-  imageUrl: source.imageUrl ?? '',
-  description: source.description ?? '',
+  ...(isScratchPrize.value
+    ? normalizeScratchPrize(source as PrizeFormRow)
+    : {
+        _key: source._key || createKey(),
+        name: source.name ?? '',
+        quantity: source.quantity ?? 1,
+        level: source.level ?? 'A',
+        prizeType: source.prizeType ?? 'physical',
+        pointValue: source.pointValue,
+        prizeNumber: source.prizeNumber ?? '',
+        isLastPrize: source.isLastPrize ?? false,
+        isGrandPrize: source.isGrandPrize ?? false,
+        orderNum: source.orderNum,
+        imageUrl: source.imageUrl ?? '',
+        description: source.description ?? '',
+      }),
 });
 
 const errors = reactive<Record<string, string>>({
@@ -368,6 +348,12 @@ const prizeTags = computed<string[]>({
     return tags;
   },
   set(value) {
+    if (isScratchPrize.value) {
+      form.isLastPrize = false;
+      form.isGrandPrize = true;
+      return;
+    }
+
     form.isLastPrize = value.includes('LAST_PRIZE');
     form.isGrandPrize = value.includes('GRAND_PRIZE');
   },
@@ -401,7 +387,17 @@ const validateForm = () => {
 
   const quantity = Number(form.quantity);
 
-  if (!Number.isFinite(quantity) || quantity < 1) {
+  if (isScratchPrize.value) {
+    if (quantity !== 1) {
+      errors.quantity = '刮刮樂模式固定為 1';
+      valid = false;
+    }
+
+    if (String(form.level || '') !== 'GRAND') {
+      errors.level = '刮刮樂模式固定為大獎等級';
+      valid = false;
+    }
+  } else if (!Number.isFinite(quantity) || quantity < 1) {
     errors.quantity = '數量必須大於或等於 1';
     valid = false;
   }
@@ -424,21 +420,32 @@ const validateForm = () => {
 };
 
 const handleConfirm = async () => {
+  if (isScratchPrize.value) {
+    form.level = 'GRAND';
+    form.quantity = 1;
+    form.isGrandPrize = true;
+    form.isLastPrize = false;
+  }
+
   if (!validateForm()) return;
 
+  const normalized = isScratchPrize.value
+    ? normalizeScratchPrize(form)
+    : form;
+
   await props.onConfirm?.({
-    ...form,
-    name: String(form.name || '').trim(),
-    description: String(form.description || '').trim(),
-    quantity: Number(form.quantity),
+    ...normalized,
+    name: String(normalized.name || '').trim(),
+    description: String(normalized.description || '').trim(),
+    quantity: Number(normalized.quantity),
     pointValue:
-      form.pointValue === '' || form.pointValue == null
+      normalized.pointValue === '' || normalized.pointValue == null
         ? undefined
-        : Number(form.pointValue),
+        : Number(normalized.pointValue),
     orderNum:
-      form.orderNum === '' || form.orderNum == null
+      normalized.orderNum === '' || normalized.orderNum == null
         ? undefined
-        : Number(form.orderNum),
+        : Number(normalized.orderNum),
   });
 };
 

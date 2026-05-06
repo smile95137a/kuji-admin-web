@@ -1,14 +1,29 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import VChart from 'vue-echarts';
+import { use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
 import MCard from '@/components/common/MCard.vue';
 import ReportFilterBar from '@/components/report/ReportFilterBar.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import { getBonusReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
+import { exportToCsv } from '@/utils/csvExport';
+
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent]);
 
 const reportData = ref<any>(null);
 const { dateRange } = useReportFilter();
+
+const chartOption = ref<any>({
+  tooltip: { trigger: 'axis' },
+  xAxis: { type: 'category', data: [] },
+  yAxis: { type: 'value' },
+  series: [{ name: '每日贈點數', type: 'line', data: [], smooth: true, areaStyle: {} }],
+});
 
 // API: POST /admin/report/bonus
 // Response: { totalBonusPoints, totalCount, benefitUsers, growthRate, dailyDetails[], typeStats[] }
@@ -49,15 +64,30 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
         }));
       }
       reportData.value = raw;
+      const daily = raw?.dailyDetails ?? [];
+      chartOption.value = {
+        ...chartOption.value,
+        xAxis: { type: 'category', data: daily.map((d: any) => d.date) },
+        series: [{ name: '每日贈點數', type: 'line', data: daily.map((d: any) => d.points ?? 0), smooth: true, areaStyle: {} }],
+      };
     },
     showSuccessDialog: false,
   });
+}
+
+function handleExport() {
+  if (!reportData.value) return;
+  if (reportData.value.dailyDetails?.length) exportToCsv(reportData.value.dailyDetails, dailyColumns, '紅利報表_每日明細');
+  if (reportData.value.typeStats?.length) exportToCsv(reportData.value.typeStats, typeStatsColumns, '紅利報表_類型統計');
 }
 </script>
 
 <template>
   <MCard>
-    <p class="form__text form__text--title">紅利報表</p>
+    <div class="rp__header">
+      <p class="form__text form__text--title">紅利報表</p>
+      <button v-if="reportData" class="rp__export-btn" @click="handleExport">↓ 匯出 CSV</button>
+    </div>
 
     <ReportFilterBar @update:filter="fetchReport" />
 
@@ -80,6 +110,11 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
           <p class="rp__card-label">成長率</p>
           <p class="rp__card-value">{{ reportData.growthRate != null ? reportData.growthRate + '%' : '-' }}</p>
         </div>
+      </div>
+
+      <!-- 每日贈點趨勢圖 -->
+      <div v-if="reportData.dailyDetails?.length" class="rp__chart m-t-20">
+        <v-chart :option="chartOption" style="height: 260px" autoresize />
       </div>
 
       <!-- 類型統計 -->
@@ -113,6 +148,12 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
 
 <style scoped lang="scss">
 .rp {
+  &__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  &__export-btn {
+    padding: 6px 16px; font-size: 13px; border-radius: 6px;
+    border: 1px solid #6366f1; background: #fff; color: #6366f1; cursor: pointer; transition: all 0.15s;
+    &:hover { background: #6366f1; color: #fff; }
+  }
   &__loading, &__empty { text-align: center; color: #9ca3af; font-size: 14px; padding: 24px; }
   &__cards { display: flex; gap: 12px; flex-wrap: wrap; }
   &__card {
@@ -121,5 +162,6 @@ async function fetchReport(filter: { startDate: string; endDate: string }) {
   }
   &__card-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
   &__card-value { font-size: 22px; font-weight: 700; color: #d97706; }
+  &__chart { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; padding: 8px; background: #fafafa; }
 }
 </style>

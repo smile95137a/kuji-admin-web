@@ -393,16 +393,20 @@ const selectedRows = computed(() =>
   list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
+const enableTargetRows = computed(() =>
+  selectedRows.value.filter((r: any) => r.status === 'UNPUBLISHED'),
+);
+
+const disableTargetRows = computed(() =>
+  selectedRows.value.filter((r: any) => r.status === 'PUBLISHED'),
+);
+
 const canEnable = computed(
-  () =>
-    selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.status === 'UNPUBLISHED'),
+  () => enableTargetRows.value.length > 0,
 );
 
 const canDisable = computed(
-  () =>
-    selectedRows.value.length > 0 &&
-    selectedRows.value.every((r: any) => r.status === 'PUBLISHED'),
+  () => disableTargetRows.value.length > 0,
 );
 
 const canDelete = computed(() => selectedRows.value.length > 0);
@@ -530,19 +534,23 @@ const enableSelected = async () => {
 
   if (!ok) return;
 
+  const targetIds = enableTargetRows.value.map((x: any) => x.id);
+  const skippedCount = selectedRows.value.length - targetIds.length;
+
   await executeApi({
     fn: async () =>
-      Promise.allSettled(selectedIds.value.map((id) => publishBanner(id))),
+      Promise.allSettled(targetIds.map((id) => publishBanner(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
+      const skipText = skippedCount > 0 ? `、略過 ${skippedCount}` : '';
 
       await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
-            ? `上架完成：成功 ${okCount}、失敗 ${failCount}`
-            : `上架完成：成功 ${okCount}`,
+            ? `上架完成：成功 ${okCount}、失敗 ${failCount}${skipText}`
+            : `上架完成：成功 ${okCount}${skipText}`,
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 
@@ -569,19 +577,23 @@ const disableSelected = async () => {
 
   if (!ok) return;
 
+  const targetIds = disableTargetRows.value.map((x: any) => x.id);
+  const skippedCount = selectedRows.value.length - targetIds.length;
+
   await executeApi({
     fn: async () =>
-      Promise.allSettled(selectedIds.value.map((id) => unpublishBanner(id))),
+      Promise.allSettled(targetIds.map((id) => unpublishBanner(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
       const okCount = results.filter((x) => x.status === 'fulfilled').length;
       const failCount = results.length - okCount;
+      const skipText = skippedCount > 0 ? `、略過 ${skippedCount}` : '';
 
       await openInfoDialog({
         title: '提示訊息',
         message:
           failCount > 0
-            ? `下架完成：成功 ${okCount}、失敗 ${failCount}`
-            : `下架完成：成功 ${okCount}`,
+            ? `下架完成：成功 ${okCount}、失敗 ${failCount}${skipText}`
+            : `下架完成：成功 ${okCount}${skipText}`,
         iconType: failCount > 0 ? 'warning' : 'success',
       });
 

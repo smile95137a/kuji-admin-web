@@ -2,6 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import { isAxiosError } from 'axios';
 
+import { use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { BarChart, LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
+import VChart from 'vue-echarts';
+
 import MCard from '@/components/common/MCard.vue';
 import ReportFilterBar from '@/components/report/ReportFilterBar.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
@@ -13,6 +19,9 @@ import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import type { QueryReq } from '@/services/adminReportService';
 import { getErrorMessage } from '@/utils/ErrorUtils';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { exportToCsv } from '@/utils/csvExport';
+
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent]);
 
 type StoreOption = { label: string; value: string };
 
@@ -35,6 +44,99 @@ const props = defineProps<{
     req: QueryReq<Record<string, any>>,
   ) => Promise<ApiResponse<any>>;
 }>();
+
+// ── 中文欄位名稱對照表 ───────────────────────────────────────────────────────
+const FIELD_ZH: Record<string, string> = {
+  date: '日期',
+  storeName: '店家名稱',
+  storeId: '店家 ID',
+  totalRevenue: '總營收',
+  revenue: '營收 (NT$)',
+  totalOrders: '總訂單數',
+  orders: '訂單數',
+  totalDraws: '總抽獎次數',
+  draws: '抽獎次數',
+  avgOrderAmount: '平均訂單金額',
+  growthRate: '成長率 (%)',
+  percentage: '占比 (%)',
+  dailyDetails: '每日明細',
+  storeDetails: '各店家營收',
+  totalNewMembers: '新增會員數',
+  totalActiveMembers: '活躍會員數',
+  totalMembers: '總會員數',
+  newMembers: '新增',
+  activeMembers: '活躍',
+  retentionRate: '留存率 (%)',
+  conversionRate: '轉換率 (%)',
+  memberStats: '會員統計',
+  totalSales: '總銷售額',
+  totalTickets: '總票數',
+  soldTickets: '已售票數',
+  remainTickets: '剩餘票數',
+  soldPercentage: '售出率 (%)',
+  lotteryTitle: '商品名稱',
+  lotteryStats: '商品統計',
+  salesByStore: '各店家銷售',
+  totalShipped: '已出貨數',
+  shippedCount: '已出貨',
+  totalPending: '待出貨數',
+  pendingCount: '待出貨',
+  preparingCount: '備貨中',
+  completedCount: '已完成',
+  overdueCount: '逾期件數',
+  startDate: '開始日期',
+  endDate: '結束日期',
+  totalPrizes: '總獎品數',
+  prizeStats: '獎品統計',
+  prizeName: '獎品名稱',
+  prizeLevel: '獎品等級',
+  shipmentDetails: '出貨明細',
+  count: '數量',
+  totalStores: '店家總數',
+  activeStores: '上架中',
+  topStores: '績效排行',
+  storePerformance: '店家績效',
+  rank: '排名',
+  performanceScore: '績效分數',
+  id: 'ID',
+  name: '名稱',
+  status: '狀態',
+  createdAt: '建立時間',
+  updatedAt: '更新時間',
+  amount: '金額 (NT$)',
+  total: '合計',
+  index: '項次',
+  value: '數值',
+  result: '資料列表',
+  wonCount: '已抽數',
+  remainCount: '剩餘數',
+  wonPercentage: '抽出率 (%)',
+  totalSlots: '總簽數',
+  soldSlots: '已售',
+  remainSlots: '剩餘',
+  planName: '方案名稱',
+  planPrice: '方案金額 (NT$)',
+  bonusPoints: '贈送點數',
+  purchaseCount: '購買次數',
+  totalAmount: '總金額 (NT$)',
+  referralCount: '推薦人數',
+  referralCode: '推薦碼',
+  ownerName: '持有人',
+  rewardGiven: '已發獎勵',
+  totalReferrals: '總推薦人數',
+  activeReferralCodes: '活躍推薦碼',
+  totalRewardGiven: '已發放獎勵',
+  typeStats: '類型統計',
+  ranking: '排行榜',
+  planStats: '方案統計',
+  totalBonusPoints: '總贈點數',
+  totalCount: '總筆數',
+  benefitUsers: '受益人數',
+  points: '贈點數',
+  bonusType: '代碼',
+  typeName: '類型',
+  totalPoints: '總點數',
+};
 
 const authStore = useAuthStore();
 const dialogStore = useDialogStore();
@@ -116,11 +218,59 @@ const loadStoreOptions = async () => {
 };
 
 function toLabel(key: string): string {
+  if (FIELD_ZH[key]) return FIELD_ZH[key];
+  // fallback：camelCase → 英文空格分詞
   return key
     .replace(/([A-Z])/g, ' $1')
     .replace(/_/g, ' ')
     .trim()
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+// ── 圖表 ────────────────────────────────────────────────────────────────────
+const chartOption = computed(() => {
+  // 找第一個含 date 欄位的表格 section
+  const series = tableSections.value.find((s) =>
+    s.rows.length > 0 && 'date' in s.rows[0],
+  );
+  if (!series) return null;
+
+  const rows = series.rows;
+  const numericFields = Object.keys(rows[0]).filter(
+    (k) => k !== 'date' && k !== '__rowKey' && typeof rows[0][k] === 'number',
+  );
+  if (!numericFields.length) return null;
+
+  return {
+    tooltip: { trigger: 'axis' },
+    legend: numericFields.length > 1 ? { data: numericFields.map(toLabel) } : undefined,
+    xAxis: { type: 'category', data: rows.map((r: any) => r.date) },
+    yAxis: { type: 'value' },
+    series: numericFields.map((f) => ({
+      name: toLabel(f),
+      type: 'bar',
+      data: rows.map((r: any) => r[f] ?? 0),
+      barMaxWidth: 40,
+    })),
+  };
+});
+
+// ── 匯出 ────────────────────────────────────────────────────────────────────
+function handleExport() {
+  const sections = tableSections.value;
+  if (!sections.length) return;
+  // 每個 section 各匯出一個 CSV
+  sections.forEach((s) => {
+    exportToCsv(s.rows, s.columns, `${props.title}_${s.title}`);
+  });
+  // 若只有 summary cards、無表格，把 summary 也匯出
+  if (!sections.length && summaryEntries.value.length) {
+    exportToCsv(
+      summaryEntries.value.map((e) => ({ 欄位: e.label, 數值: e.value })),
+      [{ field: '欄位', label: '欄位' }, { field: '數值', label: '數值' }],
+      props.title,
+    );
+  }
 }
 
 function normalizeRows(input: any): any[] {
@@ -228,7 +378,16 @@ onMounted(async () => {
 
 <template>
   <MCard>
-    <p class="form__text form__text--title">{{ title }}</p>
+    <div class="rp__header">
+      <p class="form__text form__text--title">{{ title }}</p>
+      <button
+        v-if="reportData && (tableSections.length || summaryEntries.length)"
+        class="rp__export-btn"
+        @click="handleExport"
+      >
+        ↓ 匯出 CSV
+      </button>
+    </div>
 
     <ReportFilterBar
       :show-store-filter="true"
@@ -249,6 +408,11 @@ onMounted(async () => {
           <p class="rp__card-label">{{ entry.label }}</p>
           <p class="rp__card-value">{{ entry.value }}</p>
         </div>
+      </div>
+
+      <!-- 自動圖表 -->
+      <div v-if="chartOption" class="rp__chart m-t-20">
+        <v-chart :option="chartOption" style="height: 280px" autoresize />
       </div>
 
       <div v-for="section in tableSections" :key="section.key" class="m-t-20">
@@ -273,6 +437,38 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .rp {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  &__export-btn {
+    padding: 6px 16px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #6366f1;
+    background: #fff;
+    color: #6366f1;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+      background: #6366f1;
+      color: #fff;
+    }
+  }
+
+  &__chart {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 8px;
+    background: #fafafa;
+  }
+
   &__state {
     color: #6b7280;
     font-size: 14px;

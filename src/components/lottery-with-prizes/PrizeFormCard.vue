@@ -40,6 +40,7 @@
                 v-model="localPrize.level"
                 :options="levelOptions"
                 placeholder="A / B / C / D / LAST"
+                :disabled="isScratchPrize"
               />
             </div>
 
@@ -75,6 +76,7 @@
                 v-model="localPrize.quantity"
                 type="number"
                 required
+                :disabled="isScratchPrize"
               />
             </div>
 
@@ -105,6 +107,7 @@
                 label="是否大賞（降價觸發）"
                 v-model="localPrize.isGrandPrize"
                 :options="boolOptions"
+                :disabled="isScratchPrize"
               />
             </div>
           </div>
@@ -221,6 +224,8 @@ const emit = defineEmits<{
   (e: 'selectImage', file: File): void;
   (e: 'clearImage'): void;
 }>();
+
+const isScratchPrize = computed(() => String(props.playMode || '') === 'SCRATCH_MODE');
 
 // 用 computed getter/setter 讓 v-model:prize 能「就地修改」
 const localPrize = computed<PrizeFormRow>({

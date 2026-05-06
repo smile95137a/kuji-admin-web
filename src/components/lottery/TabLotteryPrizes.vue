@@ -135,6 +135,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useFieldArray, useFormContext } from 'vee-validate';
 
 import MButton from '@/components/common/MButton.vue';
@@ -146,7 +147,23 @@ import type { PrizeFormRow } from '@/components/lottery/PrizeFormDialog.vue';
 
 import { levelOptions, prizeTypeOptions } from '@/constants/lotteryOptions';
 
-const { errors, submitCount } = useFormContext();
+const { errors, submitCount, defineField } = useFormContext();
+
+const [subCategory] = defineField('subCategory');
+const [playMode] = defineField('playMode');
+const [gameMode] = defineField('gameMode');
+
+const isScratchMode = computed(() => {
+  const values = [subCategory.value, playMode.value, gameMode.value]
+    .map((item) => String(item || ''))
+    .filter(Boolean);
+
+  return (
+    values.includes('SCRATCH_MODE') ||
+    values.includes('SCRATCH_STORE') ||
+    values.includes('SCRATCH_PLAYER')
+  );
+});
 
 const { fields, push, remove, update } = useFieldArray<PrizeFormRow>('prizes');
 
@@ -155,17 +172,39 @@ const createKey = () =>
     ? crypto.randomUUID()
     : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+const normalizeScratchPrize = (row: PrizeFormRow): PrizeFormRow => ({
+  ...row,
+  level: 'GRAND',
+  quantity: 1,
+  isGrandPrize: true,
+  isLastPrize: false,
+});
+
 const openAddDialog = async () => {
+  if (isScratchMode.value && fields.value.length >= 1) {
+    const { openInfoDialog } = await import('@/utils/dialog/infoDialog');
+    await openInfoDialog({
+      title: '刮刮樂限制',
+      message: '刮刮樂模式只能設定一個獎品（大獎）。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   const result = await openPrizeFormDialog({
     title: '新增獎品',
     data: {
       mode: 'add',
+      isScratchPrize: isScratchMode.value,
+      ...(isScratchMode.value
+        ? { prize: { _key: '', name: '', quantity: 1, level: 'GRAND', prizeType: 'physical', isLastPrize: false, isGrandPrize: true } }
+        : {}),
     },
   });
 
   if (!result) return;
 
-  push(result);
+  push(isScratchMode.value ? normalizeScratchPrize(result) : result);
 };
 
 const openEditDialog = async (index: number) => {
@@ -177,6 +216,7 @@ const openEditDialog = async (index: number) => {
     title: '編輯獎品',
     data: {
       mode: 'edit',
+      isScratchPrize: isScratchMode.value,
       prize: {
         ...prize,
       },
@@ -185,7 +225,7 @@ const openEditDialog = async (index: number) => {
 
   if (!result) return;
 
-  update(index, result);
+  update(index, isScratchMode.value ? normalizeScratchPrize(result) : result);
 };
 
 const removePrize = (index: number) => {

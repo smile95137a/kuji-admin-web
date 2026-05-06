@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores';
 import { getRechargeReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
+import { exportToCsv } from '@/utils/csvExport';
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent]);
 
@@ -56,11 +57,23 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
     showSuccessDialog: false,
   });
 }
-</script>
+function handleExport() {
+  if (!reportData.value) return;
+  const dailyColumns = [
+    { field: 'date', label: '日期', width: 120 },
+    { field: 'amount', label: '金額 (NT$)', width: 120 },
+    { field: 'count', label: '筆數', width: 90 },
+  ];
+  if (reportData.value.dailyDetails?.length) exportToCsv(reportData.value.dailyDetails, dailyColumns, '儲値報表_每日明細');
+  if (reportData.value.planStats?.length) exportToCsv(reportData.value.planStats, planColumns, '儲値報表_方案統計');
+}</script>
 
 <template>
   <MCard>
-    <p class="form__text form__text--title">儲值報表</p>
+    <div class="rp__header">
+      <p class="form__text form__text--title">儲値報表</p>
+      <button v-if="reportData" class="rp__export-btn" @click="handleExport">↓ 匯出 CSV</button>
+    </div>
 
     <ReportFilterBar :show-store-filter="isAdmin" @update:filter="fetchReport" />
 
@@ -105,6 +118,12 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
 
 <style scoped lang="scss">
 .rp {
+  &__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  &__export-btn {
+    padding: 6px 16px; font-size: 13px; border-radius: 6px;
+    border: 1px solid #6366f1; background: #fff; color: #6366f1; cursor: pointer; transition: all 0.15s;
+    &:hover { background: #6366f1; color: #fff; }
+  }
   &__loading { text-align: center; color: #9ca3af; font-size: 14px; }
   &__cards { display: flex; gap: 12px; flex-wrap: wrap; }
   &__card {

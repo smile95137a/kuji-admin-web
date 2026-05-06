@@ -80,6 +80,29 @@ const router = createRouter({
   },
 });
 
+router.onError((error, to) => {
+  const message = String((error as Error)?.message || '');
+  const isChunkLoadError =
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed') ||
+    message.includes('Loading chunk');
+
+  if (!isChunkLoadError) return;
+
+  const reloadFlag = 'kuji:chunk-reload-once';
+  const hasReloaded = sessionStorage.getItem(reloadFlag) === '1';
+
+  if (!hasReloaded) {
+    sessionStorage.setItem(reloadFlag, '1');
+    const target = to?.fullPath || window.location.pathname + window.location.search;
+    window.location.replace(target);
+    return;
+  }
+
+  sessionStorage.removeItem(reloadFlag);
+  console.error('Dynamic import failed after retry:', error);
+});
+
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 

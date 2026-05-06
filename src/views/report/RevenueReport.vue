@@ -15,6 +15,7 @@ import { getStoreOptions } from '@/services/adminStoreService';
 import { getRevenueReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
+import { exportToCsv } from '@/utils/csvExport';
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent]);
 
@@ -75,11 +76,19 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
     showSuccessDialog: false,
   });
 }
+
+function handleExport() {
+  if (!reportData.value) return;
+  if (reportData.value.dailyDetails?.length) exportToCsv(reportData.value.dailyDetails, dailyColumns, '營收報表_每日明細');
+  if (isAdmin.value && reportData.value.storeDetails?.length) exportToCsv(reportData.value.storeDetails, storeColumns, '營收報表_各店家');}
 </script>
 
 <template>
   <MCard>
-    <p class="form__text form__text--title">營收報表</p>
+    <div class="rp__header">
+      <p class="form__text form__text--title">營收報表</p>
+      <button v-if="reportData" class="rp__export-btn" @click="handleExport">↓ 匯出 CSV</button>
+    </div>
 
     <ReportFilterBar
       :show-store-filter="isAdmin"
@@ -144,6 +153,12 @@ async function fetchReport(filter: { startDate: string; endDate: string; storeId
 
 <style scoped lang="scss">
 .rp {
+  &__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  &__export-btn {
+    padding: 6px 16px; font-size: 13px; border-radius: 6px;
+    border: 1px solid #6366f1; background: #fff; color: #6366f1; cursor: pointer; transition: all 0.15s;
+    &:hover { background: #6366f1; color: #fff; }
+  }
   &__loading { text-align: center; color: #9ca3af; font-size: 14px; }
   &__cards {
     display: flex;

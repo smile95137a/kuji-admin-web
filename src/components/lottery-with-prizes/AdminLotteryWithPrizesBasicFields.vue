@@ -108,10 +108,18 @@ const addMultiDrawOption = (n: number) => {
   }
 };
 
-/** 刮刮樂模式：以 subCategory 為依據，不再依賴 playMode 的選取 */
-const isScratchMode = computed(
-  () => String(subCategory.value || '') === 'SCRATCH_MODE',
-);
+/** 刮刮樂模式：任一來源顯示為刮刮樂時都視為 scratch */
+const isScratchMode = computed(() => {
+  const values = [subCategory.value, playMode.value, gameMode.value]
+    .map((item) => String(item || ''))
+    .filter(Boolean);
+
+  return (
+    values.includes('SCRATCH_MODE') ||
+    values.includes('SCRATCH_STORE') ||
+    values.includes('SCRATCH_PLAYER')
+  );
+});
 
 /** 同步 playMode （方便 PrizeFormCard 等使用 playMode 的地方） */
 watch(

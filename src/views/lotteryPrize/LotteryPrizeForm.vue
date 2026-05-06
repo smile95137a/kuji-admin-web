@@ -17,6 +17,7 @@
             label="此為大獎（isGrandPrize）"
             v-model="isGrandPrize"
             :options="boolOptions"
+            :disabled="isScratch"
           />
         </div>
 
@@ -170,6 +171,16 @@ const isScratch = computed(
 /* T009 — isGrandPrize local ref (not a form field, but passed in payload) */
 const isGrandPrize = ref<boolean>(false);
 
+watch(
+  isScratch,
+  (value) => {
+    if (value) {
+      isGrandPrize.value = true;
+    }
+  },
+  { immediate: true },
+);
+
 /* schema（先用通用欄位） */
 const schema = yup.object({
   level: yup.string().required('等級不能為空'),
@@ -254,7 +265,7 @@ const loadDetail = async () => {
       });
 
       /* T009 — load isGrandPrize from existing prize */
-      isGrandPrize.value = d?.isGrandPrize ?? false;
+      isGrandPrize.value = isScratch.value ? true : d?.isGrandPrize ?? false;
 
       imagePreview.value = d?.imageUrl ?? '';
     },
@@ -289,7 +300,7 @@ const onSubmit = handleSubmit(async (values) => {
     imageUrl: values.imageUrl?.trim(),
     totalQuantity: Number(values.totalQuantity),
     weight: values.weight ?? null,
-    isGrandPrize: isGrandPrize.value,
+    isGrandPrize: isScratch.value ? true : isGrandPrize.value,
   };
 
   await executeApi({

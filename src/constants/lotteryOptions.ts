@@ -19,7 +19,6 @@ export const subCategoryOptions = [
 ];
 
 export const gameModeOptions = [
-  { label: '隨機指定', value: 'RANDOM' },
   { label: '店家指定', value: 'SCRATCH_STORE' },
   { label: '玩家指定', value: 'SCRATCH_PLAYER' },
 ];
