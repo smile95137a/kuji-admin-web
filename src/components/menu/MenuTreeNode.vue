@@ -1,170 +1,246 @@
 <!-- src/components/menu/MenuTreeNode.vue -->
 <template>
   <li
-    class="menuTreeNode"
-    :class="{
-      'menuTreeNode--dragging': isDraggingThis,
-      'menuTreeNode--over': isDragOver,
-    }"
+    class="menu-tree-node"
+    :class="{ 'menu-tree-node--dragging': draggingId === node.id }"
     draggable="true"
-    @dragstart.stop="onDragStart"
-    @dragend.stop="onDragEnd"
-    @dragover.stop.prevent="onDragOver"
-    @dragleave.stop="onDragLeave"
-    @drop.stop.prevent="onDrop"
+    @dragstart="handleDragStart"
+    @dragover.prevent
+    @drop="handleDrop"
+    @dragend="handleDragEnd"
   >
-    <div class="menuTreeNode__row">
-      <span class="menuTreeNode__handle" title="拖曳排序">⠿</span>
-      <span class="menuTreeNode__order">{{ node.orderNum ?? '-' }}</span>
-      <span class="menuTreeNode__name">
-        {{ node.name || node.title || node.code || '-' }}
-      </span>
-      <span class="menuTreeNode__meta">
-        {{ node.path ? `(${node.path})` : '' }}
-      </span>
+    <div class="menu-tree-node__row">
+      <div class="menu-tree-node__main">
+        <label class="menu-tree-node__check">
+          <input
+            type="checkbox"
+            :checked="isNodeSelected?.(node.id)"
+            :disabled="Boolean(node.children?.length)"
+            :title="
+              node.children?.length
+                ? '此選單仍有子選單，請先刪除子選單'
+                : '勾選刪除'
+            "
+            @change.stop="toggleNodeSelected?.(node)"
+            @click.stop
+          />
+        </label>
+
+        <span class="menu-tree-node__handle">⠿</span>
+
+        <span class="menu-tree-node__order">
+          {{ node.orderNum ?? '-' }}
+        </span>
+
+        <span class="menu-tree-node__name">
+          {{ node.name || '-' }}
+        </span>
+
+        <span class="menu-tree-node__code">
+          {{ node.code || '-' }}
+        </span>
+      </div>
+
+      <div class="menu-tree-node__actions">
+        <button
+          type="button"
+          class="menu-tree-node__delete"
+          :disabled="Boolean(node.children?.length)"
+          :title="
+            node.children?.length
+              ? '此選單仍有子選單，請先刪除子選單'
+              : '刪除選單'
+          "
+          @click.stop="deleteNode?.(node)"
+        >
+          <font-awesome-icon icon="fa-trash" class="m-r-4" />
+          刪除
+        </button>
+      </div>
     </div>
 
-    <ul
-      v-if="node.children && node.children.length"
-      class="menuTreeNode__children"
-    >
+    <ul v-if="node.children?.length" class="menu-tree-node__children">
       <MenuTreeNode
-        v-for="c in node.children"
-        :key="c.id"
-        :node="c"
+        v-for="child in node.children"
+        :key="child.id"
+        :node="child"
       />
     </ul>
   </li>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { inject } from 'vue';
 
-const props = defineProps<{ node: any }>();
+const props = defineProps<{
+  node: any;
+}>();
 
-const { draggingId, draggingParentId, onDragStart: ctxDragStart, onDragEnd: ctxDragEnd, onReorder } =
-  inject<any>('menuTreeReorder');
-
-/* -------------------------------------------------------
- * 當前節點是否正在被拖曳
- * ------------------------------------------------------- */
-const isDraggingThis = computed(() => draggingId.value === props.node.id);
-
-/* -------------------------------------------------------
- * hover 狀態（只有同 parent 才視為有效）
- * ------------------------------------------------------- */
-const isHovering = ref(false);
-
-const isDragOver = computed(() => {
-  if (!isHovering.value) return false;
-  if (!draggingId.value || draggingId.value === props.node.id) return false;
-  // 同 parentId 才視為有效放置目標
-  const myParent = props.node.parentId ?? null;
-  return myParent === draggingParentId.value;
-});
-
-/* -------------------------------------------------------
- * Drag handlers
- * ------------------------------------------------------- */
-const onDragStart = (e: DragEvent) => {
-  ctxDragStart(props.node.id, props.node.parentId ?? null);
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', props.node.id);
-  }
+type MenuTreeContext = {
+  draggingId: any;
+  draggingParentId: any;
+  selectedIds?: any;
+  onDragStart: (id: string, parentId: string | null) => void;
+  onDragEnd: () => void;
+  onReorder: (fromId: string, toId: string) => void;
+  deleteNode?: (node: any) => void | Promise<void>;
+  isNodeSelected?: (nodeId: string) => boolean;
+  toggleNodeSelected?: (node: any) => void;
 };
 
-const onDragEnd = () => {
-  ctxDragEnd();
-  isHovering.value = false;
+const context = inject<MenuTreeContext>('menuTreeReorder');
+
+const draggingId = context?.draggingId;
+const onDragStart = context?.onDragStart;
+const onDragEnd = context?.onDragEnd;
+const onReorder = context?.onReorder;
+const deleteNode = context?.deleteNode;
+const isNodeSelected = context?.isNodeSelected;
+const toggleNodeSelected = context?.toggleNodeSelected;
+
+const handleDragStart = () => {
+  onDragStart?.(props.node.id, props.node.parentId ?? null);
 };
 
-const onDragOver = () => {
-  if (draggingId.value && draggingId.value !== props.node.id) {
-    isHovering.value = true;
-  }
+const handleDragEnd = () => {
+  onDragEnd?.();
 };
 
-const onDragLeave = () => {
-  isHovering.value = false;
-};
+const handleDrop = () => {
+  if (!draggingId?.value) return;
 
-const onDrop = () => {
-  isHovering.value = false;
-  const fromId = draggingId.value;
-  if (!fromId || fromId === props.node.id) return;
-  onReorder(fromId, props.node.id);
+  onReorder?.(draggingId.value, props.node.id);
 };
 </script>
 
 <style scoped lang="scss">
-.menuTreeNode {
-  margin: 4px 0;
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as tokens;
+
+.menu-tree-node {
+  margin-bottom: 8px;
   list-style: none;
-  border-radius: 6px;
-  transition: opacity 0.15s, background 0.15s;
 
   &--dragging {
-    opacity: 0.4;
-  }
-
-  &--over > &__row {
-    background: #eff6ff;
-    border-color: #3b82f6;
-    outline: 2px dashed #3b82f6;
-    border-radius: 4px;
+    opacity: 0.5;
   }
 
   &__row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 6px;
-    border-radius: 4px;
-    cursor: default;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
+    border-radius: 12px;
+    background: tokens.$form-bg;
+  }
 
-    &:hover {
-      background: #f9fafb;
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__check {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+
+    input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
     }
   }
 
   &__handle {
     cursor: grab;
-    color: #9ca3af;
+    color: tokens.$form-muted;
     font-size: 16px;
-    letter-spacing: 1px;
-    user-select: none;
-    flex-shrink: 0;
-
-    &:active {
-      cursor: grabbing;
-    }
   }
 
   &__order {
-    min-width: 24px;
-    font-size: 11px;
-    color: #6b7280;
-    background: #f3f4f6;
-    border-radius: 4px;
-    text-align: center;
-    padding: 1px 5px;
-    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 24px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color.mix(tokens.$brand-light, #fff, 18%);
+    color: tokens.$brand-dark;
+    font-size: 12px;
+    font-weight: 800;
   }
 
   &__name {
-    font-weight: 600;
-    flex-shrink: 0;
+    color: tokens.$form-text;
+    font-size: 14px;
+    font-weight: 800;
   }
 
-  &__meta {
-    color: #6b7280;
+  &__code {
+    color: tokens.$form-muted;
     font-size: 12px;
   }
 
+  &__actions {
+    flex: 0 0 auto;
+  }
+
+  &__delete {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #991b1b;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 800;
+
+    &:hover:not(:disabled) {
+      opacity: 0.85;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+  }
+
   &__children {
-    padding-left: 28px;
-    margin-top: 4px;
+    margin-top: 8px;
+    margin-left: 28px;
+    padding-left: 14px;
+    border-left: 1px dashed color.mix(tokens.$form-border, #fff, 35%);
+    list-style: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .menu-tree-node {
+    &__row {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    &__main {
+      flex-wrap: wrap;
+    }
+
+    &__actions {
+      width: 100%;
+    }
   }
 }
 </style>

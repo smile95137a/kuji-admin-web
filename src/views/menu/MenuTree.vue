@@ -9,6 +9,15 @@
         {{ isSaving ? '儲存中…' : '儲存排序' }}
       </MButton>
 
+      <MButton
+        class="mbtn--red"
+        :disabled="!canDeleteSelected || isSaving"
+        @click="deleteSelected"
+      >
+        <font-awesome-icon icon="fa-trash" class="m-r-4" />
+        刪除選取
+      </MButton>
+
       <MButton class="mbtn--gray" :disabled="isSaving" @click="refresh">
         <font-awesome-icon icon="fa-rotate-right" class="m-r-4" />
         重新載入
@@ -37,6 +46,17 @@
       </div>
     </div>
 
+    <div v-if="selectedIds.length" class="menu-tree-page__selected">
+      已選取 {{ selectedIds.length }} 筆可刪除選單
+      <button
+        type="button"
+        class="menu-tree-page__clear-selected"
+        @click="clearSelected"
+      >
+        清除選取
+      </button>
+    </div>
+
     <template v-if="tree.length === 0">
       <NoData message="查無樹狀資料" />
     </template>
@@ -50,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, ref } from 'vue';
+import { computed, onMounted, provide, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import MCard from '@/components/common/MCard.vue';
@@ -60,6 +80,7 @@ import FormTitle from '@/components/common/FormTitle.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import {
+  deleteMenu,
   getAllMenus,
   getMenuTree,
   updateMenu,
@@ -76,8 +97,54 @@ const menuMetaMap = ref<Record<string, any>>({});
 const isDirty = ref(false);
 const isSaving = ref(false);
 
+const selectedIds = ref<string[]>([]);
+
+const canDeleteSelected = computed(() => selectedIds.value.length > 0);
+
 const goBack = () => {
   router.push('/home/menus');
+};
+
+/* -------------------------------------------------------
+ * Checkbox 勾選刪除共用狀態
+ * ------------------------------------------------------- */
+const isNodeSelected = (nodeId: string) => {
+  return selectedIds.value.includes(String(nodeId));
+};
+
+const toggleNodeSelected = (node: any) => {
+  const menuId = String(node?.id ?? '').trim();
+
+  if (!menuId) return;
+
+  if (node?.children?.length) {
+    return;
+  }
+
+  if (selectedIds.value.includes(menuId)) {
+    selectedIds.value = selectedIds.value.filter((id) => id !== menuId);
+    return;
+  }
+
+  selectedIds.value = [...selectedIds.value, menuId];
+};
+
+const clearSelected = () => {
+  selectedIds.value = [];
+};
+
+const findNodeById = (nodeId: string, nodes: any[]): any | null => {
+  for (const node of nodes) {
+    if (String(node?.id) === String(nodeId)) return node;
+
+    if (node?.children?.length) {
+      const found = findNodeById(nodeId, node.children);
+
+      if (found) return found;
+    }
+  }
+
+  return null;
 };
 
 /* -------------------------------------------------------
@@ -126,7 +193,6 @@ const onReorder = (fromId: string, toId: string) => {
   const fromSiblings = findSiblings(fromId, tree.value, tree.value);
   const toSiblings = findSiblings(toId, tree.value, tree.value);
 
-  // 不同父層 → 不做任何事
   if (!fromSiblings || !toSiblings || fromSiblings !== toSiblings) return;
 
   const siblings = fromSiblings;
@@ -135,11 +201,9 @@ const onReorder = (fromId: string, toId: string) => {
 
   if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
 
-  // 移位
   const [moved] = siblings.splice(fromIdx, 1);
   siblings.splice(toIdx, 0, moved);
 
-  // 重新指派 orderNum（1-based 連續）
   siblings.forEach((node: any, index: number) => {
     node.orderNum = index + 1;
   });
@@ -147,12 +211,141 @@ const onReorder = (fromId: string, toId: string) => {
   isDirty.value = true;
 };
 
+/* -------------------------------------------------------
+ * 單筆刪除
+ * ------------------------------------------------------- */
+const deleteNode = async (node: any) => {
+  const menuId = String(node?.id ?? '').trim();
+
+  if (!menuId) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '查無選單 ID，無法刪除。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  if (node?.children?.length) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '此選單仍有子選單，請先刪除子選單後再刪除此選單。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  if (isDirty.value) {
+    const continueDelete = await openConfirmDialog({
+      title: '刪除確認',
+      message:
+        '目前有未儲存的排序變更，刪除後會重新載入資料並放棄未儲存排序。確定要繼續嗎？',
+    });
+
+    if (!continueDelete) return;
+  }
+
+  const ok = await openConfirmDialog({
+    title: '刪除確認',
+    message: `確定要刪除「${node?.name || '-'}」嗎？（刪除後無法復原）`,
+  });
+
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () => deleteMenu(menuId),
+    onSuccess: async () => {
+      await openInfoDialog({
+        title: '提示訊息',
+        message: '刪除成功',
+        iconType: 'success',
+      });
+
+      clearSelected();
+      await refresh();
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+  });
+};
+
+/* -------------------------------------------------------
+ * 勾選批次刪除
+ * ------------------------------------------------------- */
+const deleteSelected = async () => {
+  if (!selectedIds.value.length) return;
+
+  const selectedNodes = selectedIds.value
+    .map((id) => findNodeById(id, tree.value))
+    .filter(Boolean);
+
+  const hasChildren = selectedNodes.some((node: any) => node?.children?.length);
+
+  if (hasChildren) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '選取資料中包含仍有子選單的項目，請先刪除子選單後再刪除父選單。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
+  if (isDirty.value) {
+    const continueDelete = await openConfirmDialog({
+      title: '刪除確認',
+      message:
+        '目前有未儲存的排序變更，刪除後會重新載入資料並放棄未儲存排序。確定要繼續嗎？',
+    });
+
+    if (!continueDelete) return;
+  }
+
+  const ok = await openConfirmDialog({
+    title: '刪除確認',
+    message: `確定要刪除選取的 ${selectedIds.value.length} 筆選單嗎？（刪除後無法復原）`,
+  });
+
+  if (!ok) return;
+
+  const ids = [...selectedIds.value];
+
+  await executeApi({
+    fn: async () => Promise.allSettled(ids.map((id) => deleteMenu(id))),
+    onSuccess: async (results: PromiseSettledResult<any>[]) => {
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
+      const failCount = results.length - okCount;
+
+      await openInfoDialog({
+        title: '提示訊息',
+        message:
+          failCount > 0
+            ? `刪除完成：成功 ${okCount}、失敗 ${failCount}`
+            : `刪除完成：成功 ${okCount}`,
+        iconType: failCount > 0 ? 'warning' : 'success',
+      });
+
+      clearSelected();
+      await refresh();
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+  });
+};
+
 provide('menuTreeReorder', {
   draggingId,
   draggingParentId,
+  selectedIds,
   onDragStart,
   onDragEnd,
   onReorder,
+  deleteNode,
+  isNodeSelected,
+  toggleNodeSelected,
 });
 
 /* -------------------------------------------------------
@@ -300,6 +493,7 @@ const refresh = async () => {
         : {};
 
       isDirty.value = false;
+      clearSelected();
     },
     showSuccessDialog: false,
     showFailDialog: true,
@@ -379,6 +573,34 @@ onMounted(async () => {
     font-size: 12px;
     line-height: 1.5;
   }
+
+  &__selected {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 9px 12px;
+    border: 1px solid color.mix(tokens.$brand-light, #fff, 45%);
+    border-radius: 12px;
+    background: color.mix(tokens.$brand-light, #fff, 18%);
+    color: tokens.$brand-dark;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  &__clear-selected {
+    border: none;
+    background: transparent;
+    color: tokens.$brand;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: underline;
+
+    &:hover {
+      opacity: 0.75;
+    }
+  }
 }
 
 .menuTree {
@@ -393,6 +615,11 @@ onMounted(async () => {
     }
 
     &__tip {
+      flex-direction: column;
+    }
+
+    &__selected {
+      align-items: flex-start;
       flex-direction: column;
     }
   }
