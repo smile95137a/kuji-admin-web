@@ -3,18 +3,31 @@
   <MCard>
     <FormTitle title="選單管理" />
 
-    <div v-if="isAdmin" class="menuList__notice m-b-12">
-      ⚠ 選單資料須與前端路由對應，新增前請確認已部署對應頁面。
+    <div v-if="isAdmin" class="menu-list__notice">
+      <font-awesome-icon icon="fa-triangle-exclamation" class="m-r-4" />
+      選單資料須與前端路由對應，新增前請確認已部署對應頁面。
     </div>
 
-    <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
-      <MButton v-if="isAdmin" @click="navigateToAdd">新增</MButton>
+    <div class="menu-list__toolbar">
+      <MButton v-if="isAdmin" @click="navigateToAdd">
+        <font-awesome-icon icon="fa-plus" class="m-r-4" />
+        新增
+      </MButton>
 
-      <MButton v-if="isAdmin" :disabled="!canDelete" class="mbtn--red" @click="deleteSelected">
+      <MButton
+        v-if="isAdmin"
+        class="mbtn--red"
+        :disabled="!canDelete"
+        @click="deleteSelected"
+      >
+        <font-awesome-icon icon="fa-trash" class="m-r-4" />
         刪除
       </MButton>
 
-      <MButton @click="navigateToTree">樹狀檢視</MButton>
+      <MButton variant="secondary" @click="navigateToTree">
+        <font-awesome-icon icon="fa-sitemap" class="m-r-4" />
+        樹狀檢視
+      </MButton>
     </div>
 
     <template v-if="!hasData">
@@ -43,6 +56,20 @@
           </span>
         </template>
 
+        <!-- 代碼 -->
+        <template #cell-code="{ item }">
+          <span class="menu-list__code">
+            {{ item.code || '-' }}
+          </span>
+        </template>
+
+        <!-- 路徑 -->
+        <template #cell-path="{ item }">
+          <span class="menu-list__path">
+            {{ item.path || '-' }}
+          </span>
+        </template>
+
         <!-- 父選單 -->
         <template #cell-parentId="{ item }">
           <span>{{ item.parentName || item.parentId || '-' }}</span>
@@ -50,7 +77,14 @@
 
         <!-- 圖示 -->
         <template #cell-icon="{ item }">
-          <span>{{ item.icon || '-' }}</span>
+          <span class="menu-list__icon-text">
+            <font-awesome-icon
+              v-if="item.icon"
+              :icon="normalizeIcon(item.icon)"
+              class="m-r-4"
+            />
+            {{ item.icon || '-' }}
+          </span>
         </template>
 
         <!-- 排序 -->
@@ -69,12 +103,24 @@
 
         <!-- 是否可見 -->
         <template #cell-isVisible="{ item }">
-          <span>{{ item.isVisible ? '顯示' : '隱藏' }}</span>
+          <span :class="visibleBadgeClass(item.isVisible)">
+            {{ item.isVisible ? '顯示' : '隱藏' }}
+          </span>
         </template>
 
         <!-- 更新時間 -->
         <template #cell-updatedAt="{ item }">
           <span>{{ formatDateTime(item.updatedAt) }}</span>
+        </template>
+
+        <!-- 操作 -->
+        <template #cell-actions="{ item }">
+          <div class="menu-list__actions">
+            <MButton size="sm" @click="navigateToEdit(item)">
+              <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
+              編輯
+            </MButton>
+          </div>
         </template>
       </ReportTable>
 
@@ -96,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/authStore';
@@ -112,22 +158,20 @@ import ReportTable from '@/components/common/ReportTable.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
 import NumberFormatter from '@/components/common/NumberFormatter.vue';
 
-import { useDialogStore } from '@/stores';
 import { useMenuStore } from '@/stores/menu/useMenuStore';
 import { executeApi } from '@/utils/executeApiUtils';
 
-import { getAllMenus, deleteMenu } from '@/services/adminMenuService';
+import { deleteMenu, getAllMenus } from '@/services/adminMenuService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
-const dialogStore = useDialogStore();
 const menuStore = useMenuStore();
 const authStore = useAuthStore();
 
-const isAdmin = computed(() =>
-  (authStore.user?.roles ?? []).includes('ROLE_ADMIN'),
-);
+const isAdmin = computed(() => {
+  return (authStore.user?.roles ?? []).includes('ROLE_ADMIN');
+});
 
 /* --------------------------------------
  * 搜尋 + 清單
@@ -137,9 +181,25 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
 });
 
 /* --------------------------------------
- * datetime
+ * Utils
  * -------------------------------------- */
-const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
+const formatDateTime = (value?: string) => {
+  if (!value) return '-';
+
+  return String(value).replace('T', ' ');
+};
+
+const normalizeIcon = (icon: string) => {
+  if (!icon) return '';
+
+  if (icon.startsWith('fa-')) return icon;
+
+  return `fa-${icon}`;
+};
+
+const visibleBadgeClass = (isVisible: boolean) => {
+  return isVisible ? 'badge badge--green' : 'badge badge--gray';
+};
 
 /* --------------------------------------
  * 排序
@@ -207,6 +267,7 @@ const columns = [
   { field: 'orderNum', label: '排序', width: 90, sortable: true },
   { field: 'isVisible', label: '可見', width: 100, sortable: true },
   { field: 'updatedAt', label: '更新時間', width: 170, sortable: true },
+  { field: 'actions', label: '操作', width: 120 },
 ];
 
 /* --------------------------------------
@@ -232,6 +293,7 @@ const fetchList = async () => {
 
   selectedIds.value = [];
   goToPage(1);
+  isSearch.value = true;
 };
 
 /* --------------------------------------
@@ -252,7 +314,9 @@ const deleteSelected = async () => {
   await executeApi({
     fn: async () => Promise.allSettled(ids.map((id) => deleteMenu(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -324,18 +388,70 @@ onMounted(async () => {
   }
 
   await fetchList();
-  isSearch.value = true;
   menuStore.resetAll();
 });
 </script>
 
 <style scoped lang="scss">
-.menuList__notice {
-  padding: 10px 14px;
-  background: #fffbeb;
-  border: 1px solid #f59e0b;
-  border-radius: 6px;
-  color: #92400e;
-  font-size: 13px;
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as tokens;
+
+.menu-list {
+  &__notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border: 1px solid #f59e0b;
+    border-radius: 10px;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__code,
+  &__path {
+    display: inline-block;
+    max-width: 220px;
+    overflow: hidden;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__icon-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 140px;
+    overflow: hidden;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .menu-list {
+    &__toolbar {
+      justify-content: flex-start;
+    }
+  }
 }
 </style>

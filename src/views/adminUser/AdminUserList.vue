@@ -1,7 +1,12 @@
 <!-- src/views/adminUser/AdminUserList.vue -->
 <template>
   <MCard>
-    <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
+    <Form
+      ref="formRef"
+      :initial-values="initValues"
+      :validation-schema="schema"
+      @submit="onSubmit"
+    >
       <FormTitle title="帳號管理" />
 
       <AdminUserSearchForm
@@ -26,7 +31,7 @@
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
+      <div class="admin-user-list__toolbar">
         <MButton @click="navigateToAddOwner">
           <font-awesome-icon icon="fa-user-plus" class="m-r-4" />
           新增店家負責人
@@ -97,14 +102,14 @@
 
           <!-- 角色 -->
           <template #cell-roles="{ item }">
-            <span class="aul__text-ellipsis">
+            <span class="admin-user-list__text-ellipsis">
               {{ roleText(item) }}
             </span>
           </template>
 
           <!-- 店家 -->
           <template #cell-stores="{ item }">
-            <span class="aul__text-ellipsis">
+            <span class="admin-user-list__text-ellipsis">
               {{ storeText(item) }}
             </span>
           </template>
@@ -127,7 +132,7 @@
 
           <!-- 操作 -->
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-8 flex-wrap">
+            <div class="admin-user-list__actions">
               <MButton size="sm" @click="navigateToDetail(item)">
                 <font-awesome-icon icon="fa-circle-info" class="m-r-4" />
                 詳情
@@ -162,7 +167,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 import * as yup from 'yup';
 
 import { usePagination } from '@/hook/usePagination';
@@ -180,7 +185,7 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 import AdminUserSearchForm from '@/components/adminUser/AdminUserSearchForm.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useDialogStore, useAuthStore } from '@/stores';
+import { useAuthStore } from '@/stores';
 import { useAdminUserStore } from '@/stores/adminUser/useAdminUserStore';
 
 import {
@@ -202,7 +207,6 @@ interface SelectOption {
 }
 
 const router = useRouter();
-const dialogStore = useDialogStore();
 const authStore = useAuthStore();
 const adminUserStore = useAdminUserStore();
 
@@ -659,11 +663,14 @@ const doResetPassword = async (item: any) => {
 
   await executeApi<{ newPassword: string }>({
     fn: async () => resetAdminUserPassword(userId),
-
     onSuccess: async (data) => {
       await openInfoDialog({
         title: '重設成功',
-        message: `密碼已重設，新密碼已發送至用戶 Email。${data?.newPassword ? `（臨時密碼：${data.newPassword}，請告知用戶）` : ''}`,
+        message: `密碼已重設，新密碼已發送至用戶 Email。${
+          data?.newPassword
+            ? `（臨時密碼：${data.newPassword}，請告知用戶）`
+            : ''
+        }`,
         iconType: 'success',
       });
     },
@@ -743,7 +750,20 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.aul {
+.admin-user-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   &__text-ellipsis {
     display: inline-block;
     max-width: 200px;

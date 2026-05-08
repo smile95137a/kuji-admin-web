@@ -10,14 +10,17 @@
       />
 
       <div class="flex justify-center m-y-8">
-        <MButton type="submit">查詢</MButton>
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
       </div>
     </Form>
   </MCard>
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
+      <div class="banner-list__toolbar">
         <MButton @click="navigateToAdd">
           <font-awesome-icon icon="fa-plus" class="m-r-4" />
           新增
@@ -95,7 +98,7 @@
               v-if="item.imageUrl"
               :src="resolveImageUrl(item.imageUrl)"
               alt="banner"
-              class="bl__table-img"
+              class="banner-list__table-img"
             />
             <span v-else>-</span>
           </template>
@@ -119,7 +122,7 @@
           </template>
 
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-4">
+            <div class="banner-list__actions">
               <MButton
                 size="sm"
                 :disabled="isFirstInList(item)"
@@ -159,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -175,7 +178,6 @@ import FormTitle from '@/components/common/FormTitle.vue';
 import BannerSearchForm from '@/components/banner/BannerSearchForm.vue';
 import BannerDragSort from '@/components/banner/BannerDragSort.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useBannerStore } from '@/stores/banner/useBannerStore';
 
@@ -193,7 +195,6 @@ import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
-const dialogStore = useDialogStore();
 const bannerStore = useBannerStore();
 
 /* --------------------------------------
@@ -236,9 +237,9 @@ const loadSelectOptions = async () => {
           ? data
           : [];
 
-      storeOptions.value = arr.map((s: any) => ({
-        label: s.label ?? s.storeName ?? s.name ?? '-',
-        value: s.value ?? s.id ?? '',
+      storeOptions.value = arr.map((item: any) => ({
+        label: item.label ?? item.storeName ?? item.name ?? '-',
+        value: item.value ?? item.id ?? '',
       }));
     },
     showSuccessDialog: false,
@@ -264,21 +265,24 @@ const resolveImageUrl = (url?: string) => {
   return url;
 };
 
-const formatDateTime = (v?: string) => {
-  if (!v) return '-';
-  return String(v).replace('T', ' ');
+const formatDateTime = (value?: string) => {
+  if (!value) return '-';
+
+  return String(value).replace('T', ' ');
 };
 
 const statusText = (status?: string) => {
   if (status === 'PUBLISHED') return '已上架';
   if (status === 'UNPUBLISHED') return '已下架';
   if (status === 'SCHEDULED') return '排程中';
+
   return '-';
 };
 
 const statusBadgeClass = (status?: string) => {
   if (status === 'PUBLISHED') return 'badge badge--green';
   if (status === 'SCHEDULED') return 'badge badge--blue';
+
   return 'badge badge--gray';
 };
 
@@ -373,6 +377,7 @@ const onSubmit = async (values: any) => {
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
+
   await onSubmit(values);
 };
 
@@ -394,20 +399,16 @@ const selectedRows = computed(() =>
 );
 
 const enableTargetRows = computed(() =>
-  selectedRows.value.filter((r: any) => r.status === 'UNPUBLISHED'),
+  selectedRows.value.filter((row: any) => row.status === 'UNPUBLISHED'),
 );
 
 const disableTargetRows = computed(() =>
-  selectedRows.value.filter((r: any) => r.status === 'PUBLISHED'),
+  selectedRows.value.filter((row: any) => row.status === 'PUBLISHED'),
 );
 
-const canEnable = computed(
-  () => enableTargetRows.value.length > 0,
-);
+const canEnable = computed(() => enableTargetRows.value.length > 0);
 
-const canDisable = computed(
-  () => disableTargetRows.value.length > 0,
-);
+const canDisable = computed(() => disableTargetRows.value.length > 0);
 
 const canDelete = computed(() => selectedRows.value.length > 0);
 
@@ -421,22 +422,25 @@ const getOrderSortedList = () =>
 
 const isFirstInList = (item: any) => {
   const sorted = getOrderSortedList();
+
   return sorted[0]?.id === item.id;
 };
 
 const isLastInList = (item: any) => {
   const sorted = getOrderSortedList();
+
   return sorted[sorted.length - 1]?.id === item.id;
 };
 
 const moveUp = async (item: any) => {
   const sorted = getOrderSortedList();
-  const idx = sorted.findIndex((x: any) => x.id === item.id);
-  if (idx <= 0) return;
+  const index = sorted.findIndex((row: any) => row.id === item.id);
 
-  const prev = sorted[idx - 1];
-  const newOrder = prev.orderNum ?? idx - 1;
-  const prevOrder = item.orderNum ?? idx;
+  if (index <= 0) return;
+
+  const prev = sorted[index - 1];
+  const newOrder = prev.orderNum ?? index - 1;
+  const prevOrder = item.orderNum ?? index;
 
   await executeApi({
     fn: async () =>
@@ -453,12 +457,13 @@ const moveUp = async (item: any) => {
 
 const moveDown = async (item: any) => {
   const sorted = getOrderSortedList();
-  const idx = sorted.findIndex((x: any) => x.id === item.id);
-  if (idx < 0 || idx >= sorted.length - 1) return;
+  const index = sorted.findIndex((row: any) => row.id === item.id);
 
-  const next = sorted[idx + 1];
-  const newOrder = next.orderNum ?? idx + 1;
-  const nextOrder = item.orderNum ?? idx;
+  if (index < 0 || index >= sorted.length - 1) return;
+
+  const next = sorted[index + 1];
+  const newOrder = next.orderNum ?? index + 1;
+  const nextOrder = item.orderNum ?? index;
 
   await executeApi({
     fn: async () =>
@@ -534,14 +539,16 @@ const enableSelected = async () => {
 
   if (!ok) return;
 
-  const targetIds = enableTargetRows.value.map((x: any) => x.id);
+  const targetIds = enableTargetRows.value.map((item: any) => item.id);
   const skippedCount = selectedRows.value.length - targetIds.length;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(targetIds.map((id) => publishBanner(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
       const skipText = skippedCount > 0 ? `、略過 ${skippedCount}` : '';
 
@@ -577,14 +584,16 @@ const disableSelected = async () => {
 
   if (!ok) return;
 
-  const targetIds = disableTargetRows.value.map((x: any) => x.id);
+  const targetIds = disableTargetRows.value.map((item: any) => item.id);
   const skippedCount = selectedRows.value.length - targetIds.length;
 
   await executeApi({
     fn: async () =>
       Promise.allSettled(targetIds.map((id) => unpublishBanner(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
       const skipText = skippedCount > 0 ? `、略過 ${skippedCount}` : '';
 
@@ -607,7 +616,7 @@ const deleteSelected = async () => {
   if (!canDelete.value) return;
 
   const publishedRows = selectedRows.value.filter(
-    (r: any) => r.status === 'PUBLISHED',
+    (row: any) => row.status === 'PUBLISHED',
   );
 
   if (publishedRows.length > 0) {
@@ -630,7 +639,9 @@ const deleteSelected = async () => {
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteBanner(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -711,7 +722,20 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.bl {
+.banner-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
   &__table-img {
     width: 120px;
     height: auto;

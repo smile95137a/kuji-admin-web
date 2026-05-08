@@ -7,14 +7,17 @@
       <RechargePlanSearchForm />
 
       <div class="flex justify-center m-y-8">
-        <MButton type="submit">查詢</MButton>
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
       </div>
     </Form>
   </MCard>
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
+      <div class="recharge-plan-list__toolbar">
         <MButton @click="navigateToAdd">
           <font-awesome-icon icon="fa-plus" class="m-r-4" />
           新增
@@ -74,9 +77,11 @@
           <template #cell-isActive="{ item }">
             <button
               type="button"
-              class="recharge__toggle"
+              class="recharge-plan-list__toggle"
               :class="
-                item.isActive ? 'recharge__toggle--on' : 'recharge__toggle--off'
+                item.isActive
+                  ? 'recharge-plan-list__toggle--on'
+                  : 'recharge-plan-list__toggle--off'
               "
               @click="toggleActive(item)"
             >
@@ -87,19 +92,22 @@
           <template #cell-isPromotional="{ item }">
             <span
               v-if="item.isPromotional"
-              class="recharge__badge recharge__badge--promo"
+              class="recharge-plan-list__badge recharge-plan-list__badge--promo"
             >
               活動
 
               <span
                 v-if="item.isInPeriod"
-                class="recharge__badge recharge__badge--active"
+                class="recharge-plan-list__badge recharge-plan-list__badge--active"
               >
                 進行中
               </span>
             </span>
 
-            <span v-else class="recharge__badge recharge__badge--normal">
+            <span
+              v-else
+              class="recharge-plan-list__badge recharge-plan-list__badge--normal"
+            >
               一般
             </span>
           </template>
@@ -112,10 +120,14 @@
           </template>
 
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-8 flex-wrap">
-              <MButton size="sm" @click="navigateToEdit(item)"> 編輯 </MButton>
+            <div class="recharge-plan-list__actions">
+              <MButton size="sm" @click="navigateToEdit(item)">
+                <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
+                編輯
+              </MButton>
 
               <MButton size="sm" variant="danger" @click="deleteOne(item)">
+                <font-awesome-icon icon="fa-trash" class="m-r-4" />
                 刪除
               </MButton>
             </div>
@@ -142,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -199,7 +211,9 @@ const loadSelectOptions = async () => {
  * -------------------------------------- */
 const formatMoney = (n: any) => {
   const num = Number(n);
+
   if (Number.isNaN(num)) return n ?? '-';
+
   return num.toLocaleString('zh-TW');
 };
 
@@ -222,6 +236,7 @@ const filterByKeyword = (rows: any[], keyword?: string) => {
 const normalizeRechargePlanList = (res: any) => {
   if (Array.isArray(res?.data)) return res.data;
   if (Array.isArray(res)) return res;
+
   return [];
 };
 
@@ -318,6 +333,7 @@ const onSubmit = async (values: any) => {
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
+
   await onSubmit(values);
 };
 
@@ -381,7 +397,9 @@ const deleteSelected = async () => {
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteRechargePlan(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -488,7 +506,20 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.recharge {
+.recharge-plan-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   &__toggle {
     border: none;
     border-radius: 12px;

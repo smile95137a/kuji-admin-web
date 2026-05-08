@@ -17,7 +17,7 @@
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
+      <div class="admin-order-list__toolbar">
         <MButton :disabled="!canPrepare" @click="prepareSelected">
           <font-awesome-icon icon="fa-box-open" class="m-r-4" />
           準備出貨
@@ -126,7 +126,7 @@
 
           <!-- 操作 -->
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-8 flex-wrap">
+            <div class="admin-order-list__actions">
               <MButton size="sm" @click="navigateToDetail(item)">
                 <font-awesome-icon icon="fa-circle-info" class="m-r-4" />
                 明細
@@ -454,7 +454,6 @@ const handlePageLimitSizeChange = (value: number) => {
 
 /* --------------------------------------
  * Columns
- * 每個欄位寬度都設為 50
  * -------------------------------------- */
 const columns = computed(() => [
   { field: 'orderNo', label: '訂單編號', width: 50, sortable: true },
@@ -971,6 +970,21 @@ onMounted(async () => {
 <style scoped lang="scss">
 @use 'sass:color';
 @use '@/assets/styles/base/tokens' as tokens;
+
+.admin-order-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
 
 .order-action-dialog {
   padding: 16px;

@@ -1,64 +1,51 @@
-<!-- src/components/adminUser/AdminUserSearchForm.vue -->
+<!-- src/components/referralCode/ReferralCodeSearchForm.vue -->
 <template>
-  <div class="admin-user-search-form">
-    <div class="admin-user-search-form__head">
+  <div class="referral-code-search-form">
+    <div class="referral-code-search-form__head">
       <div>
-        <p class="admin-user-search-form__title">查詢條件</p>
-        <p class="admin-user-search-form__sub">
-          可依關鍵字、狀態、角色與店家條件查詢後台帳號。
+        <p class="referral-code-search-form__title">查詢條件</p>
+        <p class="referral-code-search-form__sub">
+          可依查詢範圍、指定店家、推薦碼關鍵字與啟用狀態查詢推薦碼。
         </p>
       </div>
     </div>
 
-    <div class="admin-user-search-form__grid">
-      <!-- 關鍵字 -->
+    <div class="referral-code-search-form__grid">
+      <!-- 查詢範圍 -->
+      <div class="referral-code-search-form__item">
+        <FormSelect label="查詢範圍" v-model="scope" :options="scopeOptions" />
+      </div>
+
+      <!-- 指定店家 -->
+      <div class="referral-code-search-form__item">
+        <FormSelect
+          label="指定店家"
+          v-model="storeId"
+          :options="storeOptions"
+          :showAll="true"
+          allLabel="請選擇店家"
+          :allValue="''"
+          :disabled="scope !== 'STORE'"
+        />
+      </div>
+
+      <!-- 推薦碼關鍵字 -->
       <div
-        class="admin-user-search-form__item admin-user-search-form__item--wide"
+        class="referral-code-search-form__item referral-code-search-form__item--wide"
       >
         <FormInput
-          label="關鍵字"
-          v-model="keyword"
-          :error="errors.keyword"
-          maxlength="100"
-          placeholder="Email / 顯示名稱"
+          label="推薦碼關鍵字"
+          v-model="codeKeyword"
+          placeholder="輸入推薦碼關鍵字"
         />
       </div>
 
       <!-- 狀態 -->
-      <div class="admin-user-search-form__item">
+      <div class="referral-code-search-form__item">
         <FormSelect
           label="狀態"
-          v-model="status"
-          :options="statusOptions"
-          :error="errors.status"
-          :showAll="true"
-          allLabel="全部"
-          :allValue="''"
-        />
-      </div>
-
-      <!-- 角色 -->
-      <div class="admin-user-search-form__item">
-        <FormSelect
-          label="角色"
-          v-model="roleCode"
-          :options="roleCodeOptions"
-          :error="errors.roleCode"
-          :showAll="true"
-          allLabel="全部"
-          :allValue="''"
-        />
-      </div>
-
-      <!-- 店家 -->
-      <div
-        class="admin-user-search-form__item admin-user-search-form__item--wide"
-      >
-        <FormSelect
-          label="店家"
-          v-model="storeId"
-          :options="storeOptions"
-          :error="errors.storeId"
+          v-model="enabled"
+          :options="enabledOptions"
           :showAll="true"
           allLabel="全部"
           :allValue="''"
@@ -77,28 +64,27 @@ import FormSelect from '@/components/common/FormSelect.vue';
 interface SelectOption {
   label: string;
   value: any;
-  description?: string;
 }
 
 defineProps<{
-  statusOptions: SelectOption[];
+  scopeOptions: SelectOption[];
+  enabledOptions: SelectOption[];
   storeOptions: SelectOption[];
-  roleCodeOptions: SelectOption[];
 }>();
 
-const { defineField, errors } = useFormContext();
+const { defineField } = useFormContext();
 
-const [keyword] = defineField('keyword');
-const [status] = defineField('status');
+const [scope] = defineField('scope');
 const [storeId] = defineField('storeId');
-const [roleCode] = defineField('roleCode');
+const [codeKeyword] = defineField('codeKeyword');
+const [enabled] = defineField('enabled');
 </script>
 
 <style scoped lang="scss">
 @use 'sass:color';
 @use '@/assets/styles/base/tokens' as tokens;
 
-.admin-user-search-form {
+.referral-code-search-form {
   margin-top: 12px;
 
   &__head {
@@ -146,7 +132,7 @@ const [roleCode] = defineField('roleCode');
 }
 
 @media (max-width: 1180px) {
-  .admin-user-search-form {
+  .referral-code-search-form {
     &__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -160,7 +146,7 @@ const [roleCode] = defineField('roleCode');
 }
 
 @media (max-width: 640px) {
-  .admin-user-search-form {
+  .referral-code-search-form {
     &__grid {
       grid-template-columns: 1fr;
     }

@@ -7,14 +7,17 @@
       <MarqueeSearchForm :active-options="activeOptions" />
 
       <div class="flex justify-center m-y-8">
-        <MButton type="submit">查詢</MButton>
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
       </div>
     </Form>
   </MCard>
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
+      <div class="marquee-list__toolbar">
         <MButton @click="navigateToAdd">
           <font-awesome-icon icon="fa-plus" class="m-r-4" />
           新增
@@ -83,10 +86,10 @@
 
           <!-- 背景色 -->
           <template #cell-bgColor="{ item }">
-            <div class="ml__color-cell">
+            <div class="marquee-list__color-cell">
               <span
                 v-if="isValidColor(item.bgColor)"
-                class="ml__color-dot"
+                class="marquee-list__color-dot"
                 :style="{ backgroundColor: item.bgColor }"
               />
               <span>{{ item.bgColor || '-' }}</span>
@@ -95,10 +98,10 @@
 
           <!-- 文字色 -->
           <template #cell-textColor="{ item }">
-            <div class="ml__color-cell">
+            <div class="marquee-list__color-cell">
               <span
                 v-if="isValidColor(item.textColor)"
-                class="ml__color-dot"
+                class="marquee-list__color-dot"
                 :style="{ backgroundColor: item.textColor }"
               />
               <span>{{ item.textColor || '-' }}</span>
@@ -130,10 +133,14 @@
 
           <!-- 操作 -->
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-8 flex-wrap">
-              <MButton size="sm" @click="navigateToEdit(item)"> 編輯 </MButton>
+            <div class="marquee-list__actions">
+              <MButton size="sm" @click="navigateToEdit(item)">
+                <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
+                編輯
+              </MButton>
 
               <MButton size="sm" variant="danger" @click="deleteOne(item)">
+                <font-awesome-icon icon="fa-trash" class="m-r-4" />
                 刪除
               </MButton>
             </div>
@@ -160,7 +167,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -234,6 +241,7 @@ const normalizeIsActiveNum = (value: any): 1 | 0 => {
 const normalizeMarqueeList = (res: any) => {
   if (Array.isArray(res?.data)) return res.data;
   if (Array.isArray(res)) return res;
+
   return [];
 };
 
@@ -284,6 +292,7 @@ const linkTypeText = (value?: string) => {
   if (value === 'URL' || value === 'EXTERNAL') return '網址';
   if (value === 'NEWS') return '最新消息';
   if (value === 'BANNER') return 'Banner';
+
   return value || '-';
 };
 
@@ -323,6 +332,7 @@ const onSubmit = async (values: any) => {
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
+
   await onSubmit(values);
 };
 
@@ -456,7 +466,9 @@ const enableSelected = async () => {
         selectedIds.value.map((id) => updateMarqueeStatus(id, '1')),
       ),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -498,7 +510,9 @@ const disableSelected = async () => {
         selectedIds.value.map((id) => updateMarqueeStatus(id, '0')),
       ),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -555,7 +569,9 @@ const deleteSelected = async () => {
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteMarquee(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -656,7 +672,20 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.ml {
+.marquee-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   &__link-text {
     display: inline-block;
     max-width: 200px;

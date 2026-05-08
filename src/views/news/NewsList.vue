@@ -7,14 +7,17 @@
       <NewsSearchForm :status-options="statusOptions" />
 
       <div class="flex justify-center m-y-8">
-        <MButton type="submit">查詢</MButton>
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
       </div>
     </Form>
   </MCard>
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
+      <div class="news-list__toolbar">
         <MButton @click="navigateToAdd">
           <font-awesome-icon icon="fa-plus" class="m-r-4" />
           新增
@@ -65,7 +68,7 @@
               v-if="item.imageUrl"
               :src="resolveImageUrl(item.imageUrl)"
               alt="news"
-              class="nl__table-img"
+              class="news-list__table-img"
             />
             <span v-else>-</span>
           </template>
@@ -76,7 +79,7 @@
               <font-awesome-icon
                 v-if="item.important"
                 icon="fa-star"
-                class="nl__important-icon m-r-4"
+                class="news-list__important-icon m-r-4"
                 title="重要消息"
               />
               {{ item.title || '-' }}
@@ -115,10 +118,14 @@
 
           <!-- 操作 -->
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-8 flex-wrap">
-              <MButton size="sm" @click="navigateToEdit(item)"> 編輯 </MButton>
+            <div class="news-list__actions">
+              <MButton size="sm" @click="navigateToEdit(item)">
+                <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
+                編輯
+              </MButton>
 
               <MButton size="sm" variant="danger" @click="deleteOne(item)">
+                <font-awesome-icon icon="fa-trash" class="m-r-4" />
                 刪除
               </MButton>
             </div>
@@ -145,7 +152,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -237,6 +244,7 @@ const statusText = (status?: string) => {
   if (status === 'ARCHIVED') return '已下架';
   if (status === 'DRAFT') return '草稿';
   if (status === 'SCHEDULED') return '排程中';
+
   return '-';
 };
 
@@ -245,6 +253,7 @@ const statusBadgeClass = (status?: string) => {
   if (status === 'SCHEDULED') return 'badge badge--blue';
   if (status === 'ARCHIVED') return 'badge badge--orange';
   if (status === 'DRAFT') return 'badge badge--gray';
+
   return 'badge badge--gray';
 };
 
@@ -252,6 +261,7 @@ const categoryText = (category?: string) => {
   if (category === 'ANNOUNCEMENT') return '公告';
   if (category === 'EVENT') return '活動';
   if (category === 'SYSTEM') return '系統';
+
   return category || '-';
 };
 
@@ -259,12 +269,14 @@ const categoryBadgeClass = (category?: string) => {
   if (category === 'ANNOUNCEMENT') return 'badge badge--blue';
   if (category === 'EVENT') return 'badge badge--purple';
   if (category === 'SYSTEM') return 'badge badge--orange';
+
   return 'badge badge--gray';
 };
 
 const normalizeNewsList = (res: any) => {
   if (Array.isArray(res?.data)) return res.data;
   if (Array.isArray(res)) return res;
+
   return [];
 };
 
@@ -349,6 +361,7 @@ const onSubmit = async (values: any) => {
 
   await query(async () => {
     const res = await queryNews({ condition });
+
     return normalizeNewsList(res);
   });
 
@@ -360,6 +373,7 @@ const onSubmit = async (values: any) => {
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
+
   await onSubmit(values);
 };
 
@@ -423,7 +437,9 @@ const enableSelected = async () => {
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => publishNews(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -463,7 +479,9 @@ const disableSelected = async () => {
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => unpublishNews(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -542,7 +560,9 @@ const deleteSelected = async () => {
     fn: async () =>
       Promise.allSettled(selectedIds.value.map((id) => deleteNews(id))),
     onSuccess: async (results: PromiseSettledResult<any>[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -624,7 +644,20 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.nl {
+.news-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   &__table-img {
     width: 96px;
     height: 54px;

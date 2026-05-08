@@ -5,10 +5,10 @@
     <MCard>
       <div class="sl-page-head">
         <div class="sl-page-head__main">
-          <p class="sl-page-head__eyebrow">System Management</p>
+          <p class="sl-page-head__eyebrow">系統管理</p>
           <h2 class="sl-page-head__title">系統日誌</h2>
           <p class="sl-page-head__sub">
-            查看登入紀錄、後台操作紀錄與系統活動追蹤
+            查看登入紀錄、後台操作紀錄與系統活動追蹤。
           </p>
         </div>
 
@@ -34,14 +34,14 @@
         <div class="sl-summary-card">
           <span class="sl-summary-card__label">查詢筆數</span>
           <strong class="sl-summary-card__value">
-            {{ hasData ? list.length : 0 }}
+            {{ hasData ? list.length : 0 }} 筆
           </strong>
         </div>
 
         <div class="sl-summary-card">
           <span class="sl-summary-card__label">筆數上限</span>
           <strong class="sl-summary-card__value">
-            {{ limitInput || 200 }}
+            {{ limitInput || 200 }} 筆
           </strong>
         </div>
       </div>
@@ -82,7 +82,7 @@
           <div>
             <p class="sl-card-head__title">查詢條件</p>
             <p class="sl-card-head__sub">
-              可依照時間區間、Email、結果狀態與筆數上限篩選日誌
+              可依時間區間、Email、結果狀態與筆數上限篩選日誌。
             </p>
           </div>
         </div>
@@ -149,7 +149,7 @@
           <div>
             <p class="sl-card-head__title">查詢結果</p>
             <p class="sl-card-head__sub">
-              {{ activeTabLabel }} / 依查詢條件顯示目前日誌資料
+              {{ activeTabLabel }} / 依查詢條件顯示目前日誌資料。
             </p>
           </div>
 
@@ -183,7 +183,7 @@
               <span v-else class="sl-empty">—</span>
             </template>
 
-            <!-- 結果 badge -->
+            <!-- 結果 -->
             <template #cell-result="{ item }">
               <span
                 class="sl-result"
@@ -193,7 +193,7 @@
               </span>
             </template>
 
-            <!-- errorMessage -->
+            <!-- 失敗原因 -->
             <template #cell-errorMessage="{ item }">
               <span
                 v-if="item.errorMessage"
@@ -239,7 +239,7 @@
             <!-- ADMIN_ACTION 專用：操作對象 -->
             <template #cell-target="{ item }">
               <span v-if="item.targetType || item.targetName">
-                <span class="sl-target-type">{{ item.targetType }}</span>
+                <span class="sl-target-type">{{ item.targetType || '-' }}</span>
                 <span v-if="item.targetName" class="sl-target-name">
                   — {{ truncate(item.targetName, 30) }}
                 </span>
@@ -271,7 +271,7 @@
               :goToPage="goToPage"
               :pageLimitSize="pageLimitSize"
               :totalItems="list.length"
-              @update:pageLimitSize="pageLimitSize = $event"
+              @update:pageLimitSize="handlePageLimitSizeChange"
             />
           </div>
         </template>
@@ -281,7 +281,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import { usePagination } from '@/hook/usePagination';
 import { useSearchPage } from '@/hook/useSearchPage';
@@ -299,9 +299,9 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import {
-  getSystemLogsByType,
-  getSystemLogsByDateRange,
   cleanupOldSystemLogs,
+  getSystemLogsByDateRange,
+  getSystemLogsByType,
 } from '@/services/adminSystemLogService';
 
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
@@ -375,6 +375,7 @@ const { list, hasData, noDataMessage, query } = useSearchPage({
  * ============================== */
 const toBackendDateTime = (value?: string | null) => {
   if (!value) return '';
+
   return String(value).length === 16 ? `${value}:00` : String(value);
 };
 
@@ -434,6 +435,11 @@ const {
   previousPage,
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
+
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
 
 /* ==============================
  * Columns
@@ -516,21 +522,26 @@ const fetchLogs = async (logType: LogType) => {
 /* ==============================
  * Actions
  * ============================== */
-const doSearch = () => fetchLogs(activeTab.value);
+const doSearch = async () => {
+  await fetchLogs(activeTab.value);
+};
 
-const resetFilters = () => {
+const resetFilters = async () => {
   startInput.value = '';
   endInput.value = '';
   emailInput.value = '';
   resultFilter.value = '';
   limitInput.value = 200;
+
+  await fetchLogs(activeTab.value);
 };
 
-const switchTab = (tab: LogType) => {
+const switchTab = async (tab: LogType) => {
   activeTab.value = tab;
   sortKey.value = '';
   sortOrder.value = '';
-  fetchLogs(tab);
+
+  await fetchLogs(tab);
 };
 
 const cleanupLogs = async () => {
@@ -546,7 +557,7 @@ const cleanupLogs = async () => {
   await executeApi({
     fn: async () => cleanupOldSystemLogs(days),
     onSuccess: async (data: any) => {
-      const deleted = (data as any)?.data ?? data ?? 0;
+      const deleted = data?.data ?? data ?? 0;
 
       await openInfoDialog({
         title: '提示訊息',
@@ -565,8 +576,8 @@ const cleanupLogs = async () => {
 /* ==============================
  * Lifecycle
  * ============================== */
-onMounted(() => {
-  fetchLogs('LOGIN');
+onMounted(async () => {
+  await fetchLogs('LOGIN');
 });
 </script>
 
@@ -600,7 +611,6 @@ onMounted(() => {
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   &__title {
@@ -627,30 +637,26 @@ onMounted(() => {
   }
 }
 
-.sl-current-type {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: color.mix(tokens.$brand-light, #fff, 18%);
-  color: tokens.$brand-dark;
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
+.sl-current-type,
 .sl-total-count {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
   padding: 4px 12px;
   border-radius: 999px;
-  background: color.mix(tokens.$form-border, #fff, 42%);
-  color: tokens.$form-muted;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.sl-current-type {
+  background: color.mix(tokens.$brand-light, #fff, 18%);
+  color: tokens.$brand-dark;
+}
+
+.sl-total-count {
+  background: color.mix(tokens.$form-border, #fff, 42%);
+  color: tokens.$form-muted;
 }
 
 /* ==============================

@@ -3,7 +3,7 @@
   <MCard>
     <FormTitle title="角色管理" />
 
-    <div class="flex justify-end gap-x-12 flex-wrap m-b-12">
+    <div class="role-list__toolbar">
       <MButton @click="navigateToAdd">
         <font-awesome-icon icon="fa-plus" class="m-r-4" />
         新增
@@ -48,7 +48,7 @@
 
         <!-- 描述 -->
         <template #cell-description="{ item }">
-          <span class="rl__description">
+          <span class="role-list__description">
             {{ item.description || '-' }}
           </span>
         </template>
@@ -65,13 +65,17 @@
 
         <!-- 操作 -->
         <template #cell-actions="{ item }">
-          <div class="flex gap-x-8">
+          <div class="role-list__actions">
             <MButton size="sm" @click="navigateToEdit(item)">
               <font-awesome-icon icon="fa-pen-to-square" class="m-r-4" />
               編輯
             </MButton>
 
-            <MButton size="sm" @click="navigateToPermissions(item)">
+            <MButton
+              size="sm"
+              variant="secondary"
+              @click="navigateToPermissions(item)"
+            >
               <font-awesome-icon icon="fa-key" class="m-r-4" />
               權限
             </MButton>
@@ -97,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -112,16 +116,14 @@ import ReportTable from '@/components/common/ReportTable.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useRoleStore } from '@/stores/role/useRoleStore';
 
-import { getAllRoles, deleteRole } from '@/services/adminRoleService';
+import { deleteRole, getAllRoles } from '@/services/adminRoleService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
-const dialogStore = useDialogStore();
 const roleStore = useRoleStore();
 
 /* --------------------------------------
@@ -325,7 +327,21 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.rl {
+.role-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   &__description {
     display: inline-block;
     max-width: 260px;
@@ -333,6 +349,14 @@ onMounted(async () => {
     vertical-align: middle;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .role-list {
+    &__toolbar {
+      justify-content: flex-start;
+    }
   }
 }
 </style>

@@ -5,89 +5,18 @@
     <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
       <FormTitle title="商品與獎品管理" />
 
-      <div class="flex flex-wrap">
-        <!-- 店家 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="店家"
-            v-model="storeId"
-            :options="storeOptions"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-
-        <!-- 狀態 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="狀態"
-            v-model="status"
-            :options="statusOptions"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-
-        <!-- 分類 -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="分類"
-            v-model="category"
-            :options="categoryOptions"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-
-        <!-- 商品名稱 title -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="商品名稱"
-            v-model="title"
-            placeholder="鬼滅之刃一番賞..."
-          />
-        </div>
-
-        <!-- 每抽價格 priceMin / priceMax -->
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="每抽價格（最小）"
-            v-model="priceMin"
-            type="number"
-            placeholder="0"
-          />
-        </div>
-
-        <div class="w-50 w-md-100 p-6">
-          <FormInput
-            label="每抽價格（最大）"
-            v-model="priceMax"
-            type="number"
-            placeholder="999999"
-          />
-        </div>
-
-        <!-- T020 — designationStatus filter -->
-        <div class="w-50 w-md-100 p-6">
-          <FormSelect
-            label="指定狀態"
-            v-model="designationStatus"
-            :options="[
-              { label: '待指定（PENDING）', value: 'PENDING' },
-              { label: '已指定（DESIGNATED）', value: 'DESIGNATED' },
-            ]"
-            :showAll="true"
-            allLabel="全部"
-            :allValue="''"
-          />
-        </div>
-      </div>
+      <LotteryWithPrizesSearchForm
+        :store-options="storeOptions"
+        :status-options="statusOptions"
+        :category-options="categoryOptions"
+        :designation-status-options="designationStatusOptions"
+      />
 
       <div class="flex justify-center m-y-8">
-        <MButton type="submit">查詢</MButton>
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
       </div>
     </Form>
   </MCard>
@@ -95,14 +24,18 @@
   <!-- ===================== 列表區 ===================== -->
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12">
-        <MButton @click="navigateToAdd">新增</MButton>
+      <div class="lottery-with-prizes-list__toolbar">
+        <MButton @click="navigateToAdd">
+          <font-awesome-icon icon="fa-plus" class="m-r-4" />
+          新增
+        </MButton>
 
         <MButton
           class="mbtn--red"
           :disabled="!canDelete"
           @click="deleteSelected"
         >
+          <font-awesome-icon icon="fa-trash" class="m-r-4" />
           刪除
         </MButton>
       </div>
@@ -126,43 +59,65 @@
           :sort-order="sortOrder"
           @sort="handleSort"
         >
-          <!-- ✅ title 可點擊去編輯 -->
+          <!-- 商品名稱 -->
           <template #cell-title="{ item }">
             <span class="clickable" @click="navigateToEdit(item)">
               {{ item.title || '-' }}
             </span>
           </template>
 
+          <!-- 店家 -->
           <template #cell-storeName="{ item }">
             <span>{{ item.storeName || item.storeId || '-' }}</span>
           </template>
 
+          <!-- 分類 -->
           <template #cell-category="{ item }">
             <span>{{ categoryText(item.category) }}</span>
           </template>
 
+          <!-- 遊戲模式 -->
           <template #cell-gameMode="{ item }">
             <span>{{ gameModeText(item) }}</span>
           </template>
 
+          <!-- 狀態 -->
           <template #cell-status="{ item }">
-            <span :class="statusBadgeClass(item.status)">{{
-              statusText(item.status)
-            }}</span>
+            <span :class="statusBadgeClass(item.status)">
+              {{ statusText(item.status) }}
+            </span>
           </template>
 
-          <!-- T019 — designationStatus badge -->
+          <!-- 指定狀態 -->
           <template #cell-designationStatus="{ item }">
             <span
               v-if="item.gameMode === 'SCRATCH_STORE'"
               :class="designationStatusBadgeClass(item.designationStatus)"
-              >{{ designationStatusText(item.designationStatus) }}</span
             >
+              {{ designationStatusText(item.designationStatus) }}
+            </span>
+
             <span v-else>-</span>
           </template>
 
+          <!-- 每抽價格 -->
+          <template #cell-pricePerDraw="{ item }">
+            <span>{{ formatMoney(item.pricePerDraw) }}</span>
+          </template>
+
+          <!-- 總抽數 -->
+          <template #cell-maxDraws="{ item }">
+            <span>{{ item.maxDraws ?? '-' }}</span>
+          </template>
+
+          <!-- 更新時間 -->
+          <template #cell-updatedAt="{ item }">
+            <span>{{ formatDateTime(item.updatedAt) }}</span>
+          </template>
+
+          <!-- 操作 -->
           <template #cell-actions="{ item }">
-            <div class="flex gap-x-6 flex-wrap">
+            <div class="lottery-with-prizes-list__actions">
               <!-- DRAFT → 上架 -->
               <MButton
                 v-if="item.status === 'DRAFT'"
@@ -174,8 +129,9 @@
                     `確定要將「${item.title}」上架？`,
                   )
                 "
-                >上架</MButton
               >
+                上架
+              </MButton>
 
               <!-- ON_SHELF → 下架 / 強制下架 -->
               <template v-if="item.status === 'ON_SHELF'">
@@ -189,8 +145,10 @@
                       `確定要將「${item.title}」下架？`,
                     )
                   "
-                  >下架</MButton
                 >
+                  下架
+                </MButton>
+
                 <MButton
                   size="sm"
                   class="mbtn--red"
@@ -201,8 +159,9 @@
                       `確定要強制下架「${item.title}」？`,
                     )
                   "
-                  >強制下架</MButton
                 >
+                  強制下架
+                </MButton>
               </template>
 
               <!-- OFF_SHELF → 重新上架 -->
@@ -216,8 +175,9 @@
                     `確定要將「${item.title}」重新上架？`,
                   )
                 "
-                >重新上架</MButton
               >
+                重新上架
+              </MButton>
 
               <!-- FORCED_OFF → 退回草稿 -->
               <MButton
@@ -231,12 +191,23 @@
                     `確定要將「${item.title}」退回草稿？`,
                   )
                 "
-                >退回草稿</MButton
               >
+                退回草稿
+              </MButton>
 
-              <!-- SOLD_OUT / ENDED → 無按鈕，僅顯示刪除 -->
+              <!-- 店家指定大獎 -->
+              <MButton
+                v-if="
+                  item.gameMode === 'SCRATCH_STORE' && item.status !== 'DELETED'
+                "
+                size="sm"
+                variant="secondary"
+                @click="openDesignateModal(item)"
+              >
+                指定大獎
+              </MButton>
 
-              <!-- non-ON_SHELF → 刪除（上架中不可直接刪除） -->
+              <!-- non-ON_SHELF → 刪除 -->
               <MButton
                 v-if="item.status !== 'ON_SHELF'"
                 size="sm"
@@ -248,21 +219,10 @@
                     `確定要刪除「${item.title}」？（此操作不可復原）`,
                   )
                 "
-                >刪除</MButton
               >
+                刪除
+              </MButton>
             </div>
-          </template>
-
-          <template #cell-pricePerDraw="{ item }">
-            <span>{{ item.pricePerDraw ?? '-' }}</span>
-          </template>
-
-          <template #cell-maxDraws="{ item }">
-            <span>{{ item.maxDraws ?? '-' }}</span>
-          </template>
-
-          <template #cell-updatedAt="{ item }">
-            <span>{{ formatDateTime(item.updatedAt) }}</span>
           </template>
         </ReportTable>
 
@@ -276,7 +236,7 @@
             :goToPage="goToPage"
             :pageLimitSize="pageLimitSize"
             :totalItems="list.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+            @update:pageLimitSize="handlePageLimitSizeChange"
           />
         </div>
       </template>
@@ -296,11 +256,8 @@
 </template>
 
 <script setup lang="ts">
-/* ==============================
- * Imports
- * ============================== */
-import { ref, computed, onMounted } from 'vue';
-import { Form, type FormContext, useForm } from 'vee-validate';
+import { ref, computed, onMounted, nextTick } from 'vue';
+import { Form, type FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -313,35 +270,38 @@ import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
-import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
 
-import { useDialogStore } from '@/stores';
+import LotteryWithPrizesSearchForm from '@/components/lottery-with-prizes/LotteryWithPrizesSearchForm.vue';
+import DesignatePrizeModal from '@/components/lottery-with-prizes/DesignatePrizeModal.vue';
+
 import { executeApi } from '@/utils/executeApiUtils';
 
 import { getStoreOptions } from '@/services/adminStoreService';
 import {
   getAllLotteriesWithPrizes,
   changeLotteryWithPrizesStatus,
-  designatePrize,
 } from '@/services/adminLotteryWithPrizesService';
 
-import DesignatePrizeModal from '@/components/lottery-with-prizes/DesignatePrizeModal.vue';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
-/* ==============================
- * Router / Store
- * ============================== */
 const router = useRouter();
-const dialogStore = useDialogStore();
 
 /* ==============================
- * Form & InitValues
+ * Types
+ * ============================== */
+interface SelectOption {
+  label: string;
+  value: any;
+  description?: string;
+}
+
+/* ==============================
+ * Form
  * ============================== */
 const formRef = ref<FormContext | null>(null);
 
-const initValues = ref<any>({
+const initValues = ref({
   storeId: '',
   status: '',
   category: '',
@@ -352,7 +312,7 @@ const initValues = ref<any>({
 });
 
 /* ==============================
- * useSearchPage（跟 BannerList 一樣）
+ * Search Hook
  * ============================== */
 const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
   useLocalList: true,
@@ -361,12 +321,6 @@ const { list, hasData, isSearch, noDataMessage, query } = useSearchPage({
 /* ==============================
  * Select Options
  * ============================== */
-interface SelectOption {
-  label: string;
-  value: any;
-  description?: string;
-}
-
 const storeOptions = ref<SelectOption[]>([]);
 
 const statusOptions = ref<SelectOption[]>([
@@ -385,108 +339,112 @@ const categoryOptions = ref<SelectOption[]>([
   { label: '自製賞', value: 'CUSTOM_GACHA' },
 ]);
 
+const designationStatusOptions = ref<SelectOption[]>([
+  { label: '待指定（PENDING）', value: 'PENDING' },
+  { label: '已指定（DESIGNATED）', value: 'DESIGNATED' },
+]);
+
 const mapEnumOptionsToSelect = (arr: any[] = []): SelectOption[] =>
-  arr.map((x) => ({
-    label: x?.label ?? '',
-    value: x?.value ?? '',
-    ...(x?.description ? { description: x.description } : {}),
+  arr.map((item) => ({
+    label: item?.label ?? item?.storeName ?? item?.name ?? '',
+    value: item?.value ?? item?.id ?? '',
+    ...(item?.description ? { description: item.description } : {}),
   }));
 
 const loadStoreOptions = async () => {
   await executeApi<any[]>({
     fn: async () => getStoreOptions({ activeOnly: true }),
-    onSuccess: (data) => {
-      storeOptions.value = mapEnumOptionsToSelect(
-        Array.isArray(data) ? data : [],
-      );
+    onSuccess: (data: any) => {
+      const list = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
+
+      storeOptions.value = mapEnumOptionsToSelect(list);
     },
     showSuccessDialog: false,
   });
 };
 
 /* ==============================
- * useForm defineField
- * ============================== */
-const { defineField, handleSubmit, setValues } = useForm({
-  initialValues: initValues.value,
-});
-
-const [storeId] = defineField('storeId');
-const [status] = defineField('status');
-const [category] = defineField('category');
-const [title] = defineField('title');
-const [priceMin] = defineField('priceMin');
-const [priceMax] = defineField('priceMax');
-const [designationStatus] = defineField('designationStatus');
-
-/* ==============================
  * Utils
  * ============================== */
-const formatDateTime = (v?: string) => {
-  if (!v) return '-';
-  return String(v).replace('T', ' ');
+const formatDateTime = (value?: string) => {
+  if (!value) return '-';
+
+  return String(value).replace('T', ' ');
 };
 
-const statusText = (s?: string) => {
-  if (s === 'DRAFT') return '草稿';
-  if (s === 'ON_SHELF') return '上架中';
-  if (s === 'OFF_SHELF') return '下架';
-  if (s === 'SOLD_OUT') return '已售完';
-  if (s === 'FORCED_OFF') return '強制下架';
-  if (s === 'ENDED') return '已結束';
-  return s ? String(s) : '-';
+const formatMoney = (value: any) => {
+  if (value === null || value === undefined || value === '') return '-';
+
+  const num = Number(value);
+
+  if (Number.isNaN(num)) return value;
+
+  return num.toLocaleString('zh-TW');
 };
 
-const statusBadgeClass = (s?: string) => {
-  if (s === 'ON_SHELF') return 'badge badge--green';
-  if (s === 'OFF_SHELF') return 'badge badge--gray';
-  if (s === 'SOLD_OUT') return 'badge badge--blue';
-  if (s === 'FORCED_OFF') return 'badge badge--red';
-  if (s === 'ENDED') return 'badge badge--gray';
-  return 'badge badge--gray'; // DRAFT
+const statusText = (status?: string) => {
+  if (status === 'DRAFT') return '草稿';
+  if (status === 'ON_SHELF') return '上架中';
+  if (status === 'OFF_SHELF') return '下架';
+  if (status === 'SOLD_OUT') return '已售完';
+  if (status === 'FORCED_OFF') return '強制下架';
+  if (status === 'ENDED') return '已結束';
+
+  return status ? String(status) : '-';
 };
 
-const categoryText = (c?: string) =>
-  c === 'OFFICIAL_ICHIBAN'
-    ? '官方一番賞'
-    : c === 'GACHA'
-      ? '扭蛋'
-      : c === 'TRADING_CARD'
-        ? '卡牌'
-        : c === 'CUSTOM_GACHA'
-          ? '自製賞'
-          : c
-            ? String(c)
-            : '-';
+const statusBadgeClass = (status?: string) => {
+  if (status === 'ON_SHELF') return 'badge badge--green';
+  if (status === 'OFF_SHELF') return 'badge badge--gray';
+  if (status === 'SOLD_OUT') return 'badge badge--blue';
+  if (status === 'FORCED_OFF') return 'badge badge--red';
+  if (status === 'ENDED') return 'badge badge--gray';
 
-const gameModeText = (item: any) => {
-  if (String(item?.playMode || '') !== 'SCRATCH_MODE') return '-';
-  const m = item?.gameMode;
-  return m === 'RANDOM'
-    ? '隨機'
-    : m === 'SCRATCH_STORE'
-      ? '店家指定'
-      : m === 'SCRATCH_PLAYER'
-        ? '玩家指定'
-        : m
-          ? String(m)
-          : '-';
-};
-
-/* T019 — designation status helpers */
-const designationStatusText = (s?: string) => {
-  if (s === 'PENDING') return '待指定';
-  if (s === 'DESIGNATED') return '已指定';
-  return '-';
-};
-
-const designationStatusBadgeClass = (s?: string) => {
-  if (s === 'DESIGNATED') return 'badge badge--green';
-  if (s === 'PENDING') return 'badge badge--orange';
   return 'badge badge--gray';
 };
 
-/* T016 — DesignatePrizeModal state */
+const categoryText = (category?: string) => {
+  if (category === 'OFFICIAL_ICHIBAN') return '官方一番賞';
+  if (category === 'GACHA') return '扭蛋';
+  if (category === 'TRADING_CARD') return '卡牌';
+  if (category === 'CUSTOM_GACHA') return '自製賞';
+
+  return category ? String(category) : '-';
+};
+
+const gameModeText = (item: any) => {
+  if (String(item?.playMode || '') !== 'SCRATCH_MODE') return '-';
+
+  const mode = item?.gameMode;
+
+  if (mode === 'RANDOM') return '隨機';
+  if (mode === 'SCRATCH_STORE') return '店家指定';
+  if (mode === 'SCRATCH_PLAYER') return '玩家指定';
+
+  return mode ? String(mode) : '-';
+};
+
+const designationStatusText = (status?: string) => {
+  if (status === 'PENDING') return '待指定';
+  if (status === 'DESIGNATED') return '已指定';
+
+  return '-';
+};
+
+const designationStatusBadgeClass = (status?: string) => {
+  if (status === 'DESIGNATED') return 'badge badge--green';
+  if (status === 'PENDING') return 'badge badge--orange';
+
+  return 'badge badge--gray';
+};
+
+/* ==============================
+ * DesignatePrizeModal
+ * ============================== */
 const showDesignateModal = ref(false);
 const designateTarget = ref<{
   id: string;
@@ -503,14 +461,15 @@ const openDesignateModal = (item: any) => {
   showDesignateModal.value = true;
 };
 
-/* T018 — after successful designation */
 const onDesignateSuccess = async () => {
   showDesignateModal.value = false;
+
   await openInfoDialog({
     title: '提示訊息',
     message: '指定大獎號碼成功',
     iconType: 'success',
   });
+
   await refresh();
 };
 
@@ -530,13 +489,15 @@ const sortedList = computed(() => {
   if (!sortKey.value || !sortOrder.value) return list.value;
 
   const arr = [...list.value];
+
   arr.sort((a: any, b: any) =>
-    compareByKeySmart(a, b, sortKey.value, sortOrder.value as any, {
+    compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
     }),
   );
+
   return arr;
 });
 
@@ -555,6 +516,11 @@ const {
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
 
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
+
 /* ==============================
  * Table Columns
  * ============================== */
@@ -572,15 +538,35 @@ const columns = [
 ];
 
 /* ==============================
- * Submit (Query)
+ * Query
  * ============================== */
-const onSubmit = handleSubmit(async (values: any) => {
-  const req = { condition: values };
+const onSubmit = async (values: any) => {
+  const condition = {
+    storeId: values.storeId ?? '',
+    status: values.status ?? '',
+    category: values.category ?? '',
+    title: values.title ?? '',
+    priceMin: values.priceMin ?? '',
+    priceMax: values.priceMax ?? '',
+    designationStatus: values.designationStatus ?? '',
+  };
 
-  // ✅ 真正打後端 /admin/lottery/with-prizes/list
-  await query(() => getAllLotteriesWithPrizes(req));
+  await query(() =>
+    getAllLotteriesWithPrizes({
+      condition,
+    }),
+  );
+
+  selectedIds.value = [];
   goToPage(1);
-});
+  isSearch.value = true;
+};
+
+const refresh = async () => {
+  const values = formRef.value?.values || initValues.value;
+
+  await onSubmit(values);
+};
 
 /* ==============================
  * Selection / Bulk Actions
@@ -593,22 +579,22 @@ const selectedRows = computed(() =>
 
 const canDelete = computed(() => selectedRows.value.length > 0);
 
-const refresh = async () => {
-  const values = formRef.value?.values || initValues.value;
-  await onSubmit(values);
-  selectedIds.value = [];
-};
-
-/** 單列狀態變更 */
 const changeStatus = async (
   item: any,
-  newStatus: 'ON_SHELF' | 'OFF_SHELF' | 'FORCED_OFF' | 'DRAFT' | 'ENDED' | 'DELETED',
+  newStatus:
+    | 'ON_SHELF'
+    | 'OFF_SHELF'
+    | 'FORCED_OFF'
+    | 'DRAFT'
+    | 'ENDED'
+    | 'DELETED',
   confirmMsg: string,
 ) => {
   const ok = await openConfirmDialog({
     title: '狀態確認',
     message: confirmMsg,
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -619,19 +605,18 @@ const changeStatus = async (
         message: '狀態更新成功',
         iconType: 'success',
       });
+
       await refresh();
     },
     showSuccessDialog: false,
   });
 };
 
-/** ✅ 批次刪除 */
 const deleteSelected = async () => {
   if (!canDelete.value) return;
 
-  // 篩出可刪除的（非 ON_SHELF）
   const deletable = selectedRows.value.filter(
-    (r: any) => r.status !== 'ON_SHELF',
+    (row: any) => row.status !== 'ON_SHELF',
   );
   const activeCount = selectedRows.value.length - deletable.length;
 
@@ -653,6 +638,7 @@ const deleteSelected = async () => {
     title: '刪除確認',
     message: warningMsg,
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -664,9 +650,10 @@ const deleteSelected = async () => {
       ),
     onSuccess: async (results: any[]) => {
       const okCount = results.filter(
-        (x: any) => x.status === 'fulfilled',
+        (item: any) => item.status === 'fulfilled',
       ).length;
       const failCount = results.length - okCount;
+
       await openInfoDialog({
         title: '提示訊息',
         message:
@@ -675,6 +662,7 @@ const deleteSelected = async () => {
             : `刪除完成：成功 ${okCount}`,
         iconType: failCount > 0 ? 'warning' : 'success',
       });
+
       await refresh();
     },
     showSuccessDialog: false,
@@ -684,7 +672,9 @@ const deleteSelected = async () => {
 /* ==============================
  * Navigation
  * ============================== */
-const navigateToAdd = () => router.push('/home/lottery-with-prizes/add');
+const navigateToAdd = () => {
+  router.push('/home/lottery-with-prizes/add');
+};
 
 const navigateToEdit = (item: any) => {
   router.push(`/home/lottery-with-prizes/edit/${item.id}`);
@@ -695,31 +685,59 @@ const navigateToEdit = (item: any) => {
  * ============================== */
 onMounted(async () => {
   await loadStoreOptions();
+  await nextTick();
 
-  // 初次進來直接查一次
-  setValues(initValues.value);
+  formRef.value?.setValues(initValues.value);
+
   await onSubmit(initValues.value);
-  isSearch.value = true;
 });
 </script>
 
 <style lang="scss" scoped>
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as tokens;
+
+.lottery-with-prizes-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
 .clickable {
   cursor: pointer;
   text-decoration: underline;
 }
+
 .badge--red {
+  border-radius: 4px;
   background: #fee2e2;
   color: #991b1b;
-  border-radius: 4px;
   padding: 2px 8px;
   font-size: 12px;
 }
+
 .badge--orange {
+  border-radius: 4px;
   background: #fff7e6;
   color: #d46b08;
-  border-radius: 4px;
   padding: 2px 8px;
   font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .lottery-with-prizes-list {
+    &__toolbar {
+      justify-content: flex-start;
+    }
+  }
 }
 </style>

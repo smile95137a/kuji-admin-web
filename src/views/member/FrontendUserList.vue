@@ -10,21 +10,28 @@
       />
 
       <div class="flex justify-center m-y-8">
-        <MButton type="submit">查詢</MButton>
+        <MButton type="submit">
+          <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
+          查詢
+        </MButton>
       </div>
     </Form>
   </MCard>
 
   <div class="m-t-12">
     <MCard>
-      <div class="flex justify-end gap-x-12 flex-wrap">
-        <MButton :disabled="!canActivate" @click="activateSelected"
-          >啟用</MButton
-        >
-        <MButton :disabled="!canDeactivate" @click="deactivateSelected"
-          >停用</MButton
-        >
-        <MButton :disabled="!canSuspend" @click="suspendSelected">暫停</MButton>
+      <div class="frontend-user-list__toolbar">
+        <MButton :disabled="!canActivate" @click="activateSelected">
+          啟用
+        </MButton>
+
+        <MButton :disabled="!canDeactivate" @click="deactivateSelected">
+          停用
+        </MButton>
+
+        <MButton :disabled="!canSuspend" @click="suspendSelected">
+          暫停
+        </MButton>
       </div>
 
       <template v-if="!hasData">
@@ -83,7 +90,9 @@
           </template>
 
           <template #cell-statusName="{ item }">
-            <span>{{ item.statusName || statusText(item.status) }}</span>
+            <span :class="statusBadgeClass(item.status)">
+              {{ item.statusName || statusText(item.status) }}
+            </span>
           </template>
 
           <template #cell-createdAt="{ item }">
@@ -114,7 +123,7 @@
             :goToPage="goToPage"
             :pageLimitSize="pageLimitSize"
             :totalItems="list.length"
-            @update:pageLimitSize="pageLimitSize = $event"
+            @update:pageLimitSize="handlePageLimitSizeChange"
           />
         </div>
       </template>
@@ -127,7 +136,7 @@
  * Imports
  * ============================== */
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 import { useRouter } from 'vue-router';
 
 import { usePagination } from '@/hook/usePagination';
@@ -145,7 +154,6 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import FrontendUserSearchForm from '@/components/member/FrontendUserSearchForm.vue';
 
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import {
@@ -166,10 +174,9 @@ interface SelectOption {
 }
 
 /* ==============================
- * Router / Store
+ * Router
  * ============================== */
 const router = useRouter();
-const dialogStore = useDialogStore();
 
 /* ==============================
  * Form & InitValues（對齊 FrontendUserCondition）
@@ -219,8 +226,6 @@ const loadSelectOptions = async () => {
 /* ==============================
  * Utils
  * ============================== */
-const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
-
 const statusText = (status?: string) =>
   status === 'ACTIVE'
     ? '啟用'
@@ -233,6 +238,17 @@ const statusText = (status?: string) =>
           : status === 'LOCKED'
             ? '鎖定'
             : '-';
+
+const statusBadgeClass = (status?: string) => {
+  if (status === 'ACTIVE') return 'badge badge--green';
+  if (status === 'INACTIVE' || status === 'DEACTIVATED') {
+    return 'badge badge--gray';
+  }
+  if (status === 'SUSPENDED') return 'badge badge--orange';
+  if (status === 'LOCKED') return 'badge badge--red';
+
+  return 'badge badge--gray';
+};
 
 const providerText = (p?: string) =>
   p === 'LOCAL'
@@ -263,6 +279,7 @@ const sortedList = computed(() => {
   if (!sortKey.value || !sortOrder.value) return list.value;
 
   const arr = [...list.value];
+
   arr.sort((a: any, b: any) =>
     compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
@@ -270,6 +287,7 @@ const sortedList = computed(() => {
       locale: 'zh-TW',
     }),
   );
+
   return arr;
 });
 
@@ -287,6 +305,11 @@ const {
   previousPage,
   goToPage,
 } = usePagination(sortedList, pageLimitSize);
+
+const handlePageLimitSizeChange = (value: number) => {
+  pageLimitSize.value = value;
+  goToPage(1);
+};
 
 /* ==============================
  * Columns（依 condition + 常見回傳欄位）
@@ -330,6 +353,7 @@ const onSubmit = async (values: any) => {
 
   await query(() => queryFrontendUsers(req));
   goToPage(1);
+  isSearch.value = true;
 };
 
 /* ==============================
@@ -341,18 +365,20 @@ const selectedRows = computed(() =>
   list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
-const canActivateRow = (r: any) => r?.status && r.status !== 'ACTIVE';
-const canDeactivateRow = (r: any) => r?.status === 'ACTIVE';
-const canSuspendRow = (r: any) => r?.status && r.status !== 'SUSPENDED';
+const canActivateRow = (row: any) => row?.status && row.status !== 'ACTIVE';
+const canDeactivateRow = (row: any) => row?.status === 'ACTIVE';
+const canSuspendRow = (row: any) => row?.status && row.status !== 'SUSPENDED';
 
 const canActivate = computed(
   () =>
     selectedRows.value.length > 0 && selectedRows.value.every(canActivateRow),
 );
+
 const canDeactivate = computed(
   () =>
     selectedRows.value.length > 0 && selectedRows.value.every(canDeactivateRow),
 );
+
 const canSuspend = computed(
   () =>
     selectedRows.value.length > 0 && selectedRows.value.every(canSuspendRow),
@@ -360,6 +386,7 @@ const canSuspend = computed(
 
 const refresh = async () => {
   const values = formRef.value?.values || initValues.value;
+
   await onSubmit(values);
   selectedIds.value = [];
 };
@@ -378,6 +405,7 @@ const activateSelected = async () => {
     title: '啟用確認',
     message: `確定要啟用選中的 ${selectedIds.value.length} 位會員嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -386,7 +414,9 @@ const activateSelected = async () => {
         selectedIds.value.map((id) => activateFrontendUser(id)),
       ),
     onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -418,6 +448,7 @@ const deactivateSelected = async () => {
     title: '停用確認',
     message: `確定要停用選中的 ${selectedIds.value.length} 位會員嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -426,7 +457,9 @@ const deactivateSelected = async () => {
         selectedIds.value.map((id) => deactivateFrontendUser(id)),
       ),
     onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -458,6 +491,7 @@ const suspendSelected = async () => {
     title: '暫停確認',
     message: `確定要暫停選中的 ${selectedIds.value.length} 位會員嗎？`,
   });
+
   if (!ok) return;
 
   await executeApi({
@@ -466,7 +500,9 @@ const suspendSelected = async () => {
         selectedIds.value.map((id) => suspendFrontendUser(id)),
       ),
     onSuccess: async (results: any[]) => {
-      const okCount = results.filter((x) => x.status === 'fulfilled').length;
+      const okCount = results.filter(
+        (item) => item.status === 'fulfilled',
+      ).length;
       const failCount = results.length - okCount;
 
       await openInfoDialog({
@@ -501,4 +537,13 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.frontend-user-list {
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+</style>
