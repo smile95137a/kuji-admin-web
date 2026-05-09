@@ -8,23 +8,24 @@ const adminUserRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/adminUser/AdminUserList.vue'),
     meta: { requiresAuth: true, layout: 'default' },
   },
+
+  /**
+   * 共用同一頁 AdminUserForm.vue
+   *
+   * action:
+   * - add-owner  新增店家負責人
+   * - add-editor 新增店家編輯
+   * - detail     帳號詳情
+   *
+   * id:
+   * - detail 模式才需要
+   */
   {
-    path: 'admin-users/add-owner',
-    name: 'AdminUserAddOwner',
+    path: 'admin-users/form/:action/:id?',
+    name: 'AdminUserForm',
     component: () => import('@/views/adminUser/AdminUserForm.vue'),
     meta: { requiresAuth: true, layout: 'default' },
-  },
-  {
-    path: 'admin-users/add-editor',
-    name: 'AdminUserAddEditor',
-    component: () => import('@/views/adminUser/AdminUserForm.vue'),
-    meta: { requiresAuth: true, layout: 'default' },
-  },
-  {
-    path: 'admin-users/:id',
-    name: 'AdminUserDetail',
-    component: () => import('@/views/adminUser/AdminUserForm.vue'),
-    meta: { requiresAuth: true, layout: 'default' },
+    props: true,
   },
 ];
 

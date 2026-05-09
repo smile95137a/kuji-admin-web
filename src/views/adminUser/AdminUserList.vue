@@ -696,17 +696,17 @@ const navigateToDetail = (item: any) => {
   if (!item?.id) return;
 
   saveListState();
-  router.push(`/home/admin-users/${item.id}`);
+  router.push(`/home/admin-users/form/detail/${item.id}`);
 };
 
 const navigateToAddOwner = () => {
   saveListState();
-  router.push('/home/admin-users/add-owner');
+  router.push('/home/admin-users/form/add-owner');
 };
 
 const navigateToAddEditor = () => {
   saveListState();
-  router.push('/home/admin-users/add-editor');
+  router.push('/home/admin-users/form/add-editor');
 };
 
 /* --------------------------------------

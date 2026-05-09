@@ -3,15 +3,6 @@
   <MCard>
     <div class="admin-user-form__header">
       <FormTitle :title="pageTitle" />
-
-      <MButton
-        v-if="isDev && !isDetail"
-        type="button"
-        class="mbtn--gray"
-        @click="fillMockData"
-      >
-        快速產生資料
-      </MButton>
     </div>
 
     <form class="admin-user-form" @submit.prevent="onSubmit">
@@ -34,7 +25,6 @@
             <FormSection title="帳號資訊">
               <div class="admin-user-form__card">
                 <div class="flex flex-wrap">
-                  <!-- Email -->
                   <div class="w-50 w-md-100 p-6">
                     <FormInput
                       label="Email（登入帳號）"
@@ -46,7 +36,6 @@
                     />
                   </div>
 
-                  <!-- 顯示名稱 -->
                   <div class="w-50 w-md-100 p-6">
                     <FormInput
                       label="顯示名稱"
@@ -58,7 +47,6 @@
                     />
                   </div>
 
-                  <!-- 電話 -->
                   <div class="w-50 w-md-100 p-6">
                     <FormInput
                       label="聯絡電話"
@@ -69,7 +57,6 @@
                     />
                   </div>
 
-                  <!-- 備註 -->
                   <div class="w-50 w-md-100 p-6">
                     <FormTextarea
                       label="備註"
@@ -89,12 +76,10 @@
         <!-- 新增負責人：店家資訊 -->
         <Tab v-if="mode === 'add-owner' && !isDetail" name="store">
           <div class="admin-user-form__layout">
-            <!-- 左側：店家基本資料 -->
             <div class="admin-user-form__left">
               <FormSection title="店家基本資料">
                 <div class="admin-user-form__card">
                   <div class="flex flex-wrap">
-                    <!-- 店家名稱 -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="店家名稱"
@@ -106,7 +91,6 @@
                       />
                     </div>
 
-                    <!-- 店家短描述 -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="店家短描述"
@@ -118,7 +102,6 @@
                       />
                     </div>
 
-                    <!-- 店家詳細介紹 -->
                     <div class="w-100 p-6">
                       <FormTextarea
                         label="店家詳細介紹"
@@ -130,7 +113,6 @@
                       />
                     </div>
 
-                    <!-- Logo URL -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="Logo URL"
@@ -142,7 +124,6 @@
                       />
                     </div>
 
-                    <!-- 封面圖片 URL -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="封面圖片 URL"
@@ -159,7 +140,6 @@
               <FormSection title="店家聯絡資訊">
                 <div class="admin-user-form__card">
                   <div class="flex flex-wrap">
-                    <!-- 店家聯絡 Email -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="店家聯絡 Email"
@@ -171,7 +151,6 @@
                       />
                     </div>
 
-                    <!-- 店家聯絡電話 -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="店家聯絡電話"
@@ -183,7 +162,6 @@
                       />
                     </div>
 
-                    <!-- 店家地址 -->
                     <div class="w-100 p-6">
                       <FormInput
                         label="店家地址"
@@ -195,7 +173,6 @@
                       />
                     </div>
 
-                    <!-- 營業時間 -->
                     <div class="w-50 w-md-100 p-6">
                       <FormInput
                         label="營業時間"
@@ -211,12 +188,10 @@
               </FormSection>
             </div>
 
-            <!-- 右側：社群資訊 -->
             <div class="admin-user-form__right">
               <FormSection title="社群資訊">
                 <div class="admin-user-form__card">
                   <div class="flex flex-wrap">
-                    <!-- Facebook -->
                     <div class="w-100 p-6">
                       <FormInput
                         label="Facebook 連結"
@@ -227,7 +202,6 @@
                       />
                     </div>
 
-                    <!-- Instagram -->
                     <div class="w-100 p-6">
                       <FormInput
                         label="Instagram 連結"
@@ -238,7 +212,6 @@
                       />
                     </div>
 
-                    <!-- LINE ID -->
                     <div class="w-100 p-6">
                       <FormInput
                         label="LINE ID"
@@ -418,7 +391,6 @@
         </Tab>
       </Tabs>
 
-      <!-- bottom button -->
       <div class="flex justify-end m-y-8 gap-x-12 flex-wrap">
         <template v-if="!isDetail">
           <MButton
@@ -484,7 +456,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -516,6 +488,8 @@ import {
 
 import { getStoreOptions } from '@/services/adminStoreService';
 
+type AdminUserMode = 'add-owner' | 'add-editor' | 'detail';
+
 interface SelectOption {
   label: string;
   value: any;
@@ -530,12 +504,19 @@ const router = useRouter();
 
 const isDev = import.meta.env.DEV;
 
-const mode = computed<'add-owner' | 'add-editor' | 'detail'>(() => {
-  if (route.name === 'AdminUserAddOwner') return 'add-owner';
-  if (route.name === 'AdminUserAddEditor') return 'add-editor';
+const routeAction = computed(() => String(route.params.action || ''));
+
+const mode = computed<AdminUserMode>(() => {
+  if (routeAction.value === 'add-owner') return 'add-owner';
+  if (routeAction.value === 'add-editor') return 'add-editor';
+  if (routeAction.value === 'detail') return 'detail';
 
   return 'detail';
 });
+
+const isValidAction = computed(() =>
+  ['add-owner', 'add-editor', 'detail'].includes(routeAction.value),
+);
 
 const isDetail = computed(() => mode.value === 'detail');
 const userId = computed(() => String(route.params.id || ''));
@@ -968,73 +949,6 @@ const buildEditorPayload = (values: any) => ({
 });
 
 /* ==============================
- * Mock
- * ============================== */
-const fillMockData = async () => {
-  const ts = Date.now();
-
-  if (mode.value === 'add-owner') {
-    setValues(
-      {
-        email: `owner_${ts}@example.com`,
-        displayName: `店家老闆_${ts}`,
-        phone: '0912345678',
-        remark: '測試建立店家負責人',
-
-        storeIds: [],
-
-        storeName: `KUJI 測試商店_${ts}`,
-        shortDescription: '專營一番賞、扭蛋精品',
-        longDescription: '這是一間開發測試用店家，可用來確認負責人建立流程。',
-        logoUrl: 'https://picsum.photos/seed/kuji-logo/300/300',
-        coverImageUrl: 'https://picsum.photos/seed/kuji-cover/1200/600',
-        storeEmail: `shop_${ts}@example.com`,
-        storePhone: '02-1234-5678',
-        storeAddress: '無',
-        businessHours: '每日 10:00~22:00',
-        facebookUrl: '',
-        instagramUrl: '',
-        lineId: 'kuji_official',
-      },
-      false,
-    );
-
-    activeTab.value = 'account';
-    return;
-  }
-
-  const firstStoreId =
-    storeOptions.value.find((option) => option.value)?.value || '';
-
-  setValues(
-    {
-      email: `editor_${ts}@example.com`,
-      displayName: `店家小編_${ts}`,
-      phone: '0912345678',
-      remark: '測試建立店家編輯',
-
-      storeIds: firstStoreId ? [firstStoreId] : [],
-
-      storeName: '',
-      shortDescription: '',
-      longDescription: '',
-      logoUrl: '',
-      coverImageUrl: '',
-      storeEmail: '',
-      storePhone: '',
-      storeAddress: '',
-      businessHours: '',
-      facebookUrl: '',
-      instagramUrl: '',
-      lineId: '',
-    },
-    false,
-  );
-
-  activeTab.value = 'account';
-};
-
-/* ==============================
  * Submit
  * ============================== */
 const onSubmit = handleSubmit(
@@ -1109,6 +1023,8 @@ const doActivate = async () => {
       await reloadDetail();
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
@@ -1134,6 +1050,8 @@ const doDeactivate = async () => {
       await reloadDetail();
     },
     showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
   });
 };
 
@@ -1220,18 +1138,59 @@ const goBack = () => {
 };
 
 /* ==============================
- * Mounted
+ * Init
  * ============================== */
-onMounted(async () => {
-  if (mode.value === 'add-editor') {
-    await loadStoreOptions();
+const initPage = async () => {
+  if (!isValidAction.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '無效的操作模式',
+      iconType: 'warning',
+    });
+
+    router.push(LIST_PATH);
+    return;
   }
 
-  if (isDetail.value) {
-    activeTab.value = 'detail';
-    await reloadDetail();
+  if (isDetail.value && !userId.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '查無帳號資料',
+      iconType: 'warning',
+    });
+
+    router.push(LIST_PATH);
+    return;
   }
+
+  detail.value = null;
+  isSubmitted.value = false;
+
+  if (mode.value === 'add-editor') {
+    activeTab.value = 'account';
+    await loadStoreOptions();
+    return;
+  }
+
+  if (mode.value === 'add-owner') {
+    activeTab.value = 'account';
+    return;
+  }
+
+  activeTab.value = 'detail';
+  await reloadDetail();
+};
+
+onMounted(async () => {
+  await initPage();
 });
+
+watch(
+  () => [route.params.action, route.params.id],
+  async () => {
+    await initPage();
+  },
+);
 </script>
 
 <style scoped lang="scss">
