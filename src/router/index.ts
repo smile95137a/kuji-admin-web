@@ -23,6 +23,7 @@ import systemLogRoutes from './systemLogRoutes';
 import lotteryWithPrizesRoutes from './lotteryWithPrizesRoutes';
 import systemConfigRoutes from './systemConfigRoutes';
 import reportRoutes from './reportRoutes';
+import emergencyAnnouncementRoutes from './emergencyAnnouncementRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -61,6 +62,7 @@ const routes: Array<RouteRecordRaw> = [
       ...lotteryWithPrizesRoutes,
       ...systemConfigRoutes,
       ...reportRoutes,
+      ...emergencyAnnouncementRoutes,
     ],
   },
   {
@@ -94,7 +96,8 @@ router.onError((error, to) => {
 
   if (!hasReloaded) {
     sessionStorage.setItem(reloadFlag, '1');
-    const target = to?.fullPath || window.location.pathname + window.location.search;
+    const target =
+      to?.fullPath || window.location.pathname + window.location.search;
     window.location.replace(target);
     return;
   }
