@@ -2,9 +2,11 @@
 <template>
   <MCard>
     <form class="emergency-announcement-form" @submit.prevent="onSubmit">
-      <p class="form__text form__text--title">
-        緊急公告{{ isEdit ? '編輯' : '新增' }}
-      </p>
+      <div class="emergency-announcement-form__header">
+        <p class="form__text form__text--title">
+          緊急公告{{ isEdit ? '編輯' : '新增' }}
+        </p>
+      </div>
 
       <div class="emergency-announcement-form__layout">
         <!-- 左側：主要表單 -->
@@ -129,7 +131,7 @@
 
       <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
-        <MButton type="submit">
+        <MButton type="submit" :disabled="mockCreating">
           <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
           {{ isEdit ? '更新' : '新增' }}
         </MButton>
@@ -160,6 +162,7 @@ import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useEmergencyAnnouncementStore } from '@/stores/emergencyAnnouncement/useEmergencyAnnouncementStore';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 import {
   getEmergencyAnnouncementById,
@@ -176,6 +179,9 @@ const id = computed(() => String(route.params.id || ''));
 
 /** 是否已按過送出 */
 const isSubmitted = ref(false);
+
+/** 快速假資料是否建立中 */
+const mockCreating = ref(false);
 
 /** 只有送出後才顯示錯誤 */
 const displayErrors = computed<Record<string, string | undefined>>(() => {
@@ -207,10 +213,18 @@ const normalizeToBackendLocalDateTime = (value?: string | null) => {
   const text = String(value ?? '').trim();
 
   if (!text) return null;
-  if (text.length >= 19) return text.slice(0, 19);
-  if (text.length === 16) return `${text}:00`;
 
-  return text;
+  const normalized = text.replace('T', ' ');
+
+  if (normalized.length >= 19) {
+    return normalized.slice(0, 19);
+  }
+
+  if (normalized.length === 16) {
+    return `${normalized}:00`;
+  }
+
+  return normalized;
 };
 
 const normalizeToDatetimeLocalInput = (value?: string | null) => {
@@ -219,6 +233,30 @@ const normalizeToDatetimeLocalInput = (value?: string | null) => {
   if (!text) return '';
 
   return text.length >= 16 ? text.slice(0, 16) : text;
+};
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const toDatetimeLocalString = (date: Date) => {
+  const yyyy = date.getFullYear();
+  const mm = pad2(date.getMonth() + 1);
+  const dd = pad2(date.getDate());
+  const hh = pad2(date.getHours());
+  const mi = pad2(date.getMinutes());
+
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+};
+
+const addHours = (date: Date, hours: number) => {
+  const next = new Date(date);
+  next.setHours(next.getHours() + hours);
+  return next;
+};
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 };
 
 /* --------------------------------------
@@ -322,6 +360,89 @@ const [maintenanceStartTime] = defineField('maintenanceStartTime');
 const [maintenanceEndTime] = defineField('maintenanceEndTime');
 const [forceShow] = defineField('forceShow');
 const [sortOrder] = defineField('sortOrder');
+
+/* --------------------------------------
+ * Mock data
+ * -------------------------------------- */
+const announcementTypes = [
+  {
+    value: 'MAINTENANCE',
+    label: '維修公告',
+    titlePrefix: '系統維護',
+    content:
+      '系統將於指定時間進行維護作業，維護期間部分功能可能暫時無法使用，造成不便敬請見諒。',
+  },
+  {
+    value: 'UPDATE',
+    label: '版本更新',
+    titlePrefix: '版本更新',
+    content: '平台將進行版本更新，更新完成後將提供更穩定的服務與新功能體驗。',
+  },
+  {
+    value: 'NOTICE',
+    label: '重要公告',
+    titlePrefix: '重要通知',
+    content: '提醒用戶留意本次重要公告內容，請於公告期間內確認相關資訊。',
+  },
+];
+
+const mockStatuses = ['DRAFT', 'ACTIVE', 'INACTIVE'];
+
+const mockScenarios = [
+  '登入頁公告',
+  '付款服務公告',
+  '抽獎系統公告',
+  '會員中心公告',
+  '後台管理公告',
+  '金流維護公告',
+  '圖片上傳公告',
+  '訂單查詢公告',
+  '儲值功能公告',
+  '活動頁公告',
+  '商品上架公告',
+  '通知服務公告',
+];
+
+const buildMockAnnouncementPayload = (index: number) => {
+  const type = announcementTypes[index % announcementTypes.length];
+  const status = mockStatuses[index % mockStatuses.length];
+  const scenario = mockScenarios[index % mockScenarios.length];
+
+  const now = new Date();
+  const displayStart = addDays(now, index - 6);
+  const displayEnd = addDays(displayStart, 7 + (index % 5));
+
+  const maintenanceStart = addHours(displayStart, 20 + (index % 6));
+  const maintenanceEnd = addHours(maintenanceStart, 2 + (index % 3));
+
+  return {
+    title: `${type.titlePrefix}｜${scenario} ${pad2(index + 1)}`,
+    content: [
+      type.content,
+      '',
+      `影響範圍：${scenario}`,
+      `測試批號：MOCK-${Date.now()}-${pad2(index + 1)}`,
+      `公告類型：${type.label}`,
+      `目前狀態：${status}`,
+    ].join('\n'),
+    announcementType: type.value,
+    status,
+    displayStartTime: normalizeToBackendLocalDateTime(
+      toDatetimeLocalString(displayStart),
+    )!,
+    displayEndTime: normalizeToBackendLocalDateTime(
+      toDatetimeLocalString(displayEnd),
+    )!,
+    maintenanceStartTime: normalizeToBackendLocalDateTime(
+      toDatetimeLocalString(maintenanceStart),
+    ),
+    maintenanceEndTime: normalizeToBackendLocalDateTime(
+      toDatetimeLocalString(maintenanceEnd),
+    ),
+    forceShow: index % 4 === 0,
+    sortOrder: index + 1,
+  };
+};
 
 /* --------------------------------------
  * Load detail
@@ -444,6 +565,15 @@ onMounted(async () => {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
 
   &__layout {
     display: grid;

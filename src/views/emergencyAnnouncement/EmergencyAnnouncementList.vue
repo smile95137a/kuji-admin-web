@@ -319,15 +319,15 @@ const handlePageLimitSizeChange = (value: number) => {
  * Columns
  * -------------------------------------- */
 const columns = [
-  { field: 'title', label: '公告標題', width: 220, sortable: true },
-  { field: 'announcementType', label: '公告類型', width: 120, sortable: true },
-  { field: 'status', label: '狀態', width: 100, sortable: true },
-  { field: 'displayTime', label: '公告顯示期間', width: 300 },
-  { field: 'maintenanceTime', label: '維修/更新時間', width: 300 },
-  { field: 'forceShow', label: '強制顯示', width: 100, sortable: true },
-  { field: 'sortOrder', label: '排序', width: 80, sortable: true },
-  { field: 'updatedAt', label: '更新時間', width: 160, sortable: true },
-  { field: 'actions', label: '操作', width: 200 },
+  { field: 'title', label: '公告標題', width: 50, sortable: true },
+  { field: 'announcementType', label: '公告類型', width: 50, sortable: true },
+  { field: 'status', label: '狀態', width: 50, sortable: true },
+  { field: 'displayTime', label: '公告顯示期間', width: 50 },
+  { field: 'maintenanceTime', label: '維修/更新時間', width: 50 },
+  { field: 'forceShow', label: '強制顯示', width: 50, sortable: true },
+  { field: 'sortOrder', label: '排序', width: 50, sortable: true },
+  { field: 'updatedAt', label: '更新時間', width: 50, sortable: true },
+  { field: 'actions', label: '操作', width: 50 },
 ];
 
 /* --------------------------------------
