@@ -16,9 +16,42 @@ interface ExecuteApiOptions<T> {
   showFailDialog?: boolean;
   showSuccessDialog?: boolean;
   useDefaultSuccessMessage?: boolean;
-
   onFinally?: () => void | Promise<void>;
 }
+
+const normalizeResponse = <T>(res: ApiResponse<T> | T): ApiResponse<T> => {
+  if ((res as any)?.success !== undefined) {
+    return res as ApiResponse<T>;
+  }
+
+  return {
+    success: true,
+    code: '',
+    data: res as T,
+    message: '',
+  };
+};
+
+const normalizeErrorResponse = <T>(error: any): ApiResponse<T> | null => {
+  const responseData = error?.response?.data;
+
+  if (!responseData) return null;
+
+  return {
+    success: responseData?.success ?? false,
+    code: responseData?.code ?? responseData?.error?.code ?? '',
+    data: responseData?.data,
+    message:
+      responseData?.message ||
+      responseData?.error?.message ||
+      responseData?.errorMessage ||
+      responseData?.msg ||
+      getErrorMessage(error),
+    error: responseData?.error,
+    meta: responseData?.meta,
+  } as ApiResponse<T>;
+};
+
 export async function executeApi<T = any>({
   fn,
   successTitle = '提示訊息',
@@ -33,15 +66,11 @@ export async function executeApi<T = any>({
   useDefaultSuccessMessage = true,
   onFinally,
 }: ExecuteApiOptions<T>): Promise<ApiResponse<T> | null> {
-  const dialogStore = useDialogStore();
+  useDialogStore();
 
   try {
     const res = await withLoading(() => fn());
-
-    const normalized: ApiResponse<T> =
-      (res as any)?.success !== undefined
-        ? (res as ApiResponse<T>)
-        : { success: true, code: '', data: res as T, message: '' };
+    const normalized = normalizeResponse<T>(res);
 
     const { success, data, message } = normalized;
 
@@ -55,7 +84,10 @@ export async function executeApi<T = any>({
           iconType: 'success',
         });
       }
-      if (onSuccess) await onSuccess(data!, normalized);
+
+      if (onSuccess) {
+        await onSuccess(data!, normalized);
+      }
     } else {
       if (showFailDialog) {
         await openInfoDialog({
@@ -64,19 +96,34 @@ export async function executeApi<T = any>({
           iconType: 'warning',
         });
       }
-      if (onFail) await onFail(data!, normalized);
+
+      if (onFail) {
+        await onFail(data, normalized);
+      }
     }
+
     return normalized;
-  } catch (error) {
+  } catch (error: any) {
+    const normalizedError = normalizeErrorResponse<T>(error);
+    const message =
+      normalizedError?.message || getErrorMessage(error, errorMessage);
+
     if (showCatchDialog) {
       await openInfoDialog({
         title: errorTitle,
-        message: getErrorMessage(error),
+        message,
         iconType: 'warning',
       });
     }
-    return null;
+
+    if (onFail && normalizedError) {
+      await onFail(normalizedError.data, normalizedError);
+    }
+
+    return normalizedError;
   } finally {
-    if (onFinally) await onFinally();
+    if (onFinally) {
+      await onFinally();
+    }
   }
 }

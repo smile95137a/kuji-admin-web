@@ -5,6 +5,7 @@
       <FormTitle
         :title="isEdit ? '編輯一番賞商品設定' : '新增一番賞商品設定'"
       />
+
       <MButton
         v-if="isEdit && isScratchStoreEdit"
         type="button"
@@ -79,6 +80,7 @@
             ⚠️
             此刷刷樂商品（店家指定模式）尚未完成大獎號碼指定。開始抽獎前需先指定大獎號碼。
           </span>
+
           <MButton size="sm" type="button" @click="showDesignateModal = true">
             前往指定大獎號碼
           </MButton>
@@ -132,7 +134,7 @@
 <script setup lang="ts">
 import { computed, onMounted, provide, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Form, FormContext } from 'vee-validate';
+import { Form, type FormContext } from 'vee-validate';
 
 import Tabs from '@/components/common/Tabs.vue';
 import Tab from '@/components/common/Tab.vue';
@@ -153,6 +155,7 @@ import {
 } from '@/validators/lotteryWithPrizesSchema';
 
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { getErrorMessage } from '@/utils/ErrorUtils';
 
 import { useAuthStore } from '@/stores';
 import { getStoreOptions } from '@/services/adminStoreService';
@@ -193,14 +196,15 @@ const loadedTitle = ref('');
 const loadedMaxDraws = ref(0);
 const isScratchStoreEdit = ref(false);
 const isScratchPlayerEdit = ref(false);
+
 /** 後端回傳的指定狀態（PENDING / DESIGNATED） */
 const lotteryDesignationStatus = ref<string | null>(null);
+
 /** 後端當前狀態（不隨 form values 改變），用於編輯時的 ACTIVE 上架封鎖 */
 const originalStatus = ref('');
 
 const onDesignateSuccess = async () => {
   showDesignateModal.value = false;
-  // 重新載入以更新指定狀態提示列
   await loadDetail();
 };
 
@@ -581,6 +585,7 @@ const loadDetail = async () => {
     loadedMaxDraws.value = Number(data?.maxDraws ?? 0);
     originalStatus.value = data?.status ?? '';
     lotteryDesignationStatus.value = data?.designationStatus ?? null;
+
     // 只看 gameMode，與 copy form 行為一致
     isScratchStoreEdit.value = String(data?.gameMode ?? '') === 'SCRATCH_STORE';
     isScratchPlayerEdit.value =
@@ -649,7 +654,7 @@ const loadDetail = async () => {
   } catch (error: any) {
     await openInfoDialog({
       title: '載入失敗',
-      message: error?.message ?? '請稍後再試',
+      message: getErrorMessage(error, '請稍後再試'),
       iconType: 'warning',
     });
 
@@ -780,6 +785,7 @@ const onSubmitForm = async (values: any, actions: any) => {
         const createdGrandPrize = (
           (createRes?.data?.prizes ?? []) as any[]
         ).find((p: any) => p.isGrandPrize === true);
+
         const grandPrizeIdForDesignate = createdGrandPrize?.id;
 
         if (!grandPrizeIdForDesignate) {
@@ -789,6 +795,7 @@ const onSubmitForm = async (values: any, actions: any) => {
               '商品已建立，但無法取得大獎 ID。請至編輯頁手動指定大獎號碼。',
             iconType: 'warning',
           });
+
           router.push(LIST_PATH);
           return;
         }
@@ -805,9 +812,10 @@ const onSubmitForm = async (values: any, actions: any) => {
         } catch (designateError: any) {
           await openInfoDialog({
             title: '大獎號碼指定失敗',
-            message: `商品已建立，但大獎號碼指定失敗：${
-              designateError?.message ?? '請到編輯頁重試'
-            }`,
+            message: `商品已建立，但大獎號碼指定失敗：${getErrorMessage(
+              designateError,
+              '請到編輯頁重試',
+            )}`,
             iconType: 'warning',
           });
 
@@ -838,7 +846,7 @@ const onSubmitForm = async (values: any, actions: any) => {
   } catch (error: any) {
     await openInfoDialog({
       title: '儲存失敗',
-      message: error?.message ?? '請稍後再試',
+      message: getErrorMessage(error, '請稍後再試'),
       iconType: 'warning',
     });
   }
