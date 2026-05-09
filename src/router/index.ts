@@ -24,6 +24,7 @@ import lotteryWithPrizesRoutes from './lotteryWithPrizesRoutes';
 import systemConfigRoutes from './systemConfigRoutes';
 import reportRoutes from './reportRoutes';
 import emergencyAnnouncementRoutes from './emergencyAnnouncementRoutes';
+import cooperationInquiryRoutes from './cooperationInquiryRoutes';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -63,6 +64,7 @@ const routes: Array<RouteRecordRaw> = [
       ...systemConfigRoutes,
       ...reportRoutes,
       ...emergencyAnnouncementRoutes,
+      ...cooperationInquiryRoutes,
     ],
   },
   {
