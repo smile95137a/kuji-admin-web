@@ -19,7 +19,7 @@ export function useSystemConfig() {
   const groupedConfigs = computed((): Record<string, SystemConfigRes[]> => {
     return configs.value.reduce(
       (acc, cfg) => {
-        const g = cfg.group || 'DEFAULT';
+        const g = cfg.configGroup || 'DEFAULT';
         if (!acc[g]) acc[g] = [];
         acc[g].push(cfg);
         return acc;
@@ -29,7 +29,7 @@ export function useSystemConfig() {
   });
 
   const groups = computed((): string[] =>
-    Array.from(new Set(configs.value.map((c) => c.group || 'DEFAULT')))
+    Array.from(new Set(configs.value.map((c) => c.configGroup || 'DEFAULT')))
   );
 
   // ─── methods ──────────────────────────────────────────────────────────
@@ -45,7 +45,16 @@ export function useSystemConfig() {
   }
 
   async function updateConfig(id: string, configValue: string) {
-    const res = await updateSystemConfig(id, { configValue });
+    const current = configs.value.find((cfg) => cfg.id === id);
+    if (!current) {
+      throw new Error(`system config not found: ${id}`);
+    }
+
+    const res = await updateSystemConfig(id, {
+      configValue,
+      description: current.description,
+      version: current.version,
+    });
     const updated = (res as any)?.data ?? res;
     if (updated?.id) {
       const idx = configs.value.findIndex((c) => c.id === id);

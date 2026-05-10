@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const editValue = ref(props.config.configValue);
 const jsonError = ref('');
 const jsonValid = ref(true);
+const isEditable = computed(() => props.config.isEditable !== false);
 
 // Auto-format JSON when editing starts
 watch(() => props.isEditing, (val) => {
@@ -97,18 +98,18 @@ const handleCancel = () => {
 
     <template v-else>
       <!-- STRING / NUMBER -->
-      <template v-if="config.configType === 'STRING' || config.configType === 'NUMBER'">
+      <template v-if="config.configType === 'STRING' || config.configType === 'INTEGER'">
         <input
           v-model="editValue"
-          :type="config.configType === 'NUMBER' ? 'number' : 'text'"
+          :type="config.configType === 'INTEGER' ? 'number' : 'text'"
           class="sce__input"
-          :disabled="!config.isEditable"
+          :disabled="!isEditable"
         />
       </template>
 
       <!-- BOOLEAN -->
       <template v-else-if="config.configType === 'BOOLEAN'">
-        <select v-model="editValue" class="sce__select" :disabled="!config.isEditable">
+        <select v-model="editValue" class="sce__select" :disabled="!isEditable">
           <option value="true">true</option>
           <option value="false">false</option>
         </select>
@@ -125,7 +126,7 @@ const handleCancel = () => {
               type="button"
               class="sce__fmt-btn"
               @click="formatJson"
-              :disabled="!config.isEditable"
+              :disabled="!isEditable"
             >整理格式</button>
           </div>
           <textarea
@@ -133,7 +134,7 @@ const handleCancel = () => {
             class="sce__textarea"
             :class="{ 'sce__textarea--err': !jsonValid && editValue.trim() !== '' }"
             rows="10"
-            :disabled="!config.isEditable"
+            :disabled="!isEditable"
             @input="validateJson"
             spellcheck="false"
             autocomplete="off"
@@ -142,7 +143,7 @@ const handleCancel = () => {
         </div>
       </template>
 
-      <div class="sce__actions" v-if="config.isEditable">
+      <div class="sce__actions" v-if="isEditable">
         <button
           class="sce__btn sce__btn--save"
           @click="handleSave"

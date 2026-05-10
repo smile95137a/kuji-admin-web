@@ -56,14 +56,14 @@ const emit = defineEmits<{
           </td>
           <td class="sct__td">
             <button
-              v-if="cfg.isEditable && editingId !== cfg.id"
+              v-if="cfg.isEditable !== false && editingId !== cfg.id"
               class="sct__edit-btn"
               @click="emit('startEdit', cfg.id)"
             >
               編輯
             </button>
             <span
-              v-else-if="!cfg.isEditable"
+              v-else-if="cfg.isEditable === false"
               class="sct__readonly-badge"
             >
               唯讀
@@ -134,7 +134,7 @@ const emit = defineEmits<{
     font-weight: 600;
 
     &--string  { background: #e0f2fe; color: #0369a1; }
-    &--number  { background: #fef3c7; color: #92400e; }
+    &--integer { background: #fef3c7; color: #92400e; }
     &--boolean { background: #dcfce7; color: #15803d; }
     &--json    { background: #fce7f3; color: #9d174d; }
   }

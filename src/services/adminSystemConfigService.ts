@@ -7,24 +7,26 @@ export interface SystemConfigRes {
   id: string;
   configKey: string;
   configValue: string;
-  configType: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON';
-  group: string;
+  configType: 'STRING' | 'INTEGER' | 'BOOLEAN';
+  configGroup: string;
   description?: string;
-  isEditable: boolean;
+  version: number;
+  updatedAt?: string;
+  isEditable?: boolean;
 }
 
 export interface SystemConfigCreateReq {
   configKey: string;
   configValue: string;
-  configType: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON';
-  group: string;
+  configType: 'STRING' | 'INTEGER' | 'BOOLEAN';
+  configGroup: string;
   description?: string;
-  isEditable?: boolean;
 }
 
 export interface SystemConfigUpdateReq {
   configValue: string;
   description?: string;
+  version: number;
 }
 
 /** 查詢系統設定（可依 group 過濾） */
