@@ -58,7 +58,7 @@
             {{ (detail.name || '?').charAt(0) }}
           </div>
           <div>
-            <p class="sd__store-name">{{ detail.name }}</p>
+            <p class="sd__store-name">{{ detail.storeName || detail.name }}</p>
             <span :class="['sd__badge', statusBadgeClass(detail.status)]">
               {{ statusLabel(detail.status) }}
             </span>
@@ -118,6 +118,24 @@
           >
             <i class="fa-brands fa-instagram" /> Instagram
           </a>
+        </div>
+      </div>
+
+      <div class="sd__section">
+        <p class="sd__section-title">招商追蹤</p>
+        <div class="sd__grid">
+          <div class="sd__kv">
+            <span class="sd__k">推薦碼</span>
+            <span class="sd__v">{{ detail.referralCode || '-' }}</span>
+          </div>
+          <div class="sd__kv">
+            <span class="sd__k">推薦來源店家</span>
+            <span class="sd__v">{{ detail.referrerStoreName || '-' }}</span>
+          </div>
+          <div class="sd__kv">
+            <span class="sd__k">啟用成功時間</span>
+            <span class="sd__v">{{ formatDateTime(detail.activatedAt) }}</span>
+          </div>
         </div>
       </div>
 
@@ -250,6 +268,23 @@ function statusBadgeClass(s: string): string {
   return 'sd__badge--gray';
 }
 
+function formatDateTime(val: any): string {
+  if (!val) return '-';
+  try {
+    return new Date(val).toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  } catch {
+    return String(val);
+  }
+}
+
 /* ==============================
  * Load
  * ============================== */
@@ -315,7 +350,7 @@ const submitDisable = async () => {
   actionLoading.value = true;
   try {
     await updateStoreStatus(String(route.params.id), 'INACTIVE');
-    detail.value.status = 'DISABLED';
+    detail.value.status = 'INACTIVE';
     await openInfoDialog({
       title: '提示訊息',
       message: '店家已停用',
@@ -337,7 +372,7 @@ const submitEnable = async () => {
   actionLoading.value = true;
   try {
     await updateStoreStatus(String(route.params.id), 'ACTIVE');
-    detail.value.status = 'ENABLED';
+    detail.value.status = 'ACTIVE';
     await openInfoDialog({
       title: '提示訊息',
       message: '店家已啟用，請提醒管理員手動重新上架商品',

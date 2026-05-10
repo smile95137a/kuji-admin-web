@@ -7,6 +7,38 @@ interface RequestData {
   [key: string]: any;
 }
 
+const normalizeStore = (raw: any = {}) => {
+  const storeName = raw.storeName ?? raw.name ?? '';
+  const owner = raw.owner ?? null;
+
+  return {
+    ...raw,
+    id: raw.id ?? '',
+    name: storeName,
+    storeName,
+    shortDescription: raw.shortDescription ?? '',
+    longDescription: raw.longDescription ?? '',
+    logoUrl: raw.logoUrl ?? '',
+    coverImageUrl: raw.coverImageUrl ?? '',
+    email: raw.email ?? '',
+    phone: raw.phone ?? '',
+    address: raw.address ?? '',
+    facebookUrl: raw.facebookUrl ?? '',
+    instagramUrl: raw.instagramUrl ?? '',
+    lineId: raw.lineId ?? '',
+    businessHours: raw.businessHours ?? null,
+    status: raw.status ?? '',
+    owner,
+    ownerEmail: raw.ownerEmail ?? owner?.email ?? '',
+    productCount: raw.productCount ?? raw.products?.length ?? 0,
+    referrerStoreId: raw.referrerStoreId ?? '',
+    referrerStoreName: raw.referrerStoreName ?? '',
+    referralCodeId: raw.referralCodeId ?? '',
+    referralCode: raw.referralCode ?? '',
+    activatedAt: raw.activatedAt ?? null,
+  };
+};
+
 /**
  * 取得店家選項列表（後台）
  * 後端：GET /admin/stores/options?activeOnly=true|false
@@ -66,7 +98,13 @@ export const queryStores = async (
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/list`, req ?? null);
-    return res.data;
+    const list = Array.isArray(res.data?.data)
+      ? res.data.data.map((item: any) => normalizeStore(item))
+      : res.data?.data;
+    return {
+      ...res.data,
+      data: list,
+    };
   } catch (e) {
     console.error('AdminStore - queryStores error:', e);
     throw e;
@@ -79,7 +117,10 @@ export const getStoreById = async (
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}/${storeId}`);
-    return res.data;
+    return {
+      ...res.data,
+      data: normalizeStore(res.data?.data ?? res.data),
+    };
   } catch (e) {
     console.error('AdminStore - getStoreById error:', e);
     throw e;
@@ -93,7 +134,10 @@ export const updateStore = async (
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${storeId}`, req);
-    return res.data;
+    return {
+      ...res.data,
+      data: normalizeStore(res.data?.data ?? res.data),
+    };
   } catch (e) {
     console.error('AdminStore - updateStore error:', e);
     throw e;
@@ -106,7 +150,10 @@ export const createStore = async (
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}`, req);
-    return res.data;
+    return {
+      ...res.data,
+      data: normalizeStore(res.data?.data ?? res.data),
+    };
   } catch (e) {
     console.error('AdminStore - createStore error:', e);
     throw e;

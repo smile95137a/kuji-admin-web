@@ -47,6 +47,7 @@ const { value: storeName, errorMessage: storeNameError } =
 const { value: shortDescription } = useField<string>('shortDescription');
 const { value: phone } = useField<string>('phone');
 const { value: email } = useField<string>('email');
+const { value: referralCode } = useField<string>('referralCode');
 const { value: ownerUsername, errorMessage: ownerUsernameError } =
   useField<string>('ownerUsername');
 const { value: ownerPassword } = useField<string>('ownerPassword');
@@ -60,6 +61,7 @@ const onSubmit = handleSubmit(async (values) => {
     shortDescription: values.shortDescription || undefined,
     phone: values.phone || undefined,
     email: values.email || undefined,
+    referralCode: values.referralCode || undefined,
   };
 
   if (includeOwner.value && values.ownerUsername) {
@@ -151,6 +153,13 @@ const onSubmit = handleSubmit(async (values) => {
               v-model="email"
               type="email"
               placeholder="store@example.com"
+            />
+          </div>
+          <div class="w-50 w-md-100 p-6">
+            <FormInput
+              label="招商推薦碼（選填）"
+              v-model="referralCode"
+              placeholder="輸入推薦碼後自動綁定推薦店家"
             />
           </div>
         </div>

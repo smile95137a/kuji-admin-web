@@ -13,7 +13,7 @@
         </div>
 
         <div class="br-page-head__actions">
-          <span class="br-current-type">紅利統計</span>
+          <span class="br-current-type">ADMIN 平台視圖</span>
 
           <span v-if="hasReportData" class="br-total-count">
             共 {{ totalRowCount }} 筆資料
@@ -115,7 +115,11 @@
           </div>
         </div>
 
-        <div v-if="loading" class="br-state m-t-16">查詢中...</div>
+        <div v-if="forbiddenMessage" class="br-forbidden m-t-16">
+          {{ forbiddenMessage }}
+        </div>
+
+        <div v-else-if="loading" class="br-state m-t-16">查詢中...</div>
 
         <template v-else>
           <NoData v-if="!reportData" message="請輸入查詢條件後查詢" />
@@ -162,6 +166,21 @@
               </div>
 
               <VChart :option="chartOption" class="br-chart__main" autoresize />
+            </div>
+
+            <div v-if="typeStats.length" class="br-chart m-t-20">
+              <div class="br-chart__head">
+                <div>
+                  <p class="br-chart__title">贈點類型分布圖</p>
+                  <p class="br-chart__sub">依贈點類型呈現總點數占比。</p>
+                </div>
+              </div>
+
+              <VChart
+                :option="typeDistributionOption"
+                class="br-chart__main"
+                autoresize
+              />
             </div>
 
             <!-- 類型統計 -->
@@ -273,7 +292,7 @@ import { Form, type FormContext } from 'vee-validate';
 import VChart from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { LineChart } from 'echarts/charts';
+import { LineChart, PieChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -287,6 +306,7 @@ import Pagination from '@/components/common/Pagination.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
+import { useAuthStore } from '@/stores';
 import { getBonusReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -295,6 +315,7 @@ import { exportToCsv } from '@/utils/csvExport';
 use([
   CanvasRenderer,
   LineChart,
+  PieChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
@@ -330,6 +351,7 @@ const typeStatsColumns: TableColumn[] = [
 ];
 
 const { dateRange } = useReportFilter();
+const authStore = useAuthStore();
 
 const formRef = ref<FormContext | null>(null);
 
@@ -342,6 +364,7 @@ const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
 const reportData = ref<any | null>(null);
+const forbiddenMessage = ref('');
 const loading = ref(false);
 
 const lastQuery = ref({
@@ -354,6 +377,24 @@ const lastQuery = ref({
  * ============================== */
 const pageLimitMap = ref<Record<string, number>>({});
 const currentPageMap = ref<Record<string, number>>({});
+
+const roleSet = computed(() => {
+  const raw = [
+    ...(Array.isArray((authStore.user as any)?.roles)
+      ? (authStore.user as any).roles
+      : []),
+    (authStore.user as any)?.role,
+    (authStore.user as any)?.roleCode,
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).toUpperCase());
+
+  return new Set(raw);
+});
+
+const isAdmin = computed(() => {
+  return roleSet.value.has('ROLE_ADMIN') || roleSet.value.has('ADMIN');
+});
 
 function getPageLimitSize(key: string) {
   return pageLimitMap.value[key] ?? 10;
@@ -508,6 +549,27 @@ const chartOption = computed(() => {
   };
 });
 
+const typeDistributionOption = computed(() => {
+  return {
+    tooltip: {
+      trigger: 'item',
+    },
+    legend: {
+      bottom: 0,
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['35%', '68%'],
+        data: typeStats.value.map((item: any) => ({
+          name: item.typeName ?? item.bonusType ?? '-',
+          value: item.totalPoints ?? 0,
+        })),
+      },
+    ],
+  };
+});
+
 /* ==============================
  * Utils
  * ============================== */
@@ -531,6 +593,14 @@ function formatPercent(value: any) {
  * Query
  * ============================== */
 async function onSubmit(values: any) {
+  if (!isAdmin.value) {
+    forbiddenMessage.value = '此報表僅限平台管理員查看。';
+    reportData.value = null;
+    return;
+  }
+
+  forbiddenMessage.value = '';
+
   const condition = {
     startDate: values.startDate ?? '',
     endDate: values.endDate ?? '',
@@ -575,6 +645,30 @@ function resetFilters() {
 }
 
 function handleExport() {
+  if (reportData.value) {
+    exportToCsv(
+      [
+        {
+          startDate: reportData.value.startDate,
+          endDate: reportData.value.endDate,
+          totalBonusPoints: reportData.value.totalBonusPoints,
+          totalCount: reportData.value.totalCount,
+          benefitUsers: reportData.value.benefitUsers,
+          growthRate: reportData.value.growthRate,
+        },
+      ],
+      [
+        { field: 'startDate', label: '開始日期' },
+        { field: 'endDate', label: '結束日期' },
+        { field: 'totalBonusPoints', label: '總贈點數' },
+        { field: 'totalCount', label: '總贈點筆數' },
+        { field: 'benefitUsers', label: '受益人數' },
+        { field: 'growthRate', label: '成長率(%)' },
+      ],
+      `${REPORT_TITLE}_摘要`,
+    );
+  }
+
   if (dailyDetails.value.length) {
     exportToCsv(dailyDetails.value, dailyColumns, `${REPORT_TITLE}_每日明細`);
   }
@@ -790,6 +884,16 @@ onMounted(async () => {
 .br-state {
   color: tokens.$form-muted;
   font-size: 14px;
+}
+
+.br-forbidden {
+  padding: 10px 12px;
+  border: 1px solid color.mix(#ef4444, #fff, 60%);
+  border-radius: 10px;
+  background: color.mix(#ef4444, #fff, 92%);
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* ==============================

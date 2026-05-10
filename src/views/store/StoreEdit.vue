@@ -64,6 +64,35 @@
                 :disabled="isEditorRole"
               />
             </div>
+            <div class="w-50 w-md-100 p-6">
+              <FormInput
+                label="招商推薦碼"
+                v-model="form.referralCode"
+                placeholder="輸入推薦碼後自動綁定推薦店家"
+                :disabled="!isAdmin || isEditorRole || Boolean(form.activatedAt)"
+              />
+              <p class="se__hint m-t-4">
+                {{
+                  form.activatedAt
+                    ? '店家已啟用成功，推薦來源已鎖定'
+                    : '僅 Admin 可在啟用前調整推薦來源'
+                }}
+              </p>
+            </div>
+            <div class="w-50 w-md-100 p-6">
+              <FormInput
+                label="推薦來源店家"
+                :modelValue="form.referrerStoreName || '-'"
+                disabled
+              />
+            </div>
+            <div class="w-50 w-md-100 p-6">
+              <FormInput
+                label="啟用成功時間"
+                :modelValue="formatDateTime(form.activatedAt)"
+                disabled
+              />
+            </div>
           </div>
         </div>
 
@@ -287,6 +316,9 @@ const isProfileMode = computed(() => route.name === 'StoreProfile');
 const isEditorRole = computed(() =>
   (authStore.user?.roles ?? []).includes('ROLE_STORE_EDITOR'),
 );
+const isAdmin = computed(() =>
+  (authStore.user?.roles ?? []).includes('ROLE_ADMIN'),
+);
 
 const storeId = computed((): string => {
   if (isProfileMode.value) {
@@ -311,6 +343,9 @@ const form = ref<any>({
   address: '',
   facebookUrl: '',
   instagramUrl: '',
+  referralCode: '',
+  referrerStoreName: '',
+  activatedAt: '',
 });
 
 const errors = ref<Record<string, string>>({});
@@ -448,6 +483,23 @@ function validate(): boolean {
   return Object.keys(e).length === 0;
 }
 
+function formatDateTime(val: any): string {
+  if (!val) return '-';
+  try {
+    return new Date(val).toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  } catch {
+    return String(val);
+  }
+}
+
 /* ==============================
  * Load
  * ============================== */
@@ -458,7 +510,7 @@ const loadStore = async () => {
     const res = await getStoreById(storeId.value);
     const d = (res as any)?.data ?? res;
     Object.assign(form.value, {
-      name: d.name ?? '',
+      name: d.storeName ?? d.name ?? '',
       shortDescription: d.shortDescription ?? '',
       longDescription: d.longDescription ?? '',
       logoUrl: d.logoUrl ?? '',
@@ -468,6 +520,9 @@ const loadStore = async () => {
       address: d.address ?? '',
       facebookUrl: d.facebookUrl ?? '',
       instagramUrl: d.instagramUrl ?? '',
+      referralCode: d.referralCode ?? '',
+      referrerStoreName: d.referrerStoreName ?? '',
+      activatedAt: d.activatedAt ?? '',
     });
     parseBusinessHours(d.businessHours);
   } catch {
@@ -492,6 +547,7 @@ const submitForm = async () => {
   try {
     await updateStore(storeId.value, {
       ...form.value,
+      storeName: form.value.name,
       businessHours: buildBusinessHours(),
     });
     await openInfoDialog({
@@ -594,6 +650,12 @@ onMounted(loadStore);
       color: #dc2626;
       font-weight: 700;
     }
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.5;
   }
 
   /* Image upload */

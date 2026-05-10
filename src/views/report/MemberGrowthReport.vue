@@ -1,22 +1,17 @@
-<!-- src/views/admin/report/MemberGrowthReport.vue -->
 <template>
   <div class="member-growth-page">
-    <!-- Header + Summary -->
     <MCard>
       <div class="mg-page-head">
         <div class="mg-page-head__main">
           <p class="mg-page-head__eyebrow">報表管理</p>
           <h2 class="mg-page-head__title">會員成長報表</h2>
           <p class="mg-page-head__sub">
-            查看指定期間內的新增會員、活躍會員、總會員數與成長趨勢。
+            平台會員視角：新增、活躍、留存與消費分布洞察。
           </p>
         </div>
 
         <div class="mg-page-head__actions">
-          <span class="mg-current-type">
-            {{ isAdmin ? '管理員查詢' : '店家查詢' }}
-          </span>
-
+          <span class="mg-current-type">ADMIN 平台視圖</span>
           <span v-if="hasReportData" class="mg-total-count">
             共 {{ totalRowCount }} 筆資料
           </span>
@@ -25,202 +20,109 @@
 
       <div class="mg-summary-row">
         <div class="mg-summary-card">
-          <span class="mg-summary-card__label">查詢店家</span>
-          <strong class="mg-summary-card__value">
-            {{ selectedStoreText }}
-          </strong>
-        </div>
-
-        <div class="mg-summary-card">
           <span class="mg-summary-card__label">查詢期間</span>
-          <strong class="mg-summary-card__value">
-            {{ queryDateText }}
-          </strong>
+          <strong class="mg-summary-card__value">{{ queryDateText }}</strong>
         </div>
-
         <div class="mg-summary-card">
-          <span class="mg-summary-card__label">資料區塊</span>
-          <strong class="mg-summary-card__value">
-            {{ tableSections.length }} 個
-          </strong>
+          <span class="mg-summary-card__label">分布區塊</span>
+          <strong class="mg-summary-card__value">4 個</strong>
+        </div>
+        <div class="mg-summary-card">
+          <span class="mg-summary-card__label">每日明細</span>
+          <strong class="mg-summary-card__value">{{ dailyNewMembers.length }} 筆</strong>
         </div>
       </div>
     </MCard>
 
-    <!-- 查詢條件 -->
     <div class="m-t-12">
       <MCard>
         <div class="mg-card-head">
           <div>
             <p class="mg-card-head__title">查詢條件</p>
-            <p class="mg-card-head__sub">
-              可依店家與日期區間查詢會員成長統計資料。
-            </p>
+            <p class="mg-card-head__sub">可依日期區間查詢平台會員成長資料。</p>
           </div>
         </div>
 
         <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
           <div class="mg-filter-grid">
-            <FormSelect
-              v-if="isAdmin"
-              label="店家"
-              name="storeId"
-              v-model="storeId"
-              :options="storeOptions"
-              :showAll="true"
-              allLabel="全部"
-              :allValue="''"
-            />
-
-            <FormInput
-              v-else
-              label="店家"
-              :modelValue="currentStoreLabel"
-              disabled
-            />
-
-            <FormInput
-              label="開始日期"
-              type="date"
-              name="startDate"
-              v-model="startDate"
-            />
-
-            <FormInput
-              label="結束日期"
-              type="date"
-              name="endDate"
-              v-model="endDate"
-            />
+            <FormInput label="開始日期" type="date" name="startDate" v-model="startDate" />
+            <FormInput label="結束日期" type="date" name="endDate" v-model="endDate" />
           </div>
 
           <div class="mg-filter-actions">
             <MButton type="submit">
-              <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />
-              查詢
+              <font-awesome-icon icon="fa-magnifying-glass" class="m-r-4" />查詢
             </MButton>
-
             <MButton type="button" class="mbtn--gray" @click="resetFilters">
-              <font-awesome-icon icon="fa-rotate-left" class="m-r-4" />
-              清除
+              <font-awesome-icon icon="fa-rotate-left" class="m-r-4" />清除
             </MButton>
           </div>
         </Form>
       </MCard>
     </div>
 
-    <!-- 查詢結果 -->
     <div class="m-t-12">
       <MCard>
         <div class="mg-card-head mg-card-head--result">
           <div>
             <p class="mg-card-head__title">查詢結果</p>
-            <p class="mg-card-head__sub">
-              依目前查詢條件顯示會員成長統計、趨勢圖與明細資料。
-            </p>
+            <p class="mg-card-head__sub">摘要、分布圖表與明細同步顯示。</p>
           </div>
 
           <div class="mg-result-actions">
-            <span v-if="hasReportData" class="mg-card-head__count">
-              共 {{ totalRowCount }} 筆資料
-            </span>
-
-            <MButton
-              v-if="hasReportData"
-              type="button"
-              variant="secondary"
-              @click="handleExport"
-            >
-              <font-awesome-icon icon="fa-download" class="m-r-4" />
-              匯出 CSV
+            <span v-if="hasReportData" class="mg-card-head__count">共 {{ totalRowCount }} 筆資料</span>
+            <MButton v-if="hasReportData" type="button" variant="secondary" @click="handleExport">
+              <font-awesome-icon icon="fa-download" class="m-r-4" />匯出 CSV
             </MButton>
           </div>
         </div>
 
-        <div v-if="forbiddenMessage" class="mg-forbidden m-t-16">
-          {{ forbiddenMessage }}
-        </div>
-
-        <div v-if="loading" class="mg-state m-t-16">查詢中...</div>
+        <div v-if="forbiddenMessage" class="mg-forbidden m-t-16">{{ forbiddenMessage }}</div>
+        <div v-else-if="loading" class="mg-state m-t-16">查詢中...</div>
 
         <template v-else>
           <NoData v-if="!reportData" message="請輸入查詢條件後查詢" />
 
           <div v-else class="m-t-16">
-            <!-- 統計卡片 -->
-            <div v-if="summaryEntries.length" class="mg-stat-row">
-              <div
-                v-for="entry in summaryEntries"
-                :key="entry.key"
-                class="mg-stat-card"
-              >
-                <span class="mg-stat-card__label">{{ entry.label }}</span>
-                <strong class="mg-stat-card__value">
-                  {{ formatSummaryValue(entry.value) }}
-                </strong>
-              </div>
+            <div class="mg-stat-row">
+              <div class="mg-stat-card"><span class="mg-stat-card__label">新增會員</span><strong class="mg-stat-card__value">{{ formatNumber(reportData.totalNewMembers) }}</strong></div>
+              <div class="mg-stat-card"><span class="mg-stat-card__label">活躍會員</span><strong class="mg-stat-card__value">{{ formatNumber(reportData.activeMembers) }}</strong></div>
+              <div class="mg-stat-card"><span class="mg-stat-card__label">成長率</span><strong class="mg-stat-card__value">{{ formatPercent(reportData.growthRate) }}</strong></div>
+              <div class="mg-stat-card"><span class="mg-stat-card__label">7日留存</span><strong class="mg-stat-card__value">{{ formatPercent(reportData.retention7Days) }}</strong></div>
+              <div class="mg-stat-card"><span class="mg-stat-card__label">30日留存</span><strong class="mg-stat-card__value">{{ formatPercent(reportData.retention30Days) }}</strong></div>
+              <div class="mg-stat-card"><span class="mg-stat-card__label">金幣ARPU</span><strong class="mg-stat-card__value">{{ formatNumber(reportData.arpuGold) }}</strong></div>
             </div>
 
-            <!-- 趨勢圖 -->
-            <div v-if="chartOption" class="mg-chart m-t-20">
-              <div class="mg-chart__head">
-                <div>
-                  <p class="mg-chart__title">成長趨勢圖</p>
-                  <p class="mg-chart__sub">依日期呈現可量化欄位的變化趨勢。</p>
-                </div>
-              </div>
-
-              <VChart :option="chartOption" class="mg-chart__main" autoresize />
+            <div v-if="dailyGrowthChartOption" class="mg-chart m-t-20">
+              <div class="mg-chart__head"><div><p class="mg-chart__title">每日新增趨勢</p><p class="mg-chart__sub">平台每日新增會員變化。</p></div></div>
+              <VChart :option="dailyGrowthChartOption" class="mg-chart__main" autoresize />
             </div>
 
-            <!-- 表格 -->
-            <div
-              v-for="section in tableSections"
-              :key="section.key"
-              class="m-t-20"
-            >
-              <div class="mg-section-head">
-                <p class="mg-section-head__title">
-                  {{ section.title }}
-                </p>
-
-                <span class="mg-section-head__count">
-                  共 {{ section.rows.length }} 筆
-                </span>
-              </div>
-
-              <ReportTable
-                class="mg-report-table"
-                :columns="section.columns"
-                :items="getCurrentPageItems(section)"
-                row-key="__rowKey"
-                :use-width-class="true"
-              />
-
-              <div
-                v-if="section.rows.length > 0"
-                class="flex justify-center m-t-12"
-              >
-                <Pagination
-                  :totalPages="getTotalPages(section)"
-                  :renderPaginationNums="getRenderPaginationNums(section)"
-                  :currentPage="getCurrentPage(section.key)"
-                  :nextPage="() => nextPage(section)"
-                  :previousPage="() => previousPage(section)"
-                  :goToPage="(page: number) => goToPage(section, page)"
-                  :pageLimitSize="getPageLimitSize(section.key)"
-                  :totalItems="section.rows.length"
-                  @update:pageLimitSize="
-                    (value: number) => handlePageLimitSizeChange(section, value)
-                  "
-                />
-              </div>
+            <div v-if="consumptionPatternChartOption" class="mg-chart m-t-20">
+              <div class="mg-chart__head"><div><p class="mg-chart__title">消費模式分布</p><p class="mg-chart__sub">新增會員的行為分布。</p></div></div>
+              <VChart :option="consumptionPatternChartOption" class="mg-chart__main" autoresize />
             </div>
 
-            <NoData
-              v-if="!summaryEntries.length && !tableSections.length"
-              message="無資料"
-            />
+            <div v-if="productConcentrationChartOption" class="mg-chart m-t-20">
+              <div class="mg-chart__head"><div><p class="mg-chart__title">商品集中度（Top 10）</p><p class="mg-chart__sub">抽獎次數集中於哪些商品。</p></div></div>
+              <VChart :option="productConcentrationChartOption" class="mg-chart__main" autoresize />
+            </div>
+
+            <div v-if="coinUsageChartOption" class="mg-chart m-t-20">
+              <div class="mg-chart__head"><div><p class="mg-chart__title">金幣 vs 紅利消耗分布</p><p class="mg-chart__sub">抽獎消耗幣種占比。</p></div></div>
+              <VChart :option="coinUsageChartOption" class="mg-chart__main" autoresize />
+            </div>
+
+            <div v-if="paymentMethodChartOption" class="mg-chart m-t-20">
+              <div class="mg-chart__head"><div><p class="mg-chart__title">支付型態分布</p><p class="mg-chart__sub">儲值支付渠道分布。</p></div></div>
+              <VChart :option="paymentMethodChartOption" class="mg-chart__main" autoresize />
+            </div>
+
+            <div class="m-t-20" v-if="dailyNewMembers.length">
+              <div class="mg-section-head"><p class="mg-section-head__title">每日新增明細</p><span class="mg-section-head__count">共 {{ dailyNewMembers.length }} 筆</span></div>
+              <ReportTable class="mg-report-table" :columns="dailyColumns" :items="getCurrentPageItems('daily', dailyNewMembers)" row-key="date" :use-width-class="true" />
+              <div class="flex justify-center m-t-12"><Pagination :totalPages="getTotalPages('daily', dailyNewMembers)" :renderPaginationNums="getRenderPaginationNums('daily', dailyNewMembers)" :currentPage="getCurrentPage('daily')" :nextPage="() => nextPage('daily', dailyNewMembers)" :previousPage="() => previousPage('daily', dailyNewMembers)" :goToPage="(page:number) => goToPage('daily', dailyNewMembers, page)" :pageLimitSize="getPageLimitSize('daily')" :totalItems="dailyNewMembers.length" @update:pageLimitSize="(v:number)=>handlePageLimitSizeChange('daily', v)" /></div>
+            </div>
           </div>
         </template>
       </MCard>
@@ -231,608 +133,191 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { Form, type FormContext } from 'vee-validate';
-import { isAxiosError } from 'axios';
-
+import VChart from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { BarChart, LineChart } from 'echarts/charts';
-import {
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-} from 'echarts/components';
-import VChart from 'vue-echarts';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
 import { useAuthStore } from '@/stores';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
+import { getMemberGrowthReport } from '@/services/adminReportService';
 
-import {
-  getMemberGrowthReport,
-  type QueryReq,
-} from '@/services/adminReportService';
-import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
+use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent]);
 
-use([
-  CanvasRenderer,
-  BarChart,
-  LineChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-]);
-
-type StoreOption = {
-  label: string;
-  value: string;
-};
-
-type TableColumn = {
-  field: string;
-  label: string;
-  width?: number;
-};
-
-type TableSection = {
-  key: string;
-  title: string;
-  rows: any[];
-  columns: TableColumn[];
-};
+type TableColumn = { field: string; label: string; width?: number };
 
 const REPORT_TITLE = '會員成長報表';
-
-const FIELD_ZH: Record<string, string> = {
-  date: '日期',
-  storeName: '店家名稱',
-  storeId: '店家 ID',
-
-  totalNewMembers: '新增會員數',
-  totalActiveMembers: '活躍會員數',
-  totalMembers: '總會員數',
-  newMembers: '新增會員數',
-  activeMembers: '活躍會員數',
-  retentionRate: '留存率 (%)',
-  conversionRate: '轉換率 (%)',
-  growthRate: '成長率 (%)',
-  percentage: '占比 (%)',
-
-  memberStats: '會員統計',
-  dailyDetails: '每日明細',
-  storeDetails: '店家明細',
-
-  startDate: '開始日期',
-  endDate: '結束日期',
-  totalCount: '總筆數',
-  count: '數量',
-  id: 'ID',
-  name: '名稱',
-  status: '狀態',
-  createdAt: '建立時間',
-  updatedAt: '更新時間',
-  result: '資料列表',
-  index: '項次',
-  value: '數值',
-};
-
 const authStore = useAuthStore();
 const { dateRange } = useReportFilter();
 
 const formRef = ref<FormContext | null>(null);
-
-const initValues = ref({
-  storeId: '',
-  startDate: dateRange.value.startDate,
-  endDate: dateRange.value.endDate,
-});
-
-const storeId = ref('');
+const initValues = ref({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate });
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
-
-const reportData = ref<Record<string, any> | null>(null);
-const tableSections = ref<TableSection[]>([]);
-const storeOptions = ref<StoreOption[]>([]);
-const forbiddenMessage = ref('');
 const loading = ref(false);
+const forbiddenMessage = ref('');
+const reportData = ref<any | null>(null);
+const lastQuery = ref({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate });
 
-const lastQuery = ref({
-  storeId: '',
-  startDate: dateRange.value.startDate,
-  endDate: dateRange.value.endDate,
-});
+const roleSet = computed(() => new Set([...(Array.isArray((authStore.user as any)?.roles) ? (authStore.user as any).roles : []), (authStore.user as any)?.role].filter(Boolean).map((r) => String(r).toUpperCase())));
+const isAdmin = computed(() => roleSet.value.has('ROLE_ADMIN') || roleSet.value.has('ADMIN'));
 
-/* ==============================
- * 分頁
- * ============================== */
+const dailyNewMembers = computed(() => Array.isArray(reportData.value?.dailyNewMembers) ? reportData.value.dailyNewMembers : []);
+const consumptionPatterns = computed(() => Array.isArray(reportData.value?.consumptionPatterns) ? reportData.value.consumptionPatterns : []);
+const productConcentrations = computed(() => Array.isArray(reportData.value?.productConcentrations) ? reportData.value.productConcentrations : []);
+const paymentMethodDistributions = computed(() => Array.isArray(reportData.value?.paymentMethodDistributions) ? reportData.value.paymentMethodDistributions : []);
+
+const totalRowCount = computed(() => dailyNewMembers.value.length + consumptionPatterns.value.length + productConcentrations.value.length + paymentMethodDistributions.value.length);
+const hasReportData = computed(() => Boolean(reportData.value));
+const queryDateText = computed(() => `${lastQuery.value.startDate || '-'} ~ ${lastQuery.value.endDate || '-'}`);
+
+const dailyColumns: TableColumn[] = [{ field: 'date', label: '日期', width: 120 }, { field: 'count', label: '新增會員', width: 100 }];
+const consumptionColumns: TableColumn[] = [{ field: 'patternName', label: '模式', width: 180 }, { field: 'userCount', label: '人數', width: 100 }, { field: 'percentage', label: '占比(%)', width: 100 }];
+const productColumns: TableColumn[] = [{ field: 'lotteryTitle', label: '商品', width: 240 }, { field: 'category', label: '分類', width: 120 }, { field: 'drawCount', label: '抽獎次數', width: 120 }, { field: 'drawPercentage', label: '占比(%)', width: 100 }];
+const paymentColumns: TableColumn[] = [{ field: 'paymentMethod', label: '支付方式', width: 180 }, { field: 'transactionCount', label: '筆數', width: 100 }, { field: 'totalAmount', label: '金額', width: 120 }, { field: 'percentage', label: '占比(%)', width: 100 }];
+
 const pageLimitMap = ref<Record<string, number>>({});
 const currentPageMap = ref<Record<string, number>>({});
+const getPageLimitSize = (key: string) => pageLimitMap.value[key] ?? 10;
+const getCurrentPage = (key: string) => currentPageMap.value[key] ?? 1;
+const setPageLimitSize = (key: string, size: number) => (pageLimitMap.value = { ...pageLimitMap.value, [key]: size });
+const setCurrentPage = (key: string, page: number) => (currentPageMap.value = { ...currentPageMap.value, [key]: page });
+const getTotalPages = (key: string, rows: any[]) => Math.max(1, Math.ceil(rows.length / getPageLimitSize(key)));
+const getCurrentPageItems = (key: string, rows: any[]) => rows.slice((getCurrentPage(key) - 1) * getPageLimitSize(key), (getCurrentPage(key) - 1) * getPageLimitSize(key) + getPageLimitSize(key));
+const getRenderPaginationNums = (key: string, rows: any[]) => {
+  const total = getTotalPages(key, rows);
+  const cur = getCurrentPage(key);
+  const start = Math.max(1, cur - 2);
+  const end = Math.min(total, cur + 2);
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+};
+const goToPage = (key: string, rows: any[], page: number) => setCurrentPage(key, Math.min(Math.max(page, 1), getTotalPages(key, rows)));
+const nextPage = (key: string, rows: any[]) => goToPage(key, rows, getCurrentPage(key) + 1);
+const previousPage = (key: string, rows: any[]) => goToPage(key, rows, getCurrentPage(key) - 1);
+const handlePageLimitSizeChange = (key: string, value: number) => { setPageLimitSize(key, value); setCurrentPage(key, 1); };
+const resetPagination = () => { pageLimitMap.value = {}; currentPageMap.value = {}; };
 
-function getPageLimitSize(key: string) {
-  return pageLimitMap.value[key] ?? 10;
-}
-
-function getCurrentPage(key: string) {
-  return currentPageMap.value[key] ?? 1;
-}
-
-function setCurrentPage(key: string, page: number) {
-  currentPageMap.value = {
-    ...currentPageMap.value,
-    [key]: page,
-  };
-}
-
-function setPageLimitSize(key: string, size: number) {
-  pageLimitMap.value = {
-    ...pageLimitMap.value,
-    [key]: size,
-  };
-}
-
-function getTotalPages(section: TableSection) {
-  const pageLimitSize = getPageLimitSize(section.key);
-  return Math.max(1, Math.ceil(section.rows.length / pageLimitSize));
-}
-
-function getCurrentPageItems(section: TableSection) {
-  const currentPage = getCurrentPage(section.key);
-  const pageLimitSize = getPageLimitSize(section.key);
-  const start = (currentPage - 1) * pageLimitSize;
-  const end = start + pageLimitSize;
-
-  return section.rows.slice(start, end);
-}
-
-function getRenderPaginationNums(section: TableSection) {
-  const totalPages = getTotalPages(section);
-  const currentPage = getCurrentPage(section.key);
-  const delta = 2;
-
-  const start = Math.max(1, currentPage - delta);
-  const end = Math.min(totalPages, currentPage + delta);
-
-  const pages: number[] = [];
-
-  for (let page = start; page <= end; page += 1) {
-    pages.push(page);
-  }
-
-  return pages;
-}
-
-function goToPage(section: TableSection, page: number) {
-  const totalPages = getTotalPages(section);
-  const nextPage = Math.min(Math.max(page, 1), totalPages);
-
-  setCurrentPage(section.key, nextPage);
-}
-
-function nextPage(section: TableSection) {
-  goToPage(section, getCurrentPage(section.key) + 1);
-}
-
-function previousPage(section: TableSection) {
-  goToPage(section, getCurrentPage(section.key) - 1);
-}
-
-function handlePageLimitSizeChange(section: TableSection, value: number) {
-  setPageLimitSize(section.key, value);
-  setCurrentPage(section.key, 1);
-}
-
-function resetPagination() {
-  pageLimitMap.value = {};
-  currentPageMap.value = {};
-}
-
-/* ==============================
- * 權限
- * ============================== */
-const roleSet = computed(() => {
-  const raw = [
-    ...(Array.isArray((authStore.user as any)?.roles)
-      ? (authStore.user as any).roles
-      : []),
-    (authStore.user as any)?.role,
-    (authStore.user as any)?.roleCode,
-  ]
-    .filter(Boolean)
-    .map((item) => String(item).toUpperCase());
-
-  return new Set(raw);
+const dailyGrowthChartOption = computed(() => {
+  if (!dailyNewMembers.value.length) return null;
+  return { tooltip: { trigger: 'axis' }, legend: { data: ['新增會員'] }, grid: { top: 48, left: 42, right: 20, bottom: 36 }, xAxis: { type: 'category', data: dailyNewMembers.value.map((i: any) => i.date) }, yAxis: { type: 'value' }, series: [{ name: '新增會員', type: 'line', smooth: true, areaStyle: {}, data: dailyNewMembers.value.map((i: any) => i.count ?? 0) }] };
 });
 
-const isAdmin = computed(() => {
-  return roleSet.value.has('ROLE_ADMIN') || roleSet.value.has('ADMIN');
+const consumptionPatternChartOption = computed(() => {
+  if (!consumptionPatterns.value.length) return null;
+  return { tooltip: { trigger: 'axis' }, grid: { top: 28, left: 42, right: 20, bottom: 36 }, xAxis: { type: 'category', data: consumptionPatterns.value.map((i: any) => i.patternName) }, yAxis: { type: 'value' }, series: [{ type: 'bar', barMaxWidth: 42, data: consumptionPatterns.value.map((i: any) => i.userCount ?? 0) }] };
 });
 
-/* ==============================
- * 顯示文字
- * ============================== */
-const currentStoreLabel = computed(() => {
-  if (!storeId.value) return '-';
-
-  return (
-    storeOptions.value.find((item) => item.value === storeId.value)?.label ??
-    `店家 ${storeId.value}`
-  );
+const productConcentrationChartOption = computed(() => {
+  if (!productConcentrations.value.length) return null;
+  return { tooltip: { trigger: 'axis' }, grid: { top: 28, left: 120, right: 20, bottom: 36 }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: productConcentrations.value.map((i: any) => i.lotteryTitle) }, series: [{ type: 'bar', barMaxWidth: 26, data: productConcentrations.value.map((i: any) => i.drawCount ?? 0) }] };
 });
 
-const selectedStoreText = computed(() => {
-  if (!lastQuery.value.storeId) {
-    return isAdmin.value ? '全部店家' : currentStoreLabel.value;
-  }
-
-  return (
-    storeOptions.value.find((item) => item.value === lastQuery.value.storeId)
-      ?.label ?? `店家 ${lastQuery.value.storeId}`
-  );
+const coinUsageChartOption = computed(() => {
+  const data = reportData.value?.coinUsageDistribution;
+  if (!data) return null;
+  return { tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['35%', '68%'], data: [{ name: 'GOLD', value: data.goldSpend ?? 0 }, { name: 'BONUS', value: data.bonusSpend ?? 0 }] }] };
 });
 
-const queryDateText = computed(() => {
-  const start = lastQuery.value.startDate || '-';
-  const end = lastQuery.value.endDate || '-';
-
-  return `${start} ~ ${end}`;
+const paymentMethodChartOption = computed(() => {
+  if (!paymentMethodDistributions.value.length) return null;
+  return { tooltip: { trigger: 'axis' }, grid: { top: 28, left: 42, right: 20, bottom: 36 }, xAxis: { type: 'category', data: paymentMethodDistributions.value.map((i: any) => i.paymentMethod) }, yAxis: { type: 'value' }, series: [{ type: 'bar', barMaxWidth: 42, data: paymentMethodDistributions.value.map((i: any) => i.transactionCount ?? 0) }] };
 });
 
-const totalRowCount = computed(() => {
-  return tableSections.value.reduce((sum, section) => {
-    return sum + section.rows.length;
-  }, 0);
-});
-
-const hasReportData = computed(() => {
-  return Boolean(
-    reportData.value &&
-    (summaryEntries.value.length || tableSections.value.length),
-  );
-});
-
-const summaryEntries = computed(() => {
-  if (!reportData.value) return [];
-
-  return Object.entries(reportData.value)
-    .filter(([, value]) => {
-      const type = typeof value;
-
-      return (
-        value !== null &&
-        !Array.isArray(value) &&
-        type !== 'object' &&
-        (type === 'string' || type === 'number' || type === 'boolean')
-      );
-    })
-    .map(([key, value]) => ({
-      key,
-      label: toLabel(key),
-      value,
-    }));
-});
-
-/* ==============================
- * 圖表
- * ============================== */
-const chartOption = computed(() => {
-  const section = tableSections.value.find((item) => {
-    return item.rows.length > 0 && 'date' in item.rows[0];
-  });
-
-  if (!section) return null;
-
-  const rows = section.rows;
-
-  const numericFields = Object.keys(rows[0]).filter((key) => {
-    return (
-      key !== 'date' && key !== '__rowKey' && typeof rows[0][key] === 'number'
-    );
-  });
-
-  if (!numericFields.length) return null;
-
-  return {
-    tooltip: {
-      trigger: 'axis',
-    },
-    legend:
-      numericFields.length > 1
-        ? {
-            data: numericFields.map(toLabel),
-          }
-        : undefined,
-    grid: {
-      top: 48,
-      left: 42,
-      right: 20,
-      bottom: 36,
-    },
-    xAxis: {
-      type: 'category',
-      data: rows.map((row: any) => row.date),
-    },
-    yAxis: {
-      type: 'value',
-    },
-    series: numericFields.map((field) => ({
-      name: toLabel(field),
-      type: 'bar',
-      data: rows.map((row: any) => row[field] ?? 0),
-      barMaxWidth: 40,
-    })),
-  };
-});
-
-/* ==============================
- * 工具
- * ============================== */
-function toLabel(key: string): string {
-  if (FIELD_ZH[key]) return FIELD_ZH[key];
-
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/_/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
-}
-
-function formatSummaryValue(value: any) {
+function formatNumber(value: any) {
   if (value === null || value === undefined || value === '') return '-';
-
-  if (typeof value === 'boolean') {
-    return value ? '是' : '否';
-  }
-
-  return value;
+  const num = Number(value);
+  return Number.isNaN(num) ? value : num.toLocaleString();
 }
 
-function resolveUserStoreOptions(): StoreOption[] {
-  const user = (authStore.user as any) ?? {};
-
-  const ids = Array.isArray(user.storeIds)
-    ? user.storeIds
-    : user.storeId
-      ? [user.storeId]
-      : user.store?.id
-        ? [user.store.id]
-        : [];
-
-  return ids.filter(Boolean).map((id: any) => ({
-    label: `店家 ${id}`,
-    value: String(id),
-  }));
+function formatPercent(value: any) {
+  if (value === null || value === undefined || value === '') return '-';
+  const num = Number(value);
+  return Number.isNaN(num) ? String(value) : `${num.toFixed(1)}%`;
 }
 
-function normalizeRows(input: any): any[] {
-  if (!Array.isArray(input)) return [];
-  if (!input.length) return [];
-
-  if (typeof input[0] === 'object' && input[0] !== null) {
-    return input.map((row, index) => ({
-      __rowKey: String(row?.id ?? row?.uuid ?? row?.key ?? index),
-      ...row,
-    }));
-  }
-
-  return input.map((value, index) => ({
-    __rowKey: String(index),
-    index: index + 1,
-    value,
-  }));
-}
-
-function buildColumns(rows: any[]): TableColumn[] {
-  if (!rows.length) return [];
-
-  return Object.keys(rows[0])
-    .filter((field) => field !== '__rowKey')
-    .map((field) => ({
-      field,
-      label: toLabel(field),
-      width: 160,
-    }));
-}
-
-function buildTableSections(data: any): TableSection[] {
-  if (!data) return [];
-
-  if (Array.isArray(data)) {
-    const rows = normalizeRows(data);
-
-    return [
-      {
-        key: 'result',
-        title: '資料列表',
-        rows,
-        columns: buildColumns(rows),
-      },
-    ];
-  }
-
-  const entries = Object.entries(data).filter(([, value]) => {
-    return Array.isArray(value);
-  });
-
-  return entries.map(([key, value]) => {
-    const rows = normalizeRows(value);
-
-    return {
-      key,
-      title: toLabel(key),
-      rows,
-      columns: buildColumns(rows),
-    };
-  });
-}
-
-/* ==============================
- * 下拉選單
- * ============================== */
-async function loadStoreOptions() {
-  await executeApi<any[]>({
-    fn: () => getStoreOptions({ activeOnly: false }),
-    onSuccess: (data: any) => {
-      const list = Array.isArray(data?.data)
-        ? data.data
-        : Array.isArray(data)
-          ? data
-          : [];
-
-      storeOptions.value = toSelectOptions(list);
-    },
-    onFail: () => {
-      storeOptions.value = [];
-    },
-    showSuccessDialog: false,
-    showFailDialog: false,
-    showCatchDialog: false,
-  });
-
-  if (!storeOptions.value.length && !isAdmin.value) {
-    storeOptions.value = resolveUserStoreOptions();
-  }
-
-  if (!isAdmin.value) {
-    storeId.value = storeOptions.value[0]?.value ?? '';
-    initValues.value.storeId = storeId.value;
-  }
-}
-
-/* ==============================
- * 查詢
- * ============================== */
 async function onSubmit(values: any) {
+  if (!isAdmin.value) {
+    forbiddenMessage.value = '此報表僅限平台管理員查看。';
+    reportData.value = null;
+    return;
+  }
+
   forbiddenMessage.value = '';
-
-  const condition = {
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
-    ...(values.storeId ? { storeId: values.storeId } : {}),
-  };
-
-  lastQuery.value = {
-    storeId: values.storeId ?? '',
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
-  };
-
-  const req: QueryReq<Record<string, any>> = {
-    sortBy: 'createdAt',
-    sortOrder: 'DESC',
-    condition,
-  };
-
+  lastQuery.value = { startDate: values.startDate ?? '', endDate: values.endDate ?? '' };
   loading.value = true;
 
-  try {
-    await executeApi<any>({
-      fn: () => getMemberGrowthReport(req),
-      onSuccess: (data: any, full: any) => {
-        const result = data ?? full?.data ?? null;
-
-        reportData.value = result;
-        tableSections.value = buildTableSections(result);
-        resetPagination();
-      },
-      onFail: () => {
-        reportData.value = null;
-        tableSections.value = [];
-        resetPagination();
-      },
-      showSuccessDialog: false,
-      showFailDialog: true,
-      showCatchDialog: false,
-      onFinally: () => {
-        loading.value = false;
-      },
-    });
-  } catch (error) {
-    loading.value = false;
-
-    if (isAxiosError(error) && error.response?.status === 403) {
-      forbiddenMessage.value = '無權查詢其他店家報表，請使用可存取的店家條件。';
-      return;
-    }
-
-    reportData.value = null;
-    tableSections.value = [];
-    resetPagination();
-  }
+  await executeApi({
+    fn: () => getMemberGrowthReport({ condition: { startDate: values.startDate ?? '', endDate: values.endDate ?? '' } }),
+    onSuccess: (data) => {
+      reportData.value = data ?? null;
+      resetPagination();
+    },
+    onFail: () => {
+      reportData.value = null;
+      resetPagination();
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+    onFinally: () => {
+      loading.value = false;
+    },
+  });
 }
 
 function resetFilters() {
-  const values = {
-    storeId: isAdmin.value ? '' : storeId.value,
-    startDate: dateRange.value.startDate,
-    endDate: dateRange.value.endDate,
-  };
-
-  storeId.value = values.storeId;
+  const values = { startDate: dateRange.value.startDate, endDate: dateRange.value.endDate };
   startDate.value = values.startDate;
   endDate.value = values.endDate;
-
   formRef.value?.setValues(values);
 }
 
 function handleExport() {
-  if (tableSections.value.length) {
-    tableSections.value.forEach((section) => {
-      exportToCsv(
-        section.rows,
-        section.columns,
-        `${REPORT_TITLE}_${section.title}`,
-      );
-    });
+  if (!reportData.value) return;
+  exportToCsv([
+    {
+      startDate: reportData.value.startDate,
+      endDate: reportData.value.endDate,
+      totalNewMembers: reportData.value.totalNewMembers,
+      activeMembers: reportData.value.activeMembers,
+      growthRate: reportData.value.growthRate,
+      retention7Days: reportData.value.retention7Days,
+      retention30Days: reportData.value.retention30Days,
+      arpuGold: reportData.value.arpuGold,
+      arpuBonus: reportData.value.arpuBonus,
+    },
+  ], [
+    { field: 'startDate', label: '開始日期' },
+    { field: 'endDate', label: '結束日期' },
+    { field: 'totalNewMembers', label: '新增會員' },
+    { field: 'activeMembers', label: '活躍會員' },
+    { field: 'growthRate', label: '成長率(%)' },
+    { field: 'retention7Days', label: '7日留存(%)' },
+    { field: 'retention30Days', label: '30日留存(%)' },
+    { field: 'arpuGold', label: '金幣ARPU' },
+    { field: 'arpuBonus', label: '紅利ARPU' },
+  ], `${REPORT_TITLE}_摘要`);
 
-    return;
-  }
-
-  if (summaryEntries.value.length) {
-    exportToCsv(
-      summaryEntries.value.map((entry) => ({
-        欄位: entry.label,
-        數值: entry.value,
-      })),
-      [
-        {
-          field: '欄位',
-          label: '欄位',
-        },
-        {
-          field: '數值',
-          label: '數值',
-        },
-      ],
-      REPORT_TITLE,
-    );
-  }
+  if (dailyNewMembers.value.length) exportToCsv(dailyNewMembers.value, dailyColumns, `${REPORT_TITLE}_每日新增`);
+  if (consumptionPatterns.value.length) exportToCsv(consumptionPatterns.value, consumptionColumns, `${REPORT_TITLE}_消費模式分布`);
+  if (productConcentrations.value.length) exportToCsv(productConcentrations.value, productColumns, `${REPORT_TITLE}_商品集中度`);
+  if (paymentMethodDistributions.value.length) exportToCsv(paymentMethodDistributions.value, paymentColumns, `${REPORT_TITLE}_支付型態分布`);
 }
 
-/* ==============================
- * Lifecycle
- * ============================== */
 onMounted(async () => {
-  await loadStoreOptions();
-
   await nextTick();
-
-  const values = {
-    ...initValues.value,
-    storeId: storeId.value,
-  };
-
-  formRef.value?.setValues(values);
-
-  await onSubmit(values);
+  formRef.value?.setValues({ ...initValues.value });
+  await onSubmit({ ...initValues.value });
 });
 </script>
 

@@ -6,14 +6,14 @@
       <div class="rf-page-head">
         <div class="rf-page-head__main">
           <p class="rf-page-head__eyebrow">報表管理</p>
-          <h2 class="rf-page-head__title">推薦碼報表</h2>
+          <h2 class="rf-page-head__title">店薦店招商報表</h2>
           <p class="rf-page-head__sub">
-            查看指定期間內的推薦人數、活躍推薦碼、已發放獎勵與推薦排行。
+            查看指定期間內的推薦碼投放、店家啟用成功數與推薦店家成效排行。
           </p>
         </div>
 
         <div class="rf-page-head__actions">
-          <span class="rf-current-type">推薦碼統計</span>
+          <span class="rf-current-type">ADMIN 招商視圖</span>
 
           <span v-if="hasReportData" class="rf-total-count">
             共 {{ totalRowCount }} 筆資料
@@ -23,6 +23,13 @@
 
       <div class="rf-summary-row">
         <div class="rf-summary-card">
+          <span class="rf-summary-card__label">查詢推薦店家</span>
+          <strong class="rf-summary-card__value">
+            {{ selectedStoreText }}
+          </strong>
+        </div>
+
+        <div class="rf-summary-card">
           <span class="rf-summary-card__label">查詢期間</span>
           <strong class="rf-summary-card__value">
             {{ queryDateText }}
@@ -30,14 +37,14 @@
         </div>
 
         <div class="rf-summary-card">
-          <span class="rf-summary-card__label">推薦碼排行</span>
+          <span class="rf-summary-card__label">推薦店家排行</span>
           <strong class="rf-summary-card__value">
-            {{ rankingRows.length }} 筆
+            {{ performanceRows.length }} 筆
           </strong>
         </div>
 
         <div class="rf-summary-card">
-          <span class="rf-summary-card__label">每日明細</span>
+          <span class="rf-summary-card__label">每日啟用明細</span>
           <strong class="rf-summary-card__value">
             {{ dailyRows.length }} 筆
           </strong>
@@ -51,12 +58,23 @@
         <div class="rf-card-head">
           <div>
             <p class="rf-card-head__title">查詢條件</p>
-            <p class="rf-card-head__sub">可依日期區間查詢推薦碼統計資料。</p>
+            <p class="rf-card-head__sub">可依推薦店家與日期區間查詢招商成效資料。</p>
           </div>
         </div>
 
         <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
           <div class="rf-filter-grid">
+            <FormSelect
+              label="推薦店家"
+              name="storeId"
+              v-model="storeId"
+              :options="storeOptions"
+              :showAll="true"
+              allLabel="全部"
+              :allValue="''"
+              :disabled="!isAdmin"
+            />
+
             <FormInput
               label="開始日期"
               type="date"
@@ -94,7 +112,7 @@
           <div>
             <p class="rf-card-head__title">查詢結果</p>
             <p class="rf-card-head__sub">
-              依目前查詢條件顯示推薦碼統計、趨勢圖與明細資料。
+              依目前查詢條件顯示招商摘要、啟用趨勢與推薦店家排行。
             </p>
           </div>
 
@@ -115,7 +133,11 @@
           </div>
         </div>
 
-        <div v-if="loading" class="rf-state m-t-16">查詢中...</div>
+        <div v-if="forbiddenMessage" class="rf-state m-t-16">
+          {{ forbiddenMessage }}
+        </div>
+
+        <div v-else-if="loading" class="rf-state m-t-16">查詢中...</div>
 
         <template v-else>
           <NoData v-if="!reportData" message="請輸入查詢條件後查詢" />
@@ -124,23 +146,37 @@
             <!-- 統計卡片 -->
             <div class="rf-stat-row">
               <div class="rf-stat-card">
-                <span class="rf-stat-card__label">總推薦人數</span>
+                <span class="rf-stat-card__label">推薦碼總數</span>
                 <strong class="rf-stat-card__value">
-                  {{ formatNumber(reportData.totalReferrals) }}
+                  {{ formatNumber(reportData.totalReferralCodeCount) }}
                 </strong>
               </div>
 
               <div class="rf-stat-card">
                 <span class="rf-stat-card__label">活躍推薦碼</span>
                 <strong class="rf-stat-card__value">
-                  {{ formatNumber(reportData.activeReferralCodes) }}
+                  {{ formatNumber(reportData.activeReferralCodeCount) }}
                 </strong>
               </div>
 
               <div class="rf-stat-card">
-                <span class="rf-stat-card__label">已發放獎勵</span>
+                <span class="rf-stat-card__label">成功招商店數</span>
                 <strong class="rf-stat-card__value">
-                  {{ formatNumber(reportData.totalRewardGiven) }}
+                  {{ formatNumber(reportData.successfulReferralStoreCount) }}
+                </strong>
+              </div>
+
+              <div class="rf-stat-card">
+                <span class="rf-stat-card__label">本期啟用店數</span>
+                <strong class="rf-stat-card__value">
+                  {{ formatNumber(reportData.currentPeriodActivatedStoreCount) }}
+                </strong>
+              </div>
+
+              <div class="rf-stat-card">
+                <span class="rf-stat-card__label">成長率</span>
+                <strong class="rf-stat-card__value">
+                  {{ formatPercent(reportData.growthRate) }}
                 </strong>
               </div>
             </div>
@@ -149,8 +185,8 @@
             <div v-if="dailyRows.length" class="rf-chart m-t-20">
               <div class="rf-chart__head">
                 <div>
-                  <p class="rf-chart__title">每日推薦趨勢圖</p>
-                  <p class="rf-chart__sub">依日期呈現每日推薦人數變化。</p>
+                  <p class="rf-chart__title">每日啟用趨勢圖</p>
+                  <p class="rf-chart__sub">依日期呈現每日啟用成功店數變化。</p>
                 </div>
               </div>
 
@@ -160,41 +196,41 @@
             <!-- 推薦碼排行 -->
             <div class="m-t-20">
               <div class="rf-section-head">
-                <p class="rf-section-head__title">推薦碼排行（前 10）</p>
+                <p class="rf-section-head__title">推薦店家招商排行（前 10）</p>
 
                 <span class="rf-section-head__count">
-                  共 {{ rankingRows.length }} 筆
+                  共 {{ performanceRows.length }} 筆
                 </span>
               </div>
 
-              <NoData v-if="!rankingRows.length" message="查無資料" />
+              <NoData v-if="!performanceRows.length" message="查無資料" />
 
               <template v-else>
                 <ReportTable
                   class="rf-report-table"
-                  :columns="rankingColumns"
-                  :items="getCurrentPageItems('ranking', rankingRows)"
-                  row-key="referralCode"
+                  :columns="performanceColumns"
+                  :items="getCurrentPageItems('performance', performanceRows)"
+                  row-key="__rowKey"
                   :use-width-class="true"
                 />
 
                 <div class="flex justify-center m-t-12">
                   <Pagination
-                    :totalPages="getTotalPages('ranking', rankingRows)"
+                    :totalPages="getTotalPages('performance', performanceRows)"
                     :renderPaginationNums="
-                      getRenderPaginationNums('ranking', rankingRows)
+                      getRenderPaginationNums('performance', performanceRows)
                     "
-                    :currentPage="getCurrentPage('ranking')"
-                    :nextPage="() => nextPage('ranking', rankingRows)"
-                    :previousPage="() => previousPage('ranking', rankingRows)"
+                    :currentPage="getCurrentPage('performance')"
+                    :nextPage="() => nextPage('performance', performanceRows)"
+                    :previousPage="() => previousPage('performance', performanceRows)"
                     :goToPage="
-                      (page: number) => goToPage('ranking', rankingRows, page)
+                      (page: number) => goToPage('performance', performanceRows, page)
                     "
-                    :pageLimitSize="getPageLimitSize('ranking')"
-                    :totalItems="rankingRows.length"
+                    :pageLimitSize="getPageLimitSize('performance')"
+                    :totalItems="performanceRows.length"
                     @update:pageLimitSize="
                       (value: number) =>
-                        handlePageLimitSizeChange('ranking', value)
+                        handlePageLimitSizeChange('performance', value)
                     "
                   />
                 </div>
@@ -204,7 +240,7 @@
             <!-- 每日明細 -->
             <div class="m-t-20">
               <div class="rf-section-head">
-                <p class="rf-section-head__title">每日明細</p>
+                <p class="rf-section-head__title">每日啟用明細</p>
 
                 <span class="rf-section-head__count">
                   共 {{ dailyRows.length }} 筆
@@ -245,10 +281,7 @@
               </template>
             </div>
 
-            <NoData
-              v-if="!rankingRows.length && !dailyRows.length"
-              message="無資料"
-            />
+            <NoData v-if="!performanceRows.length && !dailyRows.length" message="無資料" />
           </div>
         </template>
       </MCard>
@@ -275,9 +308,12 @@ import MButton from '@/components/common/MButton.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
 import { getReferralReport } from '@/services/adminReportService';
+import { getAllStoreOptions, toSelectOptions } from '@/services/adminStoreService';
+import { useAuthStore } from '@/stores';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
@@ -296,38 +332,48 @@ type TableColumn = {
   width?: number;
 };
 
-const REPORT_TITLE = '推薦碼報表';
+const REPORT_TITLE = '店薦店招商報表';
 
-const rankingColumns: TableColumn[] = [
+const performanceColumns: TableColumn[] = [
   { field: 'rank', label: '排名', width: 70 },
-  { field: 'referralCode', label: '推薦碼', width: 140 },
-  { field: 'ownerName', label: '持有人', width: 160 },
-  { field: 'referralCount', label: '推薦人數', width: 100 },
-  { field: 'rewardGiven', label: '已發獎勵', width: 100 },
+  { field: 'storeName', label: '推薦店家', width: 180 },
+  { field: 'referralCodeCount', label: '推薦碼數', width: 110 },
+  { field: 'activatedStoreCount', label: '成功招商店數', width: 130 },
+  { field: 'activationRateText', label: '轉換率', width: 100 },
 ];
 
 const dailyColumns: TableColumn[] = [
   { field: 'date', label: '日期', width: 120 },
-  { field: 'referralCount', label: '推薦人數', width: 100 },
-  { field: 'rewardGiven', label: '已發獎勵', width: 100 },
+  { field: 'activatedStoreCount', label: '啟用成功店數', width: 130 },
 ];
 
 const { dateRange } = useReportFilter();
+const authStore = useAuthStore();
+const isAdmin = computed(() =>
+  (authStore.user?.roles ?? []).includes('ROLE_ADMIN'),
+);
 
 const formRef = ref<FormContext | null>(null);
 
 const initValues = ref({
+  storeId: '',
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
 
+const storeId = ref('');
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
+const storeOptions = ref<any[]>([]);
 
 const reportData = ref<any | null>(null);
 const loading = ref(false);
+const forbiddenMessage = computed(() =>
+  isAdmin.value ? '' : '此報表僅限平台管理員查看。',
+);
 
 const lastQuery = ref({
+  storeId: '',
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
@@ -420,20 +466,27 @@ function resetPagination() {
 /* ==============================
  * Data
  * ============================== */
-const rankingRows = computed(() => {
-  const list = Array.isArray(reportData.value?.ranking)
-    ? reportData.value.ranking
+const performanceRows = computed(() => {
+  const list = Array.isArray(reportData.value?.storePerformances)
+    ? reportData.value.storePerformances
     : [];
 
   return rankingWithIndex(list);
 });
 
 const dailyRows = computed(() => {
-  return Array.isArray(reportData.value?.daily) ? reportData.value.daily : [];
+  const list = Array.isArray(reportData.value?.dailyActivations)
+    ? reportData.value.dailyActivations
+    : [];
+
+  return list.map((item: any, index: number) => ({
+    ...item,
+    __rowKey: `${item.date ?? 'date'}-${index}`,
+  }));
 });
 
 const totalRowCount = computed(() => {
-  return rankingRows.value.length + dailyRows.value.length;
+  return performanceRows.value.length + dailyRows.value.length;
 });
 
 const hasReportData = computed(() => {
@@ -447,6 +500,15 @@ const queryDateText = computed(() => {
   return `${start} ~ ${end}`;
 });
 
+const selectedStoreText = computed(() => {
+  if (!lastQuery.value.storeId) return '全部推薦店家';
+
+  return (
+    storeOptions.value.find((item) => String(item.value) === String(lastQuery.value.storeId))
+      ?.label ?? '指定推薦店家'
+  );
+});
+
 const chartOption = computed(() => {
   const daily = dailyRows.value;
 
@@ -455,7 +517,7 @@ const chartOption = computed(() => {
       trigger: 'axis',
     },
     legend: {
-      data: ['每日推薦人數'],
+      data: ['每日啟用成功店數'],
     },
     grid: {
       top: 48,
@@ -472,9 +534,9 @@ const chartOption = computed(() => {
     },
     series: [
       {
-        name: '每日推薦人數',
+        name: '每日啟用成功店數',
         type: 'bar',
-        data: daily.map((item: any) => item.referralCount ?? 0),
+        data: daily.map((item: any) => item.activatedStoreCount ?? 0),
         barMaxWidth: 40,
       },
     ],
@@ -486,11 +548,19 @@ const chartOption = computed(() => {
  * ============================== */
 function rankingWithIndex(list: any[]) {
   return [...list]
-    .sort((a, b) => (b.referralCount ?? 0) - (a.referralCount ?? 0))
+    .sort((a, b) => {
+      const activatedDiff =
+        (b.activatedStoreCount ?? 0) - (a.activatedStoreCount ?? 0);
+      if (activatedDiff !== 0) return activatedDiff;
+      return (b.referralCodeCount ?? 0) - (a.referralCodeCount ?? 0);
+    })
     .slice(0, 10)
     .map((item, index) => ({
       ...item,
       rank: index + 1,
+      storeName: item.storeName ?? item.referrerStoreName ?? '-',
+      activationRateText: formatPercent(item.activationRate),
+      __rowKey: `${item.storeId ?? item.storeName ?? 'store'}-${index}`,
     }));
 }
 
@@ -504,16 +574,33 @@ function formatNumber(value: any) {
   return num.toLocaleString();
 }
 
+function formatPercent(value: any) {
+  if (value === null || value === undefined || value === '') return '-';
+
+  const num = Number(value);
+  if (Number.isNaN(num)) return String(value);
+
+  return `${num.toFixed(2)}%`;
+}
+
 /* ==============================
  * Query
  * ============================== */
 async function onSubmit(values: any) {
+  if (!isAdmin.value) {
+    reportData.value = null;
+    resetPagination();
+    return;
+  }
+
   const condition = {
+    ...(values.storeId ? { storeId: values.storeId } : {}),
     startDate: values.startDate ?? '',
     endDate: values.endDate ?? '',
   };
 
   lastQuery.value = {
+    storeId: values.storeId ?? '',
     startDate: values.startDate ?? '',
     endDate: values.endDate ?? '',
   };
@@ -541,10 +628,12 @@ async function onSubmit(values: any) {
 
 function resetFilters() {
   const values = {
+    storeId: '',
     startDate: dateRange.value.startDate,
     endDate: dateRange.value.endDate,
   };
 
+  storeId.value = values.storeId;
   startDate.value = values.startDate;
   endDate.value = values.endDate;
 
@@ -552,12 +641,23 @@ function resetFilters() {
 }
 
 function handleExport() {
-  if (rankingRows.value.length) {
-    exportToCsv(rankingRows.value, rankingColumns, `${REPORT_TITLE}_排行`);
+  if (performanceRows.value.length) {
+    exportToCsv(performanceRows.value, performanceColumns, `${REPORT_TITLE}_推薦店家排行`);
   }
 
   if (dailyRows.value.length) {
-    exportToCsv(dailyRows.value, dailyColumns, `${REPORT_TITLE}_每日明細`);
+    exportToCsv(dailyRows.value, dailyColumns, `${REPORT_TITLE}_每日啟用明細`);
+  }
+}
+
+async function loadStoreOptions() {
+  if (!isAdmin.value) return;
+
+  try {
+    const res = await getAllStoreOptions();
+    storeOptions.value = toSelectOptions((res as any)?.data ?? []);
+  } catch {
+    storeOptions.value = [];
   }
 }
 
@@ -566,6 +666,7 @@ function handleExport() {
  * ============================== */
 onMounted(async () => {
   await nextTick();
+  await loadStoreOptions();
 
   const values = {
     ...initValues.value,
@@ -573,7 +674,9 @@ onMounted(async () => {
 
   formRef.value?.setValues(values);
 
-  await onSubmit(values);
+  if (isAdmin.value) {
+    await onSubmit(values);
+  }
 });
 </script>
 

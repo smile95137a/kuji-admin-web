@@ -8,7 +8,7 @@
           <p class="lr-page-head__eyebrow">報表管理</p>
           <h2 class="lr-page-head__title">抽獎結果報表</h2>
           <p class="lr-page-head__sub">
-            查看指定期間內的抽獎次數、獎品抽出狀況、商品售出率與營收統計。
+            查看指定期間內的抽獎次數、熱門商品分布與中獎明細。
           </p>
         </div>
 
@@ -30,16 +30,16 @@
         </div>
 
         <div class="lr-summary-card">
-          <span class="lr-summary-card__label">獎品統計</span>
+          <span class="lr-summary-card__label">熱門商品</span>
           <strong class="lr-summary-card__value">
-            {{ prizeStats.length }} 筆
+            {{ hotLotteries.length }} 筆
           </strong>
         </div>
 
         <div class="lr-summary-card">
-          <span class="lr-summary-card__label">商品統計</span>
+          <span class="lr-summary-card__label">中獎明細</span>
           <strong class="lr-summary-card__value">
-            {{ lotteryStats.length }} 筆
+            {{ winningDetails.length }} 筆
           </strong>
         </div>
       </div>
@@ -94,7 +94,7 @@
           <div>
             <p class="lr-card-head__title">查詢結果</p>
             <p class="lr-card-head__sub">
-              依目前查詢條件顯示抽獎結果統計、獎品抽出圖與明細資料。
+              依目前查詢條件顯示抽獎摘要、熱門商品與中獎明細。
             </p>
           </div>
 
@@ -115,7 +115,11 @@
           </div>
         </div>
 
-        <div v-if="loading" class="lr-state m-t-16">查詢中...</div>
+        <div v-if="forbiddenMessage" class="lr-forbidden m-t-16">
+          {{ forbiddenMessage }}
+        </div>
+
+        <div v-else-if="loading" class="lr-state m-t-16">查詢中...</div>
 
         <template v-else>
           <NoData v-if="!reportData" message="請輸入查詢條件後查詢" />
@@ -131,33 +135,32 @@
               </div>
 
               <div class="lr-stat-card">
-                <span class="lr-stat-card__label">總獎品數</span>
+                <span class="lr-stat-card__label">中獎次數</span>
                 <strong class="lr-stat-card__value">
-                  {{ formatNumber(reportData.totalPrizes) }}
+                  {{ formatNumber(reportData.totalWinningCount) }}
                 </strong>
               </div>
 
               <div class="lr-stat-card">
-                <span class="lr-stat-card__label">大獎數</span>
+                <span class="lr-stat-card__label">中獎率</span>
                 <strong class="lr-stat-card__value">
-                  {{ formatNumber(reportData.bigPrizes) }}
+                  {{ formatPercent(winningRate) }}
                 </strong>
               </div>
 
               <div class="lr-stat-card">
-                <span class="lr-stat-card__label">總營收 (NT$)</span>
+                <span class="lr-stat-card__label">熱門商品數</span>
                 <strong class="lr-stat-card__value">
-                  NT$ {{ formatNumber(reportData.totalAmount) }}
+                  {{ formatNumber(hotLotteries.length) }}
                 </strong>
               </div>
             </div>
 
-            <!-- 獎品抽出橫條圖 -->
-            <div v-if="prizeStats.length" class="lr-chart m-t-20">
+            <div v-if="hotLotteries.length" class="lr-chart m-t-20">
               <div class="lr-chart__head">
                 <div>
-                  <p class="lr-chart__title">獎品抽出統計圖</p>
-                  <p class="lr-chart__sub">依獎品等級呈現已抽數與剩餘數。</p>
+                  <p class="lr-chart__title">熱門商品分布圖</p>
+                  <p class="lr-chart__sub">依商品呈現中獎次數分布。</p>
                 </div>
               </div>
 
@@ -168,91 +171,92 @@
               />
             </div>
 
-            <!-- 獎品統計 -->
             <div class="m-t-20">
               <div class="lr-section-head">
-                <p class="lr-section-head__title">獎品統計</p>
+                <p class="lr-section-head__title">熱門商品統計</p>
 
                 <span class="lr-section-head__count">
-                  共 {{ prizeStats.length }} 筆
+                  共 {{ hotLotteries.length }} 筆
                 </span>
               </div>
 
-              <NoData v-if="!prizeStats.length" message="查無資料" />
+              <NoData v-if="!hotLotteries.length" message="查無資料" />
 
               <template v-else>
                 <ReportTable
                   class="lr-report-table"
-                  :columns="prizeStatsColumns"
-                  :items="getCurrentPageItems('prizeStats', prizeStats)"
-                  row-key="prizeLevel"
+                  :columns="hotLotteryColumns"
+                  :items="getCurrentPageItems('hotLotteries', hotLotteries)"
+                  row-key="lotteryId"
                   :use-width-class="true"
                 />
 
                 <div class="flex justify-center m-t-12">
                   <Pagination
-                    :totalPages="getTotalPages('prizeStats', prizeStats)"
+                    :totalPages="getTotalPages('hotLotteries', hotLotteries)"
                     :renderPaginationNums="
-                      getRenderPaginationNums('prizeStats', prizeStats)
+                      getRenderPaginationNums('hotLotteries', hotLotteries)
                     "
-                    :currentPage="getCurrentPage('prizeStats')"
-                    :nextPage="() => nextPage('prizeStats', prizeStats)"
-                    :previousPage="() => previousPage('prizeStats', prizeStats)"
+                    :currentPage="getCurrentPage('hotLotteries')"
+                    :nextPage="() => nextPage('hotLotteries', hotLotteries)"
+                    :previousPage="
+                      () => previousPage('hotLotteries', hotLotteries)
+                    "
                     :goToPage="
-                      (page: number) => goToPage('prizeStats', prizeStats, page)
+                      (page: number) =>
+                        goToPage('hotLotteries', hotLotteries, page)
                     "
-                    :pageLimitSize="getPageLimitSize('prizeStats')"
-                    :totalItems="prizeStats.length"
+                    :pageLimitSize="getPageLimitSize('hotLotteries')"
+                    :totalItems="hotLotteries.length"
                     @update:pageLimitSize="
                       (value: number) =>
-                        handlePageLimitSizeChange('prizeStats', value)
+                        handlePageLimitSizeChange('hotLotteries', value)
                     "
                   />
                 </div>
               </template>
             </div>
 
-            <!-- 商品統計 -->
             <div class="m-t-20">
               <div class="lr-section-head">
-                <p class="lr-section-head__title">商品統計</p>
+                <p class="lr-section-head__title">中獎明細</p>
 
                 <span class="lr-section-head__count">
-                  共 {{ lotteryStats.length }} 筆
+                  共 {{ winningDetails.length }} 筆
                 </span>
               </div>
 
-              <NoData v-if="!lotteryStats.length" message="查無資料" />
+              <NoData v-if="!winningDetails.length" message="查無資料" />
 
               <template v-else>
                 <ReportTable
                   class="lr-report-table"
-                  :columns="lotteryStatsColumns"
-                  :items="getCurrentPageItems('lotteryStats', lotteryStats)"
-                  row-key="lotteryTitle"
+                  :columns="winningDetailColumns"
+                  :items="getCurrentPageItems('winningDetails', winningDetails)"
+                  row-key="ticketId"
                   :use-width-class="true"
                 />
 
                 <div class="flex justify-center m-t-12">
                   <Pagination
-                    :totalPages="getTotalPages('lotteryStats', lotteryStats)"
+                    :totalPages="getTotalPages('winningDetails', winningDetails)"
                     :renderPaginationNums="
-                      getRenderPaginationNums('lotteryStats', lotteryStats)
+                      getRenderPaginationNums('winningDetails', winningDetails)
                     "
-                    :currentPage="getCurrentPage('lotteryStats')"
-                    :nextPage="() => nextPage('lotteryStats', lotteryStats)"
+                    :currentPage="getCurrentPage('winningDetails')"
+                    :nextPage="() => nextPage('winningDetails', winningDetails)"
                     :previousPage="
-                      () => previousPage('lotteryStats', lotteryStats)
+                      () => previousPage('winningDetails', winningDetails)
                     "
                     :goToPage="
                       (page: number) =>
-                        goToPage('lotteryStats', lotteryStats, page)
+                        goToPage('winningDetails', winningDetails, page)
                     "
-                    :pageLimitSize="getPageLimitSize('lotteryStats')"
-                    :totalItems="lotteryStats.length"
+                    :pageLimitSize="getPageLimitSize('winningDetails')"
+                    :totalItems="winningDetails.length"
                     @update:pageLimitSize="
                       (value: number) =>
-                        handlePageLimitSizeChange('lotteryStats', value)
+                        handlePageLimitSizeChange('winningDetails', value)
                     "
                   />
                 </div>
@@ -260,7 +264,7 @@
             </div>
 
             <NoData
-              v-if="!prizeStats.length && !lotteryStats.length"
+              v-if="!hotLotteries.length && !winningDetails.length"
               message="無資料"
             />
           </div>
@@ -291,6 +295,7 @@ import Pagination from '@/components/common/Pagination.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
+import { useAuthStore } from '@/stores';
 import { getLotteryResultReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -312,24 +317,28 @@ type TableColumn = {
 
 const REPORT_TITLE = '抽獎結果報表';
 
-const prizeStatsColumns: TableColumn[] = [
-  { field: 'prizeLevel', label: '獎品等級', width: 100 },
-  { field: 'totalCount', label: '總數量', width: 100 },
-  { field: 'wonCount', label: '已抽數', width: 100 },
-  { field: 'remainCount', label: '剩餘數', width: 100 },
-  { field: 'wonPercentage', label: '抽出率 (%)', width: 100 },
+const hotLotteryColumns: TableColumn[] = [
+  { field: 'lotteryTitle', label: '商品名稱', width: 240 },
+  { field: 'drawCount', label: '抽獎次數', width: 110 },
+  { field: 'winningCount', label: '中獎次數', width: 110 },
 ];
 
-const lotteryStatsColumns: TableColumn[] = [
-  { field: 'lotteryTitle', label: '商品名稱', width: 200 },
+const winningDetailColumns: TableColumn[] = [
+  { field: 'drawDate', label: '抽獎日期', width: 120 },
+  { field: 'drawTime', label: '抽獎時間', width: 180 },
+  { field: 'drawCount', label: '抽數', width: 90 },
+  { field: 'lotteryTitle', label: '商品名稱', width: 220 },
+  { field: 'lotteryImageUrl', label: '商品圖', width: 220 },
+  { field: 'prizeName', label: '獎品名稱', width: 200 },
+  { field: 'prizeLevel', label: '獎項', width: 100 },
+  { field: 'prizeImageUrl', label: '獎品圖', width: 220 },
+  { field: 'userDisplayName', label: '會員', width: 140 },
   { field: 'storeName', label: '店家', width: 140 },
-  { field: 'totalSlots', label: '總簽數', width: 90 },
-  { field: 'soldSlots', label: '已售', width: 80 },
-  { field: 'remainSlots', label: '剩餘', width: 80 },
-  { field: 'soldPercentage', label: '售出率 (%)', width: 100 },
-  { field: 'revenue', label: '營收 (NT$)', width: 120 },
+  { field: 'ticketNumber', label: '票號', width: 90 },
+  { field: 'revealedNumber', label: '揭示號碼', width: 110 },
 ];
 
+const authStore = useAuthStore();
 const { dateRange } = useReportFilter();
 
 const formRef = ref<FormContext | null>(null);
@@ -343,6 +352,7 @@ const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
 const reportData = ref<any | null>(null);
+const forbiddenMessage = ref('');
 const loading = ref(false);
 
 const lastQuery = ref({
@@ -355,6 +365,24 @@ const lastQuery = ref({
  * ============================== */
 const pageLimitMap = ref<Record<string, number>>({});
 const currentPageMap = ref<Record<string, number>>({});
+
+const roleSet = computed(() => {
+  const raw = [
+    ...(Array.isArray((authStore.user as any)?.roles)
+      ? (authStore.user as any).roles
+      : []),
+    (authStore.user as any)?.role,
+    (authStore.user as any)?.roleCode,
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).toUpperCase());
+
+  return new Set(raw);
+});
+
+const isAdmin = computed(() => {
+  return roleSet.value.has('ROLE_ADMIN') || roleSet.value.has('ADMIN');
+});
 
 function getPageLimitSize(key: string) {
   return pageLimitMap.value[key] ?? 10;
@@ -438,24 +466,32 @@ function resetPagination() {
 /* ==============================
  * Data
  * ============================== */
-const prizeStats = computed(() => {
-  return Array.isArray(reportData.value?.prizeStats)
-    ? reportData.value.prizeStats
+const hotLotteries = computed(() => {
+  return Array.isArray(reportData.value?.hotLotteries)
+    ? reportData.value.hotLotteries
     : [];
 });
 
-const lotteryStats = computed(() => {
-  return Array.isArray(reportData.value?.lotteryStats)
-    ? reportData.value.lotteryStats
+const winningDetails = computed(() => {
+  return Array.isArray(reportData.value?.winningDetails)
+    ? reportData.value.winningDetails
     : [];
 });
 
 const totalRowCount = computed(() => {
-  return prizeStats.value.length + lotteryStats.value.length;
+  return hotLotteries.value.length + winningDetails.value.length;
 });
 
 const hasReportData = computed(() => {
   return Boolean(reportData.value && totalRowCount.value > 0);
+});
+
+const winningRate = computed(() => {
+  const draws = Number(reportData.value?.totalDraws ?? 0);
+  const wins = Number(reportData.value?.totalWinningCount ?? 0);
+
+  if (!draws) return 0;
+  return (wins / draws) * 100;
 });
 
 const queryDateText = computed(() => {
@@ -466,14 +502,11 @@ const queryDateText = computed(() => {
 });
 
 const prizeChartOption = computed(() => {
-  const rows = prizeStats.value;
+  const rows = hotLotteries.value;
 
   return {
     tooltip: {
       trigger: 'axis',
-    },
-    legend: {
-      data: ['已抽', '剩餘'],
     },
     grid: {
       top: 48,
@@ -481,26 +514,18 @@ const prizeChartOption = computed(() => {
       right: 20,
       bottom: 36,
     },
+    yAxis: {
+      type: 'category',
+      data: rows.map((item: any) => item.lotteryTitle ?? ''),
+    },
     xAxis: {
       type: 'value',
     },
-    yAxis: {
-      type: 'category',
-      data: rows.map((item: any) => item.prizeLevel ?? ''),
-    },
     series: [
       {
-        name: '已抽',
+        name: '中獎次數',
         type: 'bar',
-        data: rows.map((item: any) => item.wonCount ?? 0),
-        stack: 'total',
-        barMaxWidth: 30,
-      },
-      {
-        name: '剩餘',
-        type: 'bar',
-        data: rows.map((item: any) => item.remainCount ?? 0),
-        stack: 'total',
+        data: rows.map((item: any) => item.winningCount ?? 0),
         barMaxWidth: 30,
       },
     ],
@@ -520,10 +545,26 @@ function formatNumber(value: any) {
   return num.toLocaleString();
 }
 
+function formatPercent(value: any) {
+  if (value === null || value === undefined || value === '') return '-';
+
+  const num = Number(value);
+  if (Number.isNaN(num)) return String(value);
+  return `${num.toFixed(1)}%`;
+}
+
 /* ==============================
  * Query
  * ============================== */
 async function onSubmit(values: any) {
+  if (!isAdmin.value) {
+    forbiddenMessage.value = '此報表僅限平台管理員查看。';
+    reportData.value = null;
+    return;
+  }
+
+  forbiddenMessage.value = '';
+
   const condition = {
     startDate: values.startDate ?? '',
     endDate: values.endDate ?? '',
@@ -568,19 +609,41 @@ function resetFilters() {
 }
 
 function handleExport() {
-  if (prizeStats.value.length) {
+  if (reportData.value) {
     exportToCsv(
-      prizeStats.value,
-      prizeStatsColumns,
-      `${REPORT_TITLE}_獎品統計`,
+      [
+        {
+          startDate: reportData.value.startDate,
+          endDate: reportData.value.endDate,
+          totalDraws: reportData.value.totalDraws,
+          totalWinningCount: reportData.value.totalWinningCount,
+          winningRate: winningRate.value,
+        },
+      ],
+      [
+        { field: 'startDate', label: '開始日期' },
+        { field: 'endDate', label: '結束日期' },
+        { field: 'totalDraws', label: '總抽獎次數' },
+        { field: 'totalWinningCount', label: '中獎次數' },
+        { field: 'winningRate', label: '中獎率(%)' },
+      ],
+      `${REPORT_TITLE}_摘要`,
     );
   }
 
-  if (lotteryStats.value.length) {
+  if (hotLotteries.value.length) {
     exportToCsv(
-      lotteryStats.value,
-      lotteryStatsColumns,
-      `${REPORT_TITLE}_商品統計`,
+      hotLotteries.value,
+      hotLotteryColumns,
+      `${REPORT_TITLE}_熱門商品`,
+    );
+  }
+
+  if (winningDetails.value.length) {
+    exportToCsv(
+      winningDetails.value,
+      winningDetailColumns,
+      `${REPORT_TITLE}_中獎明細`,
     );
   }
 }
@@ -791,6 +854,16 @@ onMounted(async () => {
 .lr-state {
   color: tokens.$form-muted;
   font-size: 14px;
+}
+
+.lr-forbidden {
+  padding: 10px 12px;
+  border: 1px solid color.mix(#ef4444, #fff, 60%);
+  border-radius: 10px;
+  background: color.mix(#ef4444, #fff, 92%);
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* ==============================

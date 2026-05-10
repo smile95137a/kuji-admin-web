@@ -1,21 +1,16 @@
 <!-- src/views/report/RechargeReport.vue -->
 <template>
   <div class="recharge-report-page">
-    <!-- Header + Summary -->
     <MCard>
       <div class="rr-page-head">
         <div class="rr-page-head__main">
           <p class="rr-page-head__eyebrow">報表管理</p>
           <h2 class="rr-page-head__title">儲值報表</h2>
-          <p class="rr-page-head__sub">
-            查看指定期間內的儲值金額、儲值筆數、平均儲值金額與方案購買統計。
-          </p>
+          <p class="rr-page-head__sub">平台儲值統計：總額、趨勢與方案分布。</p>
         </div>
 
         <div class="rr-page-head__actions">
-          <span class="rr-current-type">
-            {{ isAdmin ? '管理員查詢' : '店家查詢' }}
-          </span>
+          <span class="rr-current-type">ADMIN 平台視圖</span>
 
           <span v-if="hasReportData" class="rr-total-count">
             共 {{ totalRowCount }} 筆資料
@@ -25,10 +20,8 @@
 
       <div class="rr-summary-row">
         <div class="rr-summary-card">
-          <span class="rr-summary-card__label">查詢店家</span>
-          <strong class="rr-summary-card__value">
-            {{ selectedStoreText }}
-          </strong>
+          <span class="rr-summary-card__label">查詢範圍</span>
+          <strong class="rr-summary-card__value">平台全站</strong>
         </div>
 
         <div class="rr-summary-card">
@@ -39,9 +32,9 @@
         </div>
 
         <div class="rr-summary-card">
-          <span class="rr-summary-card__label">資料筆數</span>
+          <span class="rr-summary-card__label">方案分布</span>
           <strong class="rr-summary-card__value">
-            {{ totalRowCount }} 筆
+            {{ planStats.length }} 筆
           </strong>
         </div>
       </div>
@@ -53,32 +46,12 @@
         <div class="rr-card-head">
           <div>
             <p class="rr-card-head__title">查詢條件</p>
-            <p class="rr-card-head__sub">
-              可依店家與日期區間查詢儲值統計資料。
-            </p>
+            <p class="rr-card-head__sub">可依日期區間查詢平台儲值統計資料。</p>
           </div>
         </div>
 
         <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
           <div class="rr-filter-grid">
-            <FormSelect
-              v-if="isAdmin"
-              label="店家"
-              name="storeId"
-              v-model="storeId"
-              :options="storeOptions"
-              :showAll="true"
-              allLabel="全部"
-              :allValue="''"
-            />
-
-            <FormInput
-              v-else
-              label="店家"
-              :modelValue="currentStoreLabel"
-              disabled
-            />
-
             <FormInput
               label="開始日期"
               type="date"
@@ -141,7 +114,7 @@
           {{ forbiddenMessage }}
         </div>
 
-        <div v-if="loading" class="rr-state m-t-16">查詢中...</div>
+        <div v-else-if="loading" class="rr-state m-t-16">查詢中...</div>
 
         <template v-else>
           <NoData v-if="!reportData" message="請輸入查詢條件後查詢" />
@@ -188,6 +161,21 @@
               </div>
 
               <VChart :option="chartOption" class="rr-chart__main" autoresize />
+            </div>
+
+            <div v-if="planStats.length" class="rr-chart m-t-20">
+              <div class="rr-chart__head">
+                <div>
+                  <p class="rr-chart__title">方案分布圖</p>
+                  <p class="rr-chart__sub">依方案呈現購買次數分布。</p>
+                </div>
+              </div>
+
+              <VChart
+                :option="planDistributionOption"
+                class="rr-chart__main"
+                autoresize
+              />
             </div>
 
             <!-- 方案統計 -->
@@ -295,12 +283,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { Form, type FormContext } from 'vee-validate';
-import { isAxiosError } from 'axios';
 
 import VChart from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { LineChart } from 'echarts/charts';
+import { BarChart, LineChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -312,7 +299,6 @@ import MButton from '@/components/common/MButton.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
 import { useAuthStore } from '@/stores';
@@ -320,20 +306,15 @@ import { getRechargeReport } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
-import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 
 use([
   CanvasRenderer,
+  BarChart,
   LineChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
 ]);
-
-type StoreOption = {
-  label: string;
-  value: string;
-};
 
 type TableColumn = {
   field: string;
@@ -364,22 +345,18 @@ const { dateRange } = useReportFilter();
 const formRef = ref<FormContext | null>(null);
 
 const initValues = ref({
-  storeId: '',
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
 
-const storeId = ref('');
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
 const reportData = ref<any | null>(null);
-const storeOptions = ref<StoreOption[]>([]);
 const forbiddenMessage = ref('');
 const loading = ref(false);
 
 const lastQuery = ref({
-  storeId: '',
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
@@ -513,26 +490,6 @@ const hasReportData = computed(() => {
   return Boolean(reportData.value && totalRowCount.value > 0);
 });
 
-const currentStoreLabel = computed(() => {
-  if (!storeId.value) return '-';
-
-  return (
-    storeOptions.value.find((item) => item.value === storeId.value)?.label ??
-    `店家 ${storeId.value}`
-  );
-});
-
-const selectedStoreText = computed(() => {
-  if (!lastQuery.value.storeId) {
-    return isAdmin.value ? '全部店家' : currentStoreLabel.value;
-  }
-
-  return (
-    storeOptions.value.find((item) => item.value === lastQuery.value.storeId)
-      ?.label ?? `店家 ${lastQuery.value.storeId}`
-  );
-});
-
 const queryDateText = computed(() => {
   const start = lastQuery.value.startDate || '-';
   const end = lastQuery.value.endDate || '-';
@@ -576,6 +533,39 @@ const chartOption = computed(() => {
   };
 });
 
+const planDistributionOption = computed(() => {
+  return {
+    tooltip: {
+      trigger: 'axis',
+    },
+    grid: {
+      top: 30,
+      left: 42,
+      right: 20,
+      bottom: 48,
+    },
+    xAxis: {
+      type: 'category',
+      axisLabel: {
+        interval: 0,
+        rotate: 20,
+      },
+      data: planStats.value.map((item: any) => item.planName ?? '-'),
+    },
+    yAxis: {
+      type: 'value',
+      name: '次數',
+    },
+    series: [
+      {
+        type: 'bar',
+        barMaxWidth: 44,
+        data: planStats.value.map((item: any) => item.purchaseCount ?? 0),
+      },
+    ],
+  };
+});
+
 /* ==============================
  * Utils
  * ============================== */
@@ -595,115 +585,55 @@ function formatPercent(value: any) {
   return `${value}%`;
 }
 
-function resolveUserStoreOptions(): StoreOption[] {
-  const user = (authStore.user as any) ?? {};
-
-  const ids = Array.isArray(user.storeIds)
-    ? user.storeIds
-    : user.storeId
-      ? [user.storeId]
-      : user.store?.id
-        ? [user.store.id]
-        : [];
-
-  return ids.filter(Boolean).map((id: any) => ({
-    label: `店家 ${id}`,
-    value: String(id),
-  }));
-}
-
-/* ==============================
- * 下拉選單
- * ============================== */
-async function loadStoreOptions() {
-  await executeApi<any[]>({
-    fn: () => getStoreOptions({ activeOnly: false }),
-    onSuccess: (data: any) => {
-      const list = Array.isArray(data?.data)
-        ? data.data
-        : Array.isArray(data)
-          ? data
-          : [];
-
-      storeOptions.value = toSelectOptions(list);
-    },
-    onFail: () => {
-      storeOptions.value = [];
-    },
-    showSuccessDialog: false,
-    showFailDialog: false,
-    showCatchDialog: false,
-  });
-
-  if (!storeOptions.value.length && !isAdmin.value) {
-    storeOptions.value = resolveUserStoreOptions();
-  }
-
-  if (!isAdmin.value) {
-    storeId.value = storeOptions.value[0]?.value ?? '';
-    initValues.value.storeId = storeId.value;
-  }
-}
-
 /* ==============================
  * Query
  * ============================== */
 async function onSubmit(values: any) {
+  if (!isAdmin.value) {
+    forbiddenMessage.value = '此報表僅限平台管理員查看。';
+    reportData.value = null;
+    return;
+  }
+
   forbiddenMessage.value = '';
 
   const condition = {
     startDate: values.startDate ?? '',
     endDate: values.endDate ?? '',
-    ...(values.storeId ? { storeId: values.storeId } : {}),
   };
 
   lastQuery.value = {
-    storeId: values.storeId ?? '',
     startDate: values.startDate ?? '',
     endDate: values.endDate ?? '',
   };
 
   loading.value = true;
 
-  try {
-    await executeApi({
-      fn: () => getRechargeReport({ condition }),
-      onSuccess: (data) => {
-        reportData.value = data ?? null;
-        resetPagination();
-      },
-      onFail: () => {
-        reportData.value = null;
-        resetPagination();
-      },
-      showSuccessDialog: false,
-      showFailDialog: true,
-      showCatchDialog: false,
-      onFinally: () => {
-        loading.value = false;
-      },
-    });
-  } catch (error) {
-    loading.value = false;
-
-    if (isAxiosError(error) && error.response?.status === 403) {
-      forbiddenMessage.value = '無權查詢其他店家報表，請使用可存取的店家條件。';
-      return;
-    }
-
-    reportData.value = null;
-    resetPagination();
-  }
+  await executeApi({
+    fn: () => getRechargeReport({ condition }),
+    onSuccess: (data) => {
+      reportData.value = data ?? null;
+      resetPagination();
+    },
+    onFail: () => {
+      reportData.value = null;
+      resetPagination();
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+    onFinally: () => {
+      loading.value = false;
+    },
+  });
 }
 
 function resetFilters() {
   const values = {
-    storeId: isAdmin.value ? '' : storeId.value,
     startDate: dateRange.value.startDate,
     endDate: dateRange.value.endDate,
   };
 
-  storeId.value = values.storeId;
   startDate.value = values.startDate;
   endDate.value = values.endDate;
 
@@ -711,6 +641,30 @@ function resetFilters() {
 }
 
 function handleExport() {
+  if (reportData.value) {
+    exportToCsv(
+      [
+        {
+          startDate: reportData.value.startDate,
+          endDate: reportData.value.endDate,
+          totalAmount: reportData.value.totalAmount,
+          totalCount: reportData.value.totalCount,
+          avgAmount: reportData.value.avgAmount,
+          growthRate: reportData.value.growthRate,
+        },
+      ],
+      [
+        { field: 'startDate', label: '開始日期' },
+        { field: 'endDate', label: '結束日期' },
+        { field: 'totalAmount', label: '總儲值金額' },
+        { field: 'totalCount', label: '儲值筆數' },
+        { field: 'avgAmount', label: '平均儲值金額' },
+        { field: 'growthRate', label: '成長率(%)' },
+      ],
+      `${REPORT_TITLE}_摘要`,
+    );
+  }
+
   if (dailyDetails.value.length) {
     exportToCsv(dailyDetails.value, dailyColumns, `${REPORT_TITLE}_每日明細`);
   }
@@ -724,13 +678,10 @@ function handleExport() {
  * Lifecycle
  * ============================== */
 onMounted(async () => {
-  await loadStoreOptions();
-
   await nextTick();
 
   const values = {
     ...initValues.value,
-    storeId: storeId.value,
   };
 
   formRef.value?.setValues(values);

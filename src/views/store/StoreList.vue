@@ -74,8 +74,16 @@
           <!-- 店家名稱 -->
           <template #cell-name="{ item }">
             <span class="clickable" @click="navigateToDetail(item)">
-              {{ item.name || '-' }}
+              {{ item.storeName || item.name || '-' }}
             </span>
+          </template>
+
+          <template #cell-referrerStoreName="{ item }">
+            <span>{{ item.referrerStoreName || '-' }}</span>
+          </template>
+
+          <template #cell-referralCode="{ item }">
+            <span>{{ item.referralCode || '-' }}</span>
           </template>
 
           <!-- 商品數量 -->
@@ -95,6 +103,10 @@
           <!-- 建立時間 -->
           <template #cell-createdAt="{ item }">
             <span>{{ formatDateTime(item.createdAt) }}</span>
+          </template>
+
+          <template #cell-activatedAt="{ item }">
+            <span>{{ formatDateTime(item.activatedAt) }}</span>
           </template>
 
           <!-- 操作 -->
@@ -284,10 +296,13 @@ const {
 const columns = [
   { field: 'logo', label: 'Logo', width: 70 },
   { field: 'name', label: '店家名稱', width: 200, sortable: true },
+  { field: 'referrerStoreName', label: '推薦來源店家', width: 180 },
+  { field: 'referralCode', label: '推薦碼', width: 140 },
   { field: 'shortDescription', label: '簡短描述', width: 240 },
   { field: 'ownerEmail', label: '管理員 Email', width: 200, sortable: true },
   { field: 'productCount', label: '商品數量', width: 100, sortable: true },
   { field: 'status', label: '狀態', width: 100, sortable: true },
+  { field: 'activatedAt', label: '啟用成功時間', width: 170, sortable: true },
   { field: 'createdAt', label: '建立時間', width: 170, sortable: true },
   { field: 'actions', label: '操作', width: 260 },
 ];
@@ -361,7 +376,7 @@ const submitDisable = async () => {
   actionLoading.value = true;
   try {
     await updateStoreStatus(targetStore.value.id, 'INACTIVE');
-    targetStore.value.status = 'DISABLED';
+    targetStore.value.status = 'INACTIVE';
     await openInfoDialog({
       title: '提示訊息',
       message: '店家已停用',
@@ -389,7 +404,7 @@ const submitEnable = async () => {
   actionLoading.value = true;
   try {
     await updateStoreStatus(targetStore.value.id, 'ACTIVE');
-    targetStore.value.status = 'ENABLED';
+    targetStore.value.status = 'ACTIVE';
     await openInfoDialog({
       title: '提示訊息',
       message: '店家已啟用，請提醒管理員手動重新上架商品',
