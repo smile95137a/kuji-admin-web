@@ -435,15 +435,19 @@ const parseDesignatedPrizeNumbers = (value: any) => {
 };
 
 const normalizePrizePayload = (prize: any, index: number) => {
+  const isScratchGrandPrize =
+    toBoolean(prize.isGrandPrize) ||
+    String(prize.level || '').toUpperCase() === 'GRAND';
+
   return {
     ...(prize.id ? { id: prize.id } : {}),
 
     name: cleanText(String(prize.name || '').trim()),
-    quantity: Number(prize.quantity ?? 1),
+    quantity: isScratchGrandPrize ? 1 : Number(prize.quantity ?? 1),
 
     description: cleanText(String(prize.description || '').trim()),
     imageUrl: cleanText(prize.imageUrl),
-    level: cleanText(prize.level),
+    level: isScratchGrandPrize ? 'GRAND' : cleanText(prize.level),
 
     prizeNumber: cleanText(prize.prizeNumber),
     prizeType: cleanText(prize.prizeType),
@@ -452,8 +456,8 @@ const normalizePrizePayload = (prize: any, index: number) => {
         ? toNumberOrUndefined(prize.pointValue)
         : undefined,
 
-    isLastPrize: toBoolean(prize.isLastPrize),
-    isGrandPrize: toBoolean(prize.isGrandPrize),
+    isLastPrize: isScratchGrandPrize ? false : toBoolean(prize.isLastPrize),
+    isGrandPrize: isScratchGrandPrize ? true : toBoolean(prize.isGrandPrize),
     orderNum:
       prize.orderNum === '' || prize.orderNum == null
         ? index + 1
@@ -467,8 +471,28 @@ const normalizePrizes = (prizes: PrizeFormRow[] = []) => {
     .map((item, index) => normalizePrizePayload(item, index));
 };
 
+const normalizeScratchFormPrizes = (prizes: PrizeFormRow[] = []) => {
+  const usable = prizes.filter((item) => String(item?.name || '').trim());
+  if (!usable.length) return prizes;
+
+  const first = usable[0];
+  return [
+    {
+      ...first,
+      quantity: 1,
+      level: 'GRAND',
+      isGrandPrize: true,
+      isLastPrize: false,
+    },
+  ];
+};
+
 const buildSubmitPayload = (values: any) => {
-  const prizes = normalizePrizes(values.prizes || []);
+  const rawPrizes =
+    String(values.subCategory || '') === 'SCRATCH_MODE'
+      ? normalizeScratchFormPrizes(values.prizes || [])
+      : values.prizes || [];
+  const prizes = normalizePrizes(rawPrizes);
   const galleryImages = parseTextList(values.galleryImagesText, '\n');
   const tags = parseTextList(values.tagsText, ',');
   const multiDrawOptions = parseNumberList(values.multiDrawOptionsText);
@@ -511,7 +535,10 @@ const buildSubmitPayload = (values: any) => {
       hotCount: toNumberOrUndefined(values.hotCount),
       theme: cleanText(values.theme),
 
-      delistStrategy: cleanText(values.delistStrategy),
+      delistStrategy:
+        String(values.category || '') === 'OFFICIAL_ICHIBAN'
+          ? cleanText(values.delistStrategy)
+          : undefined,
       paymentType: cleanText(values.paymentType),
       freeDrawThreshold: toNumberOrUndefined(values.freeDrawThreshold),
 
@@ -533,7 +560,7 @@ const buildSubmitPayload = (values: any) => {
 };
 
 const isOnShelfStatus = (status: any) => {
-  return ['ACTIVE', 'ON_SHELF'].includes(String(status || ''));
+  return ['ON_SHELF'].includes(String(status || ''));
 };
 
 const isScratchStoreMode = (values: any) => {
@@ -649,7 +676,10 @@ const loadDetail = async () => {
       bonusPointsPerDraw: data?.bonusPointsPerDraw ?? undefined,
       bonusCostPerDraw: data?.bonusCostPerDraw ?? undefined,
 
-      prizes: mapPrizesToForm(data?.prizes ?? []),
+      prizes:
+        String(data?.subCategory ?? '') === 'SCRATCH_MODE'
+          ? normalizeScratchFormPrizes(mapPrizesToForm(data?.prizes ?? []))
+          : mapPrizesToForm(data?.prizes ?? []),
     });
   } catch (error: any) {
     await openInfoDialog({
@@ -696,9 +726,11 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
   }
 
   if (String(values.subCategory || '') === 'SCRATCH_MODE') {
-    const hasGrandPrize = payload.prizes.some(
-      (prize: any) => prize.isGrandPrize === true,
-    );
+    const hasGrandPrize =
+      payload.prizes.length === 1 &&
+      payload.prizes[0]?.isGrandPrize === true &&
+      Number(payload.prizes[0]?.quantity ?? 0) === 1 &&
+      String(payload.prizes[0]?.level || '').toUpperCase() === 'GRAND';
 
     if (!hasGrandPrize) {
       activeTab.value = 'prizes';
@@ -716,7 +748,7 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
   /**
    * 舊版 T021b：
    * 編輯刮刮樂店家指定模式時，如果大獎號碼尚未指定，不允許直接上架/抽獎中。
-   * 這裡支援 ACTIVE / ON_SHELF 兩種狀態字串，避免新舊狀態值不同。
+   * 僅以 ON_SHELF 視為上架中，避免舊狀態字串再混入新流程。
    */
   if (
     isEdit.value &&

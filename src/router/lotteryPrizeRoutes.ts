@@ -5,17 +5,17 @@ const lotteryPrizeRoutes: RouteRecordRaw[] = [
   {
     path: 'lottery/:lotteryId/prizes',
     name: 'LotteryPrizeList',
-    component: () => import('@/views/lotteryPrize/LotteryPrizeList.vue'),
+    redirect: (to) => `/home/lottery-with-prizes/edit/${String(to.params.lotteryId || '')}`,
   },
   {
     path: 'lottery/:lotteryId/prizes/add',
     name: 'LotteryPrizeAdd',
-    component: () => import('@/views/lotteryPrize/LotteryPrizeForm.vue'),
+    redirect: (to) => `/home/lottery-with-prizes/edit/${String(to.params.lotteryId || '')}`,
   },
   {
     path: 'lottery/:lotteryId/prizes/edit/:prizeId',
     name: 'LotteryPrizeEdit',
-    component: () => import('@/views/lotteryPrize/LotteryPrizeForm.vue'),
+    redirect: (to) => `/home/lottery-with-prizes/edit/${String(to.params.lotteryId || '')}`,
   },
 ];
 

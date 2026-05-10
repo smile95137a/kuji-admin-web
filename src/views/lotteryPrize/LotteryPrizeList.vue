@@ -43,7 +43,7 @@
           v-if="isScratch && lotteryStatus === 'DRAFT'"
           :disabled="!hasGrandPrize"
           :title="!hasGrandPrize ? '請先設定大獎才能完成配置' : ''"
-          @click="doConfigured"
+          @click="markScratchReady"
           >完成配置</MButton
         >
 
@@ -314,9 +314,9 @@ const refresh = async () => {
 };
 
 /* T015 — 完成配置 button action */
-const doConfigured = async () => {
+const markScratchReady = async () => {
   await executeApi({
-    fn: () => changeLotteryWithPrizesStatus(lotteryId.value, 'CONFIGURED'),
+    fn: () => changeLotteryWithPrizesStatus(lotteryId.value, 'OFF_SHELF'),
     onSuccess: async () => {
       await openInfoDialog({
         title: '提示訊息',

@@ -221,6 +221,49 @@ export const lotteryWithPrizesSchema = yup
       path: 'endTime',
       message: '結束時間不可早於開始時間',
     });
+  })
+  .test('scratch-single-grand-prize', '刮刮樂獎品規則不合法', function (values) {
+    const isScratch =
+      String(values?.subCategory || '') === 'SCRATCH_MODE' ||
+      String(values?.playMode || '') === 'SCRATCH_MODE' ||
+      ['SCRATCH_STORE', 'SCRATCH_PLAYER'].includes(String(values?.gameMode || ''));
+
+    if (!isScratch) return true;
+
+    const prizes = Array.isArray(values?.prizes)
+      ? values.prizes.filter((item: any) => String(item?.name || '').trim())
+      : [];
+
+    if (prizes.length !== 1) {
+      return this.createError({
+        path: 'prizes',
+        message: '刮刮樂模式只允許 1 筆大獎獎品。',
+      });
+    }
+
+    const prize = prizes[0];
+    if (prize?.isGrandPrize !== true) {
+      return this.createError({
+        path: 'prizes',
+        message: '刮刮樂模式唯一的獎品必須標記為大獎。',
+      });
+    }
+
+    if (Number(prize?.quantity ?? 0) !== 1) {
+      return this.createError({
+        path: 'prizes',
+        message: '刮刮樂模式唯一的大獎數量必須為 1。',
+      });
+    }
+
+    if (String(prize?.level || '').toUpperCase() !== 'GRAND') {
+      return this.createError({
+        path: 'prizes',
+        message: '刮刮樂模式唯一的大獎 level 必須固定為 GRAND。',
+      });
+    }
+
+    return true;
   });
 
 export const lotteryWithPrizesInitialValues = {

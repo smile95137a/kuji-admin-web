@@ -174,6 +174,7 @@ const createKey = () =>
 
 const normalizeScratchPrize = (row: PrizeFormRow): PrizeFormRow => ({
   ...row,
+  name: String(row.name || '').trim(),
   level: 'GRAND',
   quantity: 1,
   isGrandPrize: true,

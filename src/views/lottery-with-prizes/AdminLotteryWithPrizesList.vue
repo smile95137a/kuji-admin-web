@@ -179,7 +179,7 @@
                 重新上架
               </MButton>
 
-              <!-- FORCED_OFF → 退回草稿 -->
+              <!-- FORCED_OFF → 轉回一般下架 -->
               <MButton
                 v-if="item.status === 'FORCED_OFF'"
                 size="sm"
@@ -187,12 +187,12 @@
                 @click="
                   changeStatus(
                     item,
-                    'DRAFT',
-                    `確定要將「${item.title}」退回草稿？`,
+                    'OFF_SHELF',
+                    `將商品 ${item.title} 轉回一般下架`,
                   )
                 "
               >
-                退回草稿
+                轉一般下架
               </MButton>
 
               <!-- 店家指定大獎 -->
@@ -209,7 +209,7 @@
 
               <!-- non-ON_SHELF → 刪除 -->
               <MButton
-                v-if="item.status !== 'ON_SHELF'"
+                v-if="item.status === 'DRAFT' || item.status === 'OFF_SHELF'"
                 size="sm"
                 class="mbtn--red"
                 @click="
@@ -325,11 +325,13 @@ const storeOptions = ref<SelectOption[]>([]);
 
 const statusOptions = ref<SelectOption[]>([
   { label: '草稿（DRAFT）', value: 'DRAFT' },
+  { label: '待上架（WAITING_ON_SHELF）', value: 'WAITING_ON_SHELF' },
   { label: '上架中（ON_SHELF）', value: 'ON_SHELF' },
   { label: '下架（OFF_SHELF）', value: 'OFF_SHELF' },
-  { label: '已售完（SOLD_OUT）', value: 'SOLD_OUT' },
   { label: '強制下架（FORCED_OFF）', value: 'FORCED_OFF' },
-  { label: '已結束（ENDED）', value: 'ENDED' },
+  { label: '大獎已抽完（GRAND_PRIZE_DRAWN）', value: 'GRAND_PRIZE_DRAWN' },
+  { label: '全數已抽完（ALL_DRAWN）', value: 'ALL_DRAWN' },
+  { label: '已刪除（DELETED）', value: 'DELETED' },
 ]);
 
 const categoryOptions = ref<SelectOption[]>([
@@ -388,20 +390,30 @@ const formatMoney = (value: any) => {
 
 const statusText = (status?: string) => {
   if (status === 'DRAFT') return '草稿';
+  if (status === 'WAITING_ON_SHELF') return '待上架';
   if (status === 'ON_SHELF') return '上架中';
   if (status === 'OFF_SHELF') return '下架';
-  if (status === 'SOLD_OUT') return '已售完';
   if (status === 'FORCED_OFF') return '強制下架';
-  if (status === 'ENDED') return '已結束';
+  if (status === 'GRAND_PRIZE_DRAWN') return '大獎已抽完';
+  if (status === 'ALL_DRAWN') return '全數已抽完';
+  if (status === 'DELETED') return '已刪除';
+  if (status === 'CONFIGURED') return '待上架';
+  if (status === 'SOLD_OUT') return '全數已抽完';
+  if (status === 'ENDED') return '已抽完';
 
   return status ? String(status) : '-';
 };
 
 const statusBadgeClass = (status?: string) => {
+  if (status === 'WAITING_ON_SHELF') return 'badge badge--orange';
   if (status === 'ON_SHELF') return 'badge badge--green';
   if (status === 'OFF_SHELF') return 'badge badge--gray';
-  if (status === 'SOLD_OUT') return 'badge badge--blue';
   if (status === 'FORCED_OFF') return 'badge badge--red';
+  if (status === 'GRAND_PRIZE_DRAWN') return 'badge badge--blue';
+  if (status === 'ALL_DRAWN') return 'badge badge--gray';
+  if (status === 'DELETED') return 'badge badge--gray';
+  if (status === 'CONFIGURED') return 'badge badge--orange';
+  if (status === 'SOLD_OUT') return 'badge badge--blue';
   if (status === 'ENDED') return 'badge badge--gray';
 
   return 'badge badge--gray';
@@ -577,7 +589,11 @@ const selectedRows = computed(() =>
   list.value.filter((row: any) => selectedIds.value.includes(row.id)),
 );
 
-const canDelete = computed(() => selectedRows.value.length > 0);
+const canDelete = computed(() =>
+  selectedRows.value.some(
+    (row: any) => row.status === 'DRAFT' || row.status === 'OFF_SHELF',
+  ),
+);
 
 const changeStatus = async (
   item: any,
@@ -586,7 +602,6 @@ const changeStatus = async (
     | 'OFF_SHELF'
     | 'FORCED_OFF'
     | 'DRAFT'
-    | 'ENDED'
     | 'DELETED',
   confirmMsg: string,
 ) => {
@@ -616,7 +631,7 @@ const deleteSelected = async () => {
   if (!canDelete.value) return;
 
   const deletable = selectedRows.value.filter(
-    (row: any) => row.status !== 'ON_SHELF',
+    (row: any) => row.status === 'DRAFT' || row.status === 'OFF_SHELF',
   );
   const activeCount = selectedRows.value.length - deletable.length;
 

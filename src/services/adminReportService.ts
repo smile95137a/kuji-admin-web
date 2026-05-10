@@ -36,6 +36,9 @@ const postReport = async (
 export const getPrizeShipmentReport = (req: QueryReq<RequestData>) =>
   postReport('prize-shipment', req);
 
+export const getPlatformRevenueReport = (req: QueryReq<RequestData>) =>
+  postReport('platform-revenue', req);
+
 /** 會員成長報表（POST /admin/report/member-growth） */
 export const getMemberGrowthReport = (req: QueryReq<RequestData>) =>
   postReport('member-growth', req);
@@ -53,12 +56,12 @@ export const getStorePerformanceReport = (req: QueryReq<RequestData>) =>
  * 2026-04-30 scope: replaced by new four reports.
  */
 export const getRevenueReport = (req: QueryReq<RequestData>) =>
-  postReport('lottery-sales', req);
+  postReport('revenue', req);
 export const getReferralReport = (req: QueryReq<RequestData>) =>
-  postReport('member-growth', req);
+  postReport('referral', req);
 export const getLotteryResultReport = (req: QueryReq<RequestData>) =>
-  postReport('prize-shipment', req);
+  postReport('lottery-result', req);
 export const getRechargeReport = (req: QueryReq<RequestData>) =>
-  postReport('store-performance', req);
+  postReport('recharge', req);
 export const getBonusReport = (req: QueryReq<RequestData>) =>
-  postReport('member-growth', req);
+  postReport('bonus', req);

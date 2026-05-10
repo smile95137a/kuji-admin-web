@@ -2,6 +2,36 @@ import type { RouteRecordRaw } from 'vue-router';
 
 export const reportRoutes: RouteRecordRaw[] = [
   {
+    path: 'report/revenue',
+    name: 'RevenueReport',
+    component: () => import('@/views/report/RevenueReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'report/referral',
+    name: 'ReferralReport',
+    component: () => import('@/views/report/ReferralReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'report/lottery-result',
+    name: 'LotteryResultReport',
+    component: () => import('@/views/report/LotteryResultReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'report/recharge',
+    name: 'RechargeReport',
+    component: () => import('@/views/report/RechargeReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'report/bonus',
+    name: 'BonusReport',
+    component: () => import('@/views/report/BonusReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: 'report/prize-shipment',
     name: 'PrizeShipmentReport',
     component: () => import('@/views/report/PrizeShipmentReport.vue'),
@@ -23,6 +53,12 @@ export const reportRoutes: RouteRecordRaw[] = [
     path: 'report/store-performance',
     name: 'StorePerformanceReport',
     component: () => import('@/views/report/StorePerformanceReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'report/platform-revenue',
+    name: 'PlatformRevenueReport',
+    component: () => import('@/views/report/PlatformRevenueReport.vue'),
     meta: { requiresAuth: true },
   },
 ];
