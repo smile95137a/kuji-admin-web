@@ -2,6 +2,12 @@
 
 最後更新：2026-05-11
 
+## 收尾狀態
+
+1. 本 repo 同步變更已完成 commit + push。
+2. 目前分支狀態：`main...origin/main`（工作樹乾淨）。
+3. 可由下一位 AI 直接承接下一包，不需先清理本地變更。
+
 ## 本輪重點
 
 1. 已啟動與後端 `kuji-admin` 的會員契約同步（`/admin/frontend-users`）。
@@ -13,9 +19,9 @@
 
 ## 目前狀態
 
-1. 工作樹包含會員模組同步檔案（list/edit/member picker/search dialog）。
+1. 會員模組同步檔案已入版：list/edit/member picker/search dialog。
 2. 建置可啟動但有既有 Sass deprecation warning（非阻斷）。
-3. 尚待最終 `commit + push` 節點。
+3. 版本節點已完成（commit + push）。
 
 ## 下一步（接手者）
 
