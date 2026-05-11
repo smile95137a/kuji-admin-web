@@ -307,7 +307,7 @@ import FormInput from '@/components/common/FormInput.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
 import { useAuthStore } from '@/stores';
-import { getBonusReport } from '@/services/adminReportService';
+import { getBonusReport, type BonusReportRes } from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
@@ -363,7 +363,7 @@ const initValues = ref({
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
-const reportData = ref<any | null>(null);
+const reportData = ref<BonusReportRes | null>(null);
 const forbiddenMessage = ref('');
 const loading = ref(false);
 

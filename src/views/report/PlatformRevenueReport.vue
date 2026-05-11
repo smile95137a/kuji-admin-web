@@ -89,7 +89,7 @@
                   <td>{{ item.date }}</td>
                   <td>{{ formatNumber(item.recharge) }}</td>
                   <td>{{ formatNumber(item.spend) }}</td>
-                  <td>{{ formatNumber(item.netRevenue) }}</td>
+                  <td>{{ formatNumber(item.net) }}</td>
                 </tr>
                 <tr v-if="!(report.dailyRevenue || []).length">
                   <td colspan="4" class="pr-table__empty">查無資料</td>
@@ -131,35 +131,11 @@ import { onMounted, ref } from 'vue';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
-import { getPlatformRevenueReport } from '@/services/adminReportService';
+import {
+  getPlatformRevenueReport,
+  type PlatformRevenueReportRes,
+} from '@/services/adminReportService';
 import { getErrorMessage } from '@/utils/ErrorUtils';
-
-type PlatformRevenueReport = {
-  startDate?: string;
-  endDate?: string;
-  totalRecharge?: number;
-  totalSpend?: number;
-  netRevenue?: number;
-  drawCount?: number;
-  rechargeGrowthRate?: number | null;
-  spendGrowthRate?: number | null;
-  spendByType?: {
-    gold?: number;
-    bonus?: number;
-  };
-  dailyRevenue?: Array<{
-    date: string;
-    recharge: number;
-    spend: number;
-    netRevenue: number;
-  }>;
-  storeBreakdown?: Array<{
-    storeId: string;
-    storeName: string;
-    totalSpend: number;
-    drawCount: number;
-  }>;
-};
 
 const today = new Date();
 const formatDateInput = (date: Date) => date.toISOString().slice(0, 10);
@@ -172,7 +148,7 @@ const startDate = ref(defaultStartDate);
 const endDate = ref(defaultEndDate);
 const loading = ref(false);
 const forbiddenMessage = ref('');
-const report = ref<PlatformRevenueReport>({
+const report = ref<PlatformRevenueReportRes>({
   totalRecharge: 0,
   totalSpend: 0,
   netRevenue: 0,
@@ -193,7 +169,7 @@ const fetchReport = async () => {
         endDate: endDate.value || undefined,
       },
     });
-    report.value = (res as any)?.data ?? res;
+    report.value = res?.data ?? report.value;
   } catch (error: any) {
     const status = error?.response?.status;
     if (status === 403) {

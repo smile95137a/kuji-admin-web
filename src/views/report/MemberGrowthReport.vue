@@ -150,7 +150,10 @@ import { useAuthStore } from '@/stores';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
-import { getMemberGrowthReport } from '@/services/adminReportService';
+import {
+  getMemberGrowthReport,
+  type MemberGrowthReportRes,
+} from '@/services/adminReportService';
 
 use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent]);
 
@@ -166,7 +169,7 @@ const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 const loading = ref(false);
 const forbiddenMessage = ref('');
-const reportData = ref<any | null>(null);
+const reportData = ref<MemberGrowthReportRes | null>(null);
 const lastQuery = ref({ startDate: dateRange.value.startDate, endDate: dateRange.value.endDate });
 
 const roleSet = computed(() => new Set([...(Array.isArray((authStore.user as any)?.roles) ? (authStore.user as any).roles : []), (authStore.user as any)?.role].filter(Boolean).map((r) => String(r).toUpperCase())));

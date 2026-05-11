@@ -260,6 +260,7 @@ import { exportToCsv } from '@/utils/csvExport';
 
 import {
   getPrizeShipmentReport,
+  type PrizeShipmentReportRes,
   type QueryReq,
 } from '@/services/adminReportService';
 import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
@@ -347,7 +348,7 @@ const storeId = ref('');
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
-const reportData = ref<Record<string, any> | null>(null);
+const reportData = ref<PrizeShipmentReportRes | null>(null);
 const tableSections = ref<TableSection[]>([]);
 const storeOptions = ref<StoreOption[]>([]);
 const forbiddenMessage = ref('');

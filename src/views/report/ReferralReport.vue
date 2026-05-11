@@ -311,7 +311,7 @@ import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
-import { getReferralReport } from '@/services/adminReportService';
+import { getReferralReport, type ReferralReportRes } from '@/services/adminReportService';
 import { getAllStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import { useAuthStore } from '@/stores';
 import { useReportFilter } from '@/composables/useReportFilter';
@@ -366,7 +366,7 @@ const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 const storeOptions = ref<any[]>([]);
 
-const reportData = ref<any | null>(null);
+const reportData = ref<ReferralReportRes | null>(null);
 const loading = ref(false);
 const forbiddenMessage = computed(() =>
   isAdmin.value ? '' : '此報表僅限平台管理員查看。',
