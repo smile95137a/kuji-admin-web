@@ -249,8 +249,12 @@ const getAvatarText = (item: any) => {
 };
 
 const normalizeCondition = (values: any) => {
+  const baseCondition = props.data?.condition
+    ? { ...props.data.condition }
+    : {};
+
   const condition = {
-    ...(props.data?.condition ?? {}),
+    ...baseCondition,
     keyword: values.keyword ?? '',
     status: values.status ?? '',
   };
@@ -258,11 +262,12 @@ const normalizeCondition = (values: any) => {
   Object.keys(condition).forEach((key) => {
     const value = String((condition as any)[key] ?? '').trim();
 
-    if (!value) {
-      delete (condition as any)[key];
-    } else {
+    if (value) {
       (condition as any)[key] = value;
+      return;
     }
+
+    delete (condition as any)[key];
   });
 
   return condition;
@@ -273,11 +278,22 @@ const normalizeCondition = (values: any) => {
  * -------------------------------------- */
 const queryMembers = async (values: any) => {
   const condition = normalizeCondition(values);
+  const payload = props.data
+    ? {
+        ...props.data,
+        condition,
+        sortBy: 'createdAt',
+        sortOrder: 'DESC',
+        size: 50,
+      }
+    : {
+        condition,
+        sortBy: 'createdAt',
+        sortOrder: 'DESC',
+        size: 50,
+      };
 
-  const res = await queryFrontendUsers({
-    ...(props.data ?? {}),
-    condition,
-  });
+  const res = await queryFrontendUsers(payload);
 
   const success = (res as any)?.success ?? true;
   const data = (res as any)?.data ?? res ?? [];
@@ -414,5 +430,3 @@ onMounted(async () => {
   await onSubmit();
 });
 </script>
-
-<style scoped lang="scss"></style>

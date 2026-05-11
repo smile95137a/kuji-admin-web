@@ -20,18 +20,14 @@
 
   <div class="m-t-12">
     <MCard>
-      <div class="frontend-user-list__toolbar">
-        <MButton :disabled="!canActivate" @click="activateSelected">
-          啟用
-        </MButton>
-
-        <MButton :disabled="!canDeactivate" @click="deactivateSelected">
-          停用
-        </MButton>
-
-        <MButton :disabled="!canSuspend" @click="suspendSelected">
-          暫停
-        </MButton>
+      <div class="flex justify-end gap-x-12 flex-wrap">
+        <MButton v-if="isAdmin" :disabled="!canActivate" @click="activateSelected"
+          >啟用</MButton
+        >
+        <MButton v-if="isAdmin" :disabled="!canDeactivate" @click="deactivateSelected"
+          >停用</MButton
+        >
+        <MButton v-if="isAdmin" :disabled="!canSuspend" @click="suspendSelected">暫停</MButton>
       </div>
 
       <template v-if="!hasData">
@@ -44,9 +40,9 @@
           :columns="columns"
           :items="currentPageItems"
           row-key="id"
-          selectable
+          :selectable="isAdmin"
           selection-type="checkbox"
-          :show-select-all="true"
+          :show-select-all="isAdmin"
           v-model:selected="selectedIds"
           :useWidthClass="true"
           :sort-key="sortKey"
@@ -153,7 +149,7 @@ import NumberFormatter from '@/components/common/NumberFormatter.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import FrontendUserSearchForm from '@/components/member/FrontendUserSearchForm.vue';
-
+import { useDialogStore, useAuthStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
 
 import {
@@ -177,6 +173,14 @@ interface SelectOption {
  * Router
  * ============================== */
 const router = useRouter();
+const dialogStore = useDialogStore();
+const authStore = useAuthStore();
+
+const isAdmin = computed(
+  () =>
+    Array.isArray(authStore.user?.roles) &&
+    authStore.user.roles.includes('ROLE_ADMIN'),
+);
 
 /* ==============================
  * Form & InitValues（對齊 FrontendUserCondition）
@@ -208,15 +212,12 @@ const statusOptions = ref<SelectOption[]>([
   { label: 'ACTIVE（啟用）', value: 'ACTIVE' },
   { label: 'INACTIVE（停用）', value: 'INACTIVE' },
   { label: 'SUSPENDED（暫停）', value: 'SUSPENDED' },
-  { label: 'LOCKED（鎖定）', value: 'LOCKED' },
 ]);
 
 const providerOptions = ref<SelectOption[]>([
   { label: '全部', value: '' },
-  { label: 'LOCAL', value: 'LOCAL' },
+  { label: 'EMAIL', value: 'EMAIL' },
   { label: 'GOOGLE', value: 'GOOGLE' },
-  { label: 'FACEBOOK', value: 'FACEBOOK' },
-  { label: 'LINE', value: 'LINE' },
 ]);
 
 const loadSelectOptions = async () => {
@@ -226,18 +227,21 @@ const loadSelectOptions = async () => {
 /* ==============================
  * Utils
  * ============================== */
-const statusText = (status?: string) =>
-  status === 'ACTIVE'
-    ? '啟用'
-    : status === 'INACTIVE'
-      ? '停用'
-      : status === 'DEACTIVATED'
-        ? '停用'
-        : status === 'SUSPENDED'
-          ? '暫停'
-          : status === 'LOCKED'
-            ? '鎖定'
-            : '-';
+const statusText = (status?: string) => {
+  switch (status) {
+    case 'ACTIVE':
+      return '啟用';
+    case 'INACTIVE':
+    case 'DEACTIVATED':
+      return '停用';
+    case 'SUSPENDED':
+      return '暫停';
+    case 'LOCKED':
+      return '鎖定';
+    default:
+      return '-';
+  }
+};
 
 const statusBadgeClass = (status?: string) => {
   if (status === 'ACTIVE') return 'badge badge--green';
@@ -250,18 +254,24 @@ const statusBadgeClass = (status?: string) => {
   return 'badge badge--gray';
 };
 
-const providerText = (p?: string) =>
-  p === 'LOCAL'
-    ? '本地'
-    : p === 'GOOGLE'
-      ? 'Google'
-      : p === 'FACEBOOK'
-        ? 'Facebook'
-        : p === 'LINE'
-          ? 'LINE'
-          : p
-            ? String(p)
-            : '-';
+const providerText = (provider?: string) => {
+  if (provider === 'LOCAL') {
+    return '本地';
+  }
+  if (provider === 'EMAIL') {
+    return 'Email';
+  }
+  if (provider === 'GOOGLE') {
+    return 'Google';
+  }
+  if (provider === 'FACEBOOK') {
+    return 'Facebook';
+  }
+  if (provider === 'LINE') {
+    return 'LINE';
+  }
+  return provider ? String(provider) : '-';
+};
 
 /* ==============================
  * Sorting
@@ -349,6 +359,8 @@ const onSubmit = async (values: any) => {
           ? null
           : Number(values.goldCoinsMax),
     },
+            sortBy: 'createdAt',
+            sortOrder: 'DESC',
   };
 
   await query(() => queryFrontendUsers(req));
@@ -392,6 +404,15 @@ const refresh = async () => {
 };
 
 const activateSelected = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   if (!canActivate.value) {
     await openInfoDialog({
       title: '提示訊息',
@@ -435,6 +456,15 @@ const activateSelected = async () => {
 };
 
 const deactivateSelected = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   if (!canDeactivate.value) {
     await openInfoDialog({
       title: '提示訊息',
@@ -478,6 +508,15 @@ const deactivateSelected = async () => {
 };
 
 const suspendSelected = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   if (!canSuspend.value) {
     await openInfoDialog({
       title: '提示訊息',
@@ -536,14 +575,3 @@ onMounted(async () => {
   isSearch.value = true;
 });
 </script>
-
-<style scoped lang="scss">
-.frontend-user-list {
-  &__toolbar {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-}
-</style>

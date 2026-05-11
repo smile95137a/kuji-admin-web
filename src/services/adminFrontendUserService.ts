@@ -7,10 +7,75 @@ interface RequestData {
   [key: string]: any;
 }
 
+export interface FrontendUserListRes {
+  id: string;
+  email?: string;
+  nickname?: string;
+  avatar?: string;
+  provider?: string;
+  goldCoins?: number;
+  bonusCoins?: number;
+  status?: string;
+  statusName?: string;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FrontendUserDetailRes {
+  id: string;
+  email?: string;
+  nickname?: string;
+  avatar?: string;
+  provider?: string;
+  providerId?: string;
+  goldCoins?: number;
+  bonusCoins?: number;
+  status?: string;
+  statusName?: string;
+  emailVerified?: boolean;
+  phoneNumber?: string;
+  lineId?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  city?: string;
+  district?: string;
+  addressDetail?: string;
+  invoiceType?: string;
+  invoiceEmail?: string;
+  carrierCode?: string;
+  taxId?: string;
+  companyName?: string;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  failedLoginAttempts?: number;
+  lockedUntil?: string;
+}
+
+export interface FrontendUserQueryReq {
+  condition?: {
+    email?: string | null;
+    nickname?: string | null;
+    phone?: string | null;
+    status?: string | null;
+    provider?: string | null;
+    keyword?: string | null;
+    goldCoinsMin?: number | null;
+    goldCoinsMax?: number | null;
+    createdAtStart?: string | null;
+    createdAtEnd?: string | null;
+  };
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC' | string;
+}
+
 /** 查詢前台會員列表（支援動態條件） */
 export const queryFrontendUsers = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
+  req?: FrontendUserQueryReq | RequestData
+): Promise<ApiResponse<FrontendUserListRes[]>> => {
   try {
     // 後端：POST /admin/frontend-users/list (body 可為空)
     const res = await api.post(`${basePath}/list`, req ?? null);
@@ -24,7 +89,7 @@ export const queryFrontendUsers = async (
 /** 取得會員詳情 */
 export const getFrontendUserById = async (
   id: string
-): Promise<ApiResponse<any>> => {
+): Promise<ApiResponse<FrontendUserDetailRes>> => {
   try {
     // 後端：GET /admin/frontend-users/{id}
     const res = await api.get(`${basePath}/${id}`);
@@ -39,7 +104,7 @@ export const getFrontendUserById = async (
 export const updateFrontendUser = async (
   id: string,
   req: RequestData
-): Promise<ApiResponse<any>> => {
+): Promise<ApiResponse<FrontendUserDetailRes>> => {
   try {
     // 後端：PUT /admin/frontend-users/{id}
     const res = await api.put(`${basePath}/${id}`, req);
@@ -50,13 +115,13 @@ export const updateFrontendUser = async (
   }
 };
 
-/** 軟刪除會員 */
+/** 軟刪除會員（已收斂為停用） */
 export const deleteFrontendUser = async (
   id: string
 ): Promise<ApiResponse<any>> => {
   try {
-    // 後端：DELETE /admin/frontend-users/{id}
-    const res = await api.delete(`${basePath}/${id}`);
+    // 後端已移除 delete，改走停用流程
+    const res = await api.post(`${basePath}/${id}/deactivate`);
     return res.data;
   } catch (e) {
     console.error('AdminFrontendUser - deleteFrontendUser error:', e);
@@ -134,14 +199,32 @@ export const getLoginHistory = async (
   }
 };
 
-/** 手動調整點數（CoinAdjustReq: coinType / direction / amount / remark） */
+/** 手動調整點數（後端採 signed amount：正數增加、負數扣除） */
 export const coinAdjust = async (
   id: string,
-  req: { coinType: 'GOLD' | 'BONUS'; direction: 'ADD' | 'DEDUCT'; amount: number; remark: string }
+  req: {
+    coinType: 'GOLD' | 'BONUS';
+    amount: number;
+    remark: string;
+    direction?: 'ADD' | 'DEDUCT';
+  }
 ): Promise<ApiResponse<any>> => {
   try {
+    let normalizedAmount = req.amount;
+    if (req.direction === 'DEDUCT') {
+      normalizedAmount = -Math.abs(req.amount);
+    } else if (req.direction === 'ADD') {
+      normalizedAmount = Math.abs(req.amount);
+    }
+
+    const payload = {
+      coinType: req.coinType,
+      amount: normalizedAmount,
+      remark: req.remark,
+    };
+
     // 後端：POST /admin/frontend-users/{id}/coin-adjust
-    const res = await api.post(`${basePath}/${id}/coin-adjust`, req);
+    const res = await api.post(`${basePath}/${id}/coin-adjust`, payload);
     return res.data;
   } catch (e) {
     console.error('AdminFrontendUser - coinAdjust error:', e);

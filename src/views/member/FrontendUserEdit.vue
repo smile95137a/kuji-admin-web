@@ -2,7 +2,15 @@
 <template>
   <MCard>
     <form @submit.prevent="onSubmit">
-      <p class="form__text form__text--title">編輯會員</p>
+      <p class="form__text form__text--title">
+        {{ isAdmin ? '編輯會員' : '會員詳情' }}
+      </p>
+
+      <div v-if="!isAdmin" class="w-100 p-6">
+        <p class="form__text" style="opacity: 0.8">
+          目前帳號為唯讀檢視模式，僅管理員可編輯會員資料與狀態。
+        </p>
+      </div>
 
       <div class="flex flex-wrap">
         <!-- ===== 系統資訊（只讀） ===== -->
@@ -97,7 +105,9 @@
 
         <!-- ===== 會員資料（可編輯：對齊 FrontendUserUpdateReq） ===== -->
         <div class="w-100 p-6">
-          <p class="form__text form__text--red">會員資料（可編輯）</p>
+          <p class="form__text form__text--red">
+            {{ isAdmin ? '會員資料（可編輯）' : '會員資料（唯讀）' }}
+          </p>
         </div>
 
         <!-- email -->
@@ -106,6 +116,7 @@
             label="Email"
             v-model="email"
             :error="errors.email"
+            :disabled="!isAdmin"
             placeholder="user@example.com"
           />
         </div>
@@ -116,6 +127,7 @@
             label="暱稱"
             v-model="nickname"
             :error="errors.nickname"
+            :disabled="!isAdmin"
             placeholder="例如：測試會員B"
           />
         </div>
@@ -126,6 +138,7 @@
             label="手機號碼"
             v-model="phoneNumber"
             :error="errors.phoneNumber"
+            :disabled="!isAdmin"
             placeholder="例如：0966666666"
           />
         </div>
@@ -136,6 +149,7 @@
             label="LINE ID"
             v-model="lineId"
             :error="errors.lineId"
+            :disabled="!isAdmin"
             placeholder="例如：mylineid"
           />
         </div>
@@ -146,6 +160,7 @@
             label="頭像 URL"
             v-model="avatar"
             :error="errors.avatar"
+            :disabled="!isAdmin"
             placeholder="https://..."
           />
         </div>
@@ -161,6 +176,7 @@
             label="收件人姓名"
             v-model="recipientName"
             :error="errors.recipientName"
+            :disabled="!isAdmin"
             placeholder="例如：王小明"
           />
         </div>
@@ -171,6 +187,7 @@
             label="收件人電話"
             v-model="recipientPhone"
             :error="errors.recipientPhone"
+            :disabled="!isAdmin"
             placeholder="例如：0912345678"
           />
         </div>
@@ -206,6 +223,7 @@
             v-model="invoiceType"
             :options="invoiceTypeOptions"
             :error="errors.invoiceType"
+            :disabled="!isAdmin"
             :showAll="true"
             allLabel="不設定"
             :allValue="''"
@@ -218,6 +236,7 @@
             label="發票 Email"
             v-model="invoiceEmail"
             :error="errors.invoiceEmail"
+            :disabled="!isAdmin"
             placeholder="invoice@example.com"
             required
           />
@@ -229,6 +248,7 @@
             label="載具條碼"
             v-model="carrierCode"
             :error="errors.carrierCode"
+            :disabled="!isAdmin"
             placeholder="/ABCD1234"
             required
           />
@@ -240,6 +260,7 @@
             label="統一編號（三聯式）"
             v-model="taxId"
             :error="errors.taxId"
+            :disabled="!isAdmin"
             placeholder="8 碼，例如：12345678"
             maxlength="8"
             required
@@ -252,6 +273,7 @@
             label="公司名稱（三聯式）"
             v-model="companyName"
             :error="errors.companyName"
+            :disabled="!isAdmin"
             placeholder="例如：測試股份有限公司"
             required
           />
@@ -267,22 +289,33 @@
 
       <!-- bottom button -->
       <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
-        <MButton type="submit">儲存</MButton>
+        <MButton v-if="isAdmin" type="submit">儲存</MButton>
 
         <MButton type="button" class="mbtn--red" @click="goBack">返回</MButton>
 
         <!-- 管理員操作（不屬於 FrontendUserUpdateReq） -->
-        <MButton type="button" :disabled="!canActivate" @click="activateOne">
+        <MButton
+          v-if="isAdmin"
+          type="button"
+          :disabled="!canActivate"
+          @click="activateOne"
+        >
           啟用
         </MButton>
         <MButton
+          v-if="isAdmin"
           type="button"
           :disabled="!canDeactivate"
           @click="deactivateOne"
         >
           停用
         </MButton>
-        <MButton type="button" :disabled="!canSuspend" @click="suspendOne">
+        <MButton
+          v-if="isAdmin"
+          type="button"
+          :disabled="!canSuspend"
+          @click="suspendOne"
+        >
           暫停
         </MButton>
 
@@ -538,7 +571,7 @@ const goBack = () => router.push('/home/member/list');
 /* detail（只讀顯示來源） */
 const detail = ref<any>(null);
 
-const formatDateTime = (v?: string) => (!v ? '-' : String(v).replace('T', ' '));
+const formatDateTime = (v?: string) => (v ? String(v).replace('T', ' ') : '-');
 
 /* 角色判斷 */
 const isAdmin = computed(
@@ -603,42 +636,41 @@ const schema = yup.object({
     .string()
     .nullable()
     .email('發票 Email 格式不正確')
-    .when('invoiceType', {
-      is: (v: any) => v === 'DUPLICATE',
-      then: (s) => s.required('二聯式發票 Email 建議必填'),
-      otherwise: (s) => s.notRequired(),
-    }),
+    .when('invoiceType', (invoiceType: any, schema: any) =>
+      invoiceType === 'DUPLICATE'
+        ? schema.required('二聯式發票 Email 建議必填')
+        : schema.notRequired(),
+    ),
 
   carrierCode: yup
     .string()
     .nullable()
-    .when('invoiceType', {
-      is: (v: any) => v === 'CARRIER',
-      then: (s) => s.required('選擇載具時，載具條碼必填'),
-      otherwise: (s) => s.notRequired(),
-    }),
+    .when('invoiceType', (invoiceType: any, schema: any) =>
+      invoiceType === 'CARRIER'
+        ? schema.required('選擇載具時，載具條碼必填')
+        : schema.notRequired(),
+    ),
 
   taxId: yup
     .string()
     .nullable()
     .transform((v, o) => (o === '' ? null : v))
-    .when('invoiceType', {
-      is: (v: any) => v === 'TRIPLICATE',
-      then: (s) =>
-        s
-          .required('選擇三聯式時，統一編號必填')
-          .matches(/^\d{8}$/, '統一編號需為 8 碼數字'),
-      otherwise: (s) => s.notRequired(),
-    }),
+    .when('invoiceType', (invoiceType: any, schema: any) =>
+      invoiceType === 'TRIPLICATE'
+        ? schema
+            .required('選擇三聯式時，統一編號必填')
+            .matches(/^\d{8}$/, '統一編號需為 8 碼數字')
+        : schema.notRequired(),
+    ),
 
   companyName: yup
     .string()
     .nullable()
-    .when('invoiceType', {
-      is: (v: any) => v === 'TRIPLICATE',
-      then: (s) => s.required('選擇三聯式時，公司名稱必填'),
-      otherwise: (s) => s.notRequired(),
-    }),
+    .when('invoiceType', (invoiceType: any, schema: any) =>
+      invoiceType === 'TRIPLICATE'
+        ? schema.required('選擇三聯式時，公司名稱必填')
+        : schema.notRequired(),
+    ),
 });
 
 /* useForm */
@@ -729,7 +761,6 @@ watch(
       carrierCode.value = '';
       taxId.value = '';
       companyName.value = '';
-      return;
     }
   },
 );
@@ -781,6 +812,15 @@ const canSuspend = computed(
 
 /* submit (update) */
 const onSubmit = handleSubmit(async (values) => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可編輯會員資料。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   const ok = await openConfirmDialog({
     title: '儲存確認',
     message: '確定要儲存會員資料嗎？',
@@ -789,7 +829,7 @@ const onSubmit = handleSubmit(async (values) => {
 
   const toNull = (v: any) => {
     const s = String(v ?? '').trim();
-    return s ? s : null;
+    return s || null;
   };
 
   const payload: any = {
@@ -842,6 +882,15 @@ const onSubmit = handleSubmit(async (values) => {
 
 /* actions（管理員操作） */
 const activateOne = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   const ok = await openConfirmDialog({
     title: '啟用確認',
     message: '確定要啟用此會員嗎？',
@@ -863,6 +912,15 @@ const activateOne = async () => {
 };
 
 const deactivateOne = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   const ok = await openConfirmDialog({
     title: '停用確認',
     message: '確定要停用此會員嗎？',
@@ -884,6 +942,15 @@ const deactivateOne = async () => {
 };
 
 const suspendOne = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   const ok = await openConfirmDialog({
     title: '暫停確認',
     message: '確定要暫停此會員嗎？',
@@ -905,6 +972,15 @@ const suspendOne = async () => {
 };
 
 const unlockOne = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   const ok = await openConfirmDialog({
     title: '解鎖確認',
     message: '確定要解除此會員的帳號鎖定嗎？解鎖後會員可立即嘗試登入。',
@@ -1014,6 +1090,15 @@ const adjustAmountError = ref<string>('');
 const adjustRemarkError = ref<string>('');
 
 const submitCoinAdjust = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可執行此操作。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   adjustAmountError.value = '';
   adjustRemarkError.value = '';
 
@@ -1087,6 +1172,15 @@ const loginHistoryColumns = [
 ];
 
 const loadLoginHistory = async () => {
+  if (!isAdmin.value) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: '權限不足，僅管理員可查看登入記錄。',
+      iconType: 'warning',
+    });
+    return;
+  }
+
   if (!id.value) return;
   loginHistoryLoading.value = true;
   loginHistoryLoaded.value = false;
@@ -1102,5 +1196,3 @@ const loadLoginHistory = async () => {
   }
 };
 </script>
-
-<style scoped></style>

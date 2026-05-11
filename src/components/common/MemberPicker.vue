@@ -99,7 +99,12 @@ const search = async () => {
   searching.value = true;
   results.value = [];
   try {
-    const res = await queryFrontendUsers({ condition: { keyword: q } });
+    const res = await queryFrontendUsers({
+      condition: { keyword: q },
+      sortBy: 'createdAt',
+      sortOrder: 'DESC',
+      size: 20,
+    });
     const data = (res as any)?.data ?? res;
     results.value = Array.isArray(data) ? data : [];
   } catch {
