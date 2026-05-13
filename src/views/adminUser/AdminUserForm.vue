@@ -1067,15 +1067,10 @@ const doResetPassword = async () => {
 
   await executeApi<{ newPassword?: string }>({
     fn: async () => resetAdminUserPassword(userId.value),
-    onSuccess: async (res: any) => {
-      const data = res?.data ?? res;
-      const extra = data?.newPassword
-        ? `（臨時密碼：${data.newPassword}，請告知用戶）`
-        : '';
-
+    onSuccess: async () => {
       await openInfoDialog({
         title: '重設成功',
-        message: `密碼已重設，新密碼已發送至用戶 Email。${extra}`,
+        message: '密碼已重設，臨時密碼已發送至用戶 Email。',
         iconType: 'success',
       });
     },

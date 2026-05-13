@@ -695,8 +695,8 @@ async function onSubmit(values: any) {
   forbiddenMessage.value = '';
 
   const condition = {
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    startDate: values.startDate || undefined,
+    endDate: values.endDate || undefined,
     ...(values.storeId ? { storeId: values.storeId } : {}),
   };
 

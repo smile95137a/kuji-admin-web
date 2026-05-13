@@ -595,8 +595,8 @@ async function onSubmit(values: any) {
 
   const condition = {
     ...(values.storeId ? { storeId: values.storeId } : {}),
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    startDate: values.startDate || undefined,
+    endDate: values.endDate || undefined,
   };
 
   lastQuery.value = {

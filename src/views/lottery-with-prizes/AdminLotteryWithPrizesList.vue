@@ -9,6 +9,7 @@
         :store-options="storeOptions"
         :status-options="statusOptions"
         :category-options="categoryOptions"
+        :sub-category-options="subCategoryOptions"
         :designation-status-options="designationStatusOptions"
       />
 
@@ -305,6 +306,7 @@ const initValues = ref({
   storeId: '',
   status: '',
   category: '',
+  subCategory: '',
   title: '',
   priceMin: '',
   priceMax: '',
@@ -338,7 +340,12 @@ const categoryOptions = ref<SelectOption[]>([
   { label: '官方一番賞', value: 'OFFICIAL_ICHIBAN' },
   { label: '扭蛋', value: 'GACHA' },
   { label: '卡牌', value: 'TRADING_CARD' },
-  { label: '自製賞', value: 'CUSTOM_GACHA' },
+  { label: '自製一番賞', value: 'CUSTOM_GACHA' },
+]);
+
+const subCategoryOptions = ref<SelectOption[]>([
+  { label: '抽籤型', value: 'LOTTERY_MODE' },
+  { label: '刮刮樂型', value: 'SCRATCH_MODE' },
 ]);
 
 const designationStatusOptions = ref<SelectOption[]>([
@@ -423,7 +430,7 @@ const categoryText = (category?: string) => {
   if (category === 'OFFICIAL_ICHIBAN') return '官方一番賞';
   if (category === 'GACHA') return '扭蛋';
   if (category === 'TRADING_CARD') return '卡牌';
-  if (category === 'CUSTOM_GACHA') return '自製賞';
+  if (category === 'CUSTOM_GACHA') return '自製一番賞';
 
   return category ? String(category) : '-';
 };
@@ -557,6 +564,7 @@ const onSubmit = async (values: any) => {
     storeId: values.storeId ?? '',
     status: values.status ?? '',
     category: values.category ?? '',
+    subCategory: values.subCategory ?? '',
     title: values.title ?? '',
     priceMin: values.priceMin ?? '',
     priceMax: values.priceMax ?? '',

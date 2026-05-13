@@ -123,10 +123,10 @@ export const deactivateAdminUser = async (
   }
 };
 
-/** 重設密碼（回傳 { newPassword: string }） */
+/** 重設密碼（主流程以寄送 Email 為準，newPassword 視後端相容回傳而定） */
 export const resetAdminUserPassword = async (
   id: string
-): Promise<ApiResponse<{ newPassword: string }>> => {
+): Promise<ApiResponse<{ newPassword?: string }>> => {
   try {
     // 後端：POST /admin/users/{id}/reset-password
     const res = await api.post(`${basePath}/${id}/reset-password`);

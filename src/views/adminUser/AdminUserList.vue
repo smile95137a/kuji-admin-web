@@ -661,16 +661,12 @@ const doResetPassword = async (item: any) => {
 
   if (!ok) return;
 
-  await executeApi<{ newPassword: string }>({
+  await executeApi<{ newPassword?: string }>({
     fn: async () => resetAdminUserPassword(userId),
     onSuccess: async (data) => {
       await openInfoDialog({
         title: '重設成功',
-        message: `密碼已重設，新密碼已發送至用戶 Email。${
-          data?.newPassword
-            ? `（臨時密碼：${data.newPassword}，請告知用戶）`
-            : ''
-        }`,
+        message: '密碼已重設，臨時密碼已發送至用戶 Email。',
         iconType: 'success',
       });
     },

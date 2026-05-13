@@ -4,7 +4,7 @@ export const categoryOptions = [
   { label: '官方一番賞', value: 'OFFICIAL_ICHIBAN' },
   { label: '扭蛋', value: 'GACHA' },
   { label: '卡牌', value: 'TRADING_CARD' },
-  { label: '自製賞', value: 'CUSTOM_GACHA' },
+  { label: '自製一番賞', value: 'CUSTOM_GACHA' },
 ];
 
 export const playModeOptions = [

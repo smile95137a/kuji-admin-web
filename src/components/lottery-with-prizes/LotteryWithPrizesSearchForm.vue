@@ -5,7 +5,7 @@
       <div>
         <p class="lottery-with-prizes-search-form__title">查詢條件</p>
         <p class="lottery-with-prizes-search-form__sub">
-          可依店家、狀態、分類、商品名稱、每抽價格與指定狀態查詢商品。
+          可依店家、狀態、分類、子分類、商品名稱、每抽價格與指定狀態查詢商品。
         </p>
       </div>
     </div>
@@ -41,6 +41,18 @@
           label="分類"
           v-model="category"
           :options="categoryOptions"
+          :showAll="true"
+          allLabel="全部"
+          :allValue="''"
+        />
+      </div>
+
+      <!-- 子分類 -->
+      <div class="lottery-with-prizes-search-form__item">
+        <FormSelect
+          label="子分類"
+          v-model="subCategory"
+          :options="subCategoryOptions"
           :showAll="true"
           allLabel="全部"
           :allValue="''"
@@ -117,6 +129,7 @@ defineProps<{
   storeOptions: SelectOption[];
   statusOptions: SelectOption[];
   categoryOptions: SelectOption[];
+  subCategoryOptions: SelectOption[];
   designationStatusOptions: SelectOption[];
 }>();
 
@@ -125,6 +138,7 @@ const { defineField } = useFormContext();
 const [storeId] = defineField('storeId');
 const [status] = defineField('status');
 const [category] = defineField('category');
+const [subCategory] = defineField('subCategory');
 const [title] = defineField('title');
 const [priceMin] = defineField('priceMin');
 const [priceMax] = defineField('priceMax');

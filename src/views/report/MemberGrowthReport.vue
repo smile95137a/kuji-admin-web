@@ -260,7 +260,7 @@ async function onSubmit(values: any) {
   loading.value = true;
 
   await executeApi({
-    fn: () => getMemberGrowthReport({ condition: { startDate: values.startDate ?? '', endDate: values.endDate ?? '' } }),
+    fn: () => getMemberGrowthReport({ condition: { startDate: values.startDate || undefined, endDate: values.endDate || undefined } }),
     onSuccess: (data) => {
       reportData.value = data ?? null;
       resetPagination();
