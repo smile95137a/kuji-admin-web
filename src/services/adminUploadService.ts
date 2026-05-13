@@ -3,18 +3,17 @@ import { api } from './FrontAPI';
 
 const basePath = '/admin/upload';
 
-interface RequestData {
-  [key: string]: any;
-}
+type UploadImageType = 'news' | 'banner' | 'lottery' | 'prize' | 'store';
 
 /**
- * 通用：上傳圖片（news/banner/lottery/prize）
+ * 通用：上傳圖片（news/banner/lottery/prize/store）
+ *
  * @param type 上傳類型
  * @param file 檔案
  * @returns { imageUrl: string }
  */
 export const uploadImage = async (
-  type: 'news' | 'banner' | 'lottery' | 'prize',
+  type: UploadImageType,
   file: File,
 ): Promise<ApiResponse<{ imageUrl: string }>> => {
   try {
@@ -35,7 +34,7 @@ export const uploadImage = async (
 /** 上傳 News 圖片 */
 export const uploadNewsImage = async (
   file: File,
-): Promise<ApiResponse<any>> => {
+): Promise<ApiResponse<{ imageUrl: string }>> => {
   return uploadImage('news', file);
 };
 
@@ -60,15 +59,26 @@ export const uploadPrizeImage = async (
   return uploadImage('prize', file);
 };
 
+/** 上傳 Store 店家圖片 */
+export const uploadStoreImage = async (
+  file: File,
+): Promise<ApiResponse<{ imageUrl: string }>> => {
+  return uploadImage('store', file);
+};
+
 /**
  * 刪除圖片
+ *
  * 後端：@DeleteMapping + @RequestParam("imageUrl")
  */
 export const deleteImage = async (
   imageUrl: string,
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.delete(`${basePath}`, { params: { imageUrl } });
+    const res = await api.delete(`${basePath}`, {
+      params: { imageUrl },
+    });
+
     return res.data;
   } catch (e) {
     console.error('AdminUpload - deleteImage error:', e);

@@ -112,27 +112,6 @@
                         placeholder="可輸入店家詳細介紹"
                       />
                     </div>
-
-                    <div class="w-50 w-md-100 p-6">
-                      <FormInput
-                        label="Logo URL"
-                        v-model="logoUrl"
-                        :error="displayErrors.logoUrl"
-                        required
-                        maxlength="500"
-                        placeholder="https://.../logo.png"
-                      />
-                    </div>
-
-                    <div class="w-50 w-md-100 p-6">
-                      <FormInput
-                        label="封面圖片 URL"
-                        v-model="coverImageUrl"
-                        :error="displayErrors.coverImageUrl"
-                        maxlength="500"
-                        placeholder="https://.../cover.jpg"
-                      />
-                    </div>
                   </div>
                 </div>
               </FormSection>
@@ -189,6 +168,135 @@
             </div>
 
             <div class="admin-user-form__right">
+              <FormSection title="店家 Logo">
+                <div class="admin-user-form__image-card">
+                  <div class="admin-user-form__image-main-block">
+                    <div class="admin-user-form__image-main-wrap">
+                      <button
+                        type="button"
+                        class="admin-user-form__image-upload admin-user-form__image-upload--logo"
+                        :class="{
+                          'admin-user-form__image-upload--empty':
+                            !logoImagePreview,
+                        }"
+                        :disabled="logoUploading || logoCropping"
+                        @click="triggerLogoUpload"
+                      >
+                        <img
+                          v-if="logoImagePreview"
+                          :src="logoImagePreview"
+                          alt="店家 Logo 預覽"
+                          class="admin-user-form__image"
+                        />
+
+                        <div v-else class="admin-user-form__empty-image">
+                          <font-awesome-icon :icon="['fas', 'image']" />
+                          <span>點擊上傳店家 Logo</span>
+                          <small>建議比例 1:1</small>
+                        </div>
+                      </button>
+
+                      <button
+                        v-if="logoUrl"
+                        type="button"
+                        class="admin-user-form__image-remove"
+                        :disabled="logoUploading || logoCropping"
+                        aria-label="清除 Logo"
+                        @click.stop="clearLogoImage"
+                      >
+                        <font-awesome-icon
+                          :icon="['fas', 'xmark']"
+                          class="admin-user-form__image-remove-icon"
+                        />
+                      </button>
+                    </div>
+
+                    <p v-if="displayErrors.logoUrl" class="error-text m-t-8">
+                      {{ displayErrors.logoUrl }}
+                    </p>
+
+                    <p class="admin-user-form__image-hint">
+                      圖片會自動裁切成 1:1，適合店家頭像與清單 Logo 使用。
+                    </p>
+                  </div>
+
+                  <input
+                    ref="logoFileInput"
+                    class="admin-user-form__hidden-input"
+                    type="file"
+                    accept="image/*"
+                    :disabled="logoUploading || logoCropping"
+                    @change="onLogoFileChange"
+                  />
+                </div>
+              </FormSection>
+
+              <FormSection title="店家封面圖片">
+                <div class="admin-user-form__image-card">
+                  <div class="admin-user-form__image-main-block">
+                    <div class="admin-user-form__image-main-wrap">
+                      <button
+                        type="button"
+                        class="admin-user-form__image-upload"
+                        :class="{
+                          'admin-user-form__image-upload--empty':
+                            !coverImagePreview,
+                        }"
+                        :disabled="coverUploading || coverCropping"
+                        @click="triggerCoverUpload"
+                      >
+                        <img
+                          v-if="coverImagePreview"
+                          :src="coverImagePreview"
+                          alt="店家封面預覽"
+                          class="admin-user-form__image"
+                        />
+
+                        <div v-else class="admin-user-form__empty-image">
+                          <font-awesome-icon :icon="['fas', 'image']" />
+                          <span>點擊上傳店家封面圖片</span>
+                          <small>建議比例 16:9</small>
+                        </div>
+                      </button>
+
+                      <button
+                        v-if="coverImageUrl"
+                        type="button"
+                        class="admin-user-form__image-remove"
+                        :disabled="coverUploading || coverCropping"
+                        aria-label="清除封面圖片"
+                        @click.stop="clearCoverImage"
+                      >
+                        <font-awesome-icon
+                          :icon="['fas', 'xmark']"
+                          class="admin-user-form__image-remove-icon"
+                        />
+                      </button>
+                    </div>
+
+                    <p
+                      v-if="displayErrors.coverImageUrl"
+                      class="error-text m-t-8"
+                    >
+                      {{ displayErrors.coverImageUrl }}
+                    </p>
+
+                    <p class="admin-user-form__image-hint">
+                      圖片會自動裁切成 16:9，適合店家列表與詳情頁封面使用。
+                    </p>
+                  </div>
+
+                  <input
+                    ref="coverFileInput"
+                    class="admin-user-form__hidden-input"
+                    type="file"
+                    accept="image/*"
+                    :disabled="coverUploading || coverCropping"
+                    @change="onCoverFileChange"
+                  />
+                </div>
+              </FormSection>
+
               <FormSection title="社群資訊">
                 <div class="admin-user-form__card">
                   <div class="flex flex-wrap">
@@ -410,7 +518,7 @@
             上一步
           </MButton>
 
-          <MButton type="submit">
+          <MButton type="submit" :disabled="isImageProcessing">
             <font-awesome-icon icon="fa-floppy-disk" class="m-r-4" />
             {{ submitButtonText }}
           </MButton>
@@ -475,6 +583,7 @@ import DateFormatter from '@/components/common/DateFormatter.vue';
 import { executeApi } from '@/utils/executeApiUtils';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { openImageCropDialog } from '@/utils/dialog/openImageCropDialog';
 
 import {
   createStoreOwner,
@@ -487,6 +596,7 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions } from '@/services/adminStoreService';
+import { uploadStoreImage } from '@/services/adminUploadService';
 
 type AdminUserMode = 'add-owner' | 'add-editor' | 'detail';
 
@@ -501,8 +611,6 @@ const LIST_PATH = '/home/admin-users';
 
 const route = useRoute();
 const router = useRouter();
-
-const isDev = import.meta.env.DEV;
 
 const routeAction = computed(() => String(route.params.action || ''));
 
@@ -757,7 +865,7 @@ const schema = computed(() => {
     logoUrl: yup
       .string()
       .trim()
-      .required('Logo URL 不可為空')
+      .required('請上傳店家 Logo')
       .max(500, 'Logo URL 最多 500 字'),
 
     coverImageUrl: yup.string().nullable().max(500, '封面圖片 URL 最多 500 字'),
@@ -822,6 +930,236 @@ const [businessHours] = defineField('businessHours');
 const [facebookUrl] = defineField('facebookUrl');
 const [instagramUrl] = defineField('instagramUrl');
 const [lineId] = defineField('lineId');
+
+/* ==============================
+ * Image upload
+ * ============================== */
+const logoFileInput = ref<HTMLInputElement | null>(null);
+const coverFileInput = ref<HTMLInputElement | null>(null);
+
+const logoImagePreview = ref('');
+const coverImagePreview = ref('');
+
+const logoUploading = ref(false);
+const logoCropping = ref(false);
+const coverUploading = ref(false);
+const coverCropping = ref(false);
+
+const isImageProcessing = computed(
+  () =>
+    logoUploading.value ||
+    logoCropping.value ||
+    coverUploading.value ||
+    coverCropping.value,
+);
+
+const triggerLogoUpload = () => {
+  if (logoUploading.value || logoCropping.value) return;
+  logoFileInput.value?.click();
+};
+
+const triggerCoverUpload = () => {
+  if (coverUploading.value || coverCropping.value) return;
+  coverFileInput.value?.click();
+};
+
+const onLogoFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  input.value = '';
+
+  if (!file) return;
+
+  await handleSelectedLogoFile(file);
+};
+
+const onCoverFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  input.value = '';
+
+  if (!file) return;
+
+  await handleSelectedCoverFile(file);
+};
+
+const clearLogoImage = () => {
+  logoUrl.value = '';
+  logoImagePreview.value = '';
+};
+
+const clearCoverImage = () => {
+  coverImageUrl.value = '';
+  coverImagePreview.value = '';
+};
+
+const validateImageFile = async (file: File) => {
+  const maxSize = 5 * 1024 * 1024;
+
+  if (file.size > maxSize) {
+    return '圖片大小不可超過 5MB';
+  }
+
+  if (!file.type.startsWith('image/')) {
+    return '請選擇圖片檔案';
+  }
+
+  return '';
+};
+
+const handleSelectedLogoFile = async (file: File) => {
+  const errorMessage = await validateImageFile(file);
+
+  if (errorMessage) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: errorMessage,
+      iconType: 'warning',
+    });
+
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const baseName = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  const croppedFileName = `${baseName}-logo-cropped.jpg`;
+
+  try {
+    logoCropping.value = true;
+
+    const croppedFile = await openImageCropDialog({
+      src: objectUrl,
+      title: '裁切店家 Logo',
+      hint: '請裁切成 1:1 正方形圖片',
+      aspectRatio: 1,
+      outputWidth: 600,
+      mimeType: 'image/jpeg',
+      quality: 0.9,
+      fileName: croppedFileName,
+    });
+
+    if (!croppedFile) return;
+
+    await uploadCroppedLogoImage(croppedFile);
+  } finally {
+    logoCropping.value = false;
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+const handleSelectedCoverFile = async (file: File) => {
+  const errorMessage = await validateImageFile(file);
+
+  if (errorMessage) {
+    await openInfoDialog({
+      title: '提示訊息',
+      message: errorMessage,
+      iconType: 'warning',
+    });
+
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const baseName = file.name.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+  const croppedFileName = `${baseName}-cover-cropped.jpg`;
+
+  try {
+    coverCropping.value = true;
+
+    const croppedFile = await openImageCropDialog({
+      src: objectUrl,
+      title: '裁切店家封面圖片',
+      hint: '請裁切成 16:9 圖片比例',
+      aspectRatio: 16 / 9,
+      outputWidth: 1200,
+      mimeType: 'image/jpeg',
+      quality: 0.9,
+      fileName: croppedFileName,
+    });
+
+    if (!croppedFile) return;
+
+    await uploadCroppedCoverImage(croppedFile);
+  } finally {
+    coverCropping.value = false;
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+const uploadCroppedLogoImage = async (file: File) => {
+  logoUploading.value = true;
+
+  await executeApi<{ imageUrl: string }>({
+    fn: async () => uploadStoreImage(file),
+    onSuccess: async (res: any) => {
+      const url = res?.imageUrl || res?.data?.imageUrl || '';
+
+      if (!url) {
+        await openInfoDialog({
+          title: '提示訊息',
+          message: '上傳成功但未取得 imageUrl，請檢查後端回傳格式',
+          iconType: 'warning',
+        });
+
+        return;
+      }
+
+      logoUrl.value = url;
+      logoImagePreview.value = url;
+
+      await openInfoDialog({
+        title: '提示訊息',
+        message: 'Logo 上傳成功',
+        iconType: 'success',
+      });
+    },
+    onFinally: async () => {
+      logoUploading.value = false;
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+  });
+};
+
+const uploadCroppedCoverImage = async (file: File) => {
+  coverUploading.value = true;
+
+  await executeApi<{ imageUrl: string }>({
+    fn: async () => uploadStoreImage(file),
+    onSuccess: async (res: any) => {
+      const url = res?.imageUrl || res?.data?.imageUrl || '';
+
+      if (!url) {
+        await openInfoDialog({
+          title: '提示訊息',
+          message: '上傳成功但未取得 imageUrl，請檢查後端回傳格式',
+          iconType: 'warning',
+        });
+
+        return;
+      }
+
+      coverImageUrl.value = url;
+      coverImagePreview.value = url;
+
+      await openInfoDialog({
+        title: '提示訊息',
+        message: '封面圖片上傳成功',
+        iconType: 'success',
+      });
+    },
+    onFinally: async () => {
+      coverUploading.value = false;
+    },
+    showSuccessDialog: false,
+    showFailDialog: true,
+    showCatchDialog: true,
+  });
+};
 
 /* ==============================
  * Detail
@@ -900,6 +1238,9 @@ const reloadDetail = async () => {
         },
         false,
       );
+
+      logoImagePreview.value = '';
+      coverImagePreview.value = '';
     },
     showSuccessDialog: false,
     showFailDialog: true,
@@ -956,6 +1297,22 @@ const onSubmit = handleSubmit(
     isSubmitted.value = true;
 
     if (isDetail.value) return;
+
+    if (isImageProcessing.value) {
+      await openInfoDialog({
+        title: '提示訊息',
+        message: logoCropping.value
+          ? 'Logo 裁切中，請先完成裁切再送出'
+          : logoUploading.value
+            ? 'Logo 上傳中，請稍後再送出'
+            : coverCropping.value
+              ? '封面圖片裁切中，請先完成裁切再送出'
+              : '封面圖片上傳中，請稍後再送出',
+        iconType: 'warning',
+      });
+
+      return;
+    }
 
     const ok = await openConfirmDialog({
       title: '儲存確認',
@@ -1129,6 +1486,8 @@ const resetFormValues = async () => {
     },
   });
 
+  logoImagePreview.value = '';
+  coverImagePreview.value = '';
   activeTab.value = 'account';
   isSubmitted.value = false;
 };
@@ -1165,6 +1524,8 @@ const initPage = async () => {
 
   detail.value = null;
   isSubmitted.value = false;
+  logoImagePreview.value = '';
+  coverImagePreview.value = '';
 
   if (mode.value === 'add-editor') {
     activeTab.value = 'account';
@@ -1225,7 +1586,8 @@ watch(
     width: 100%;
   }
 
-  &__card {
+  &__card,
+  &__image-card {
     width: 100%;
     min-width: 0;
     max-width: 100%;
@@ -1233,6 +1595,154 @@ watch(
     border: 1px solid color.mix($form-border, #fff, 72%);
     border-radius: 14px;
     background: $form-bg;
+  }
+
+  &__image-card {
+    overflow: hidden;
+  }
+
+  &__image-main-block {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__image-main-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__image-upload {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px dashed $form-border;
+    border-radius: 14px;
+    background: color.mix($form-border, #fff, 28%);
+    cursor: pointer;
+    padding: 0;
+    line-height: 0;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      transform 0.12s ease;
+
+    &:hover:not(:disabled) {
+      border-color: $brand;
+      background: $brand-light;
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.995);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    &--empty {
+      align-items: center;
+      justify-content: center;
+      line-height: normal;
+    }
+
+    &--logo {
+      max-width: 220px;
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+    }
+  }
+
+  &__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  &__empty-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    color: $form-muted;
+    text-align: center;
+
+    svg {
+      color: $brand;
+      font-size: 26px;
+      opacity: 0.85;
+    }
+
+    span {
+      color: $form-text;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    small {
+      color: $form-muted;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+  }
+
+  &__image-remove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 999px;
+    background: $danger;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba($ink-900, 0.18);
+    transition:
+      background-color 0.12s ease,
+      transform 0.12s ease,
+      opacity 0.12s ease;
+
+    &:hover {
+      background: color.adjust($danger, $lightness: -6%);
+      transform: scale(1.06);
+    }
+
+    &:active {
+      background: color.adjust($danger, $lightness: -12%);
+      transform: scale(0.96);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+
+  &__image-hint {
+    margin: 10px 0 0;
+    color: $form-muted;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  &__hidden-input {
+    display: none;
   }
 
   &__info-box {
@@ -1334,8 +1844,14 @@ watch(
       flex-direction: column;
     }
 
-    &__card {
+    &__card,
+    &__image-card {
       padding: 12px;
+    }
+
+    &__image-remove {
+      top: 8px;
+      right: 8px;
     }
 
     &__store-head {
