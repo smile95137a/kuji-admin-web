@@ -59,7 +59,29 @@ export const updateCooperationInquiryStatus = async (
   }
 };
 
-/** 刪除合作洽談 */
+/** 合作洽談轉成廠商帳號 */
+export const convertCooperationInquiryToVendor = async (
+  id: string,
+  req?: RequestData,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/${id}/convert-vendor`, req ?? {});
+
+    return res.data;
+  } catch (e) {
+    console.error(
+      'AdminCooperationInquiry - convertCooperationInquiryToVendor error:',
+      e,
+    );
+    throw e;
+  }
+};
+
+/**
+ * 注記刪除合作洽談
+ *
+ * 注意：後端是 soft delete，不是真的刪除資料。
+ */
 export const deleteCooperationInquiry = async (
   id: string,
 ): Promise<ApiResponse<any>> => {
@@ -70,7 +92,7 @@ export const deleteCooperationInquiry = async (
       res.data ?? {
         success: true,
         data: null,
-        message: '刪除成功',
+        message: '注記刪除成功',
       }
     );
   } catch (e) {

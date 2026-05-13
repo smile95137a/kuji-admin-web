@@ -62,6 +62,30 @@
               />
             </div>
 
+            <div class="w-50 w-md-100 p-6">
+              <FormInput
+                label="是否已轉成廠商"
+                :modelValue="isConvertedToVendor ? '是' : '否'"
+                disabled
+              />
+            </div>
+
+            <div class="w-50 w-md-100 p-6">
+              <FormInput
+                label="廠商帳號 ID"
+                :modelValue="detail.vendorAdminUserId || '-'"
+                disabled
+              />
+            </div>
+
+            <div v-if="isDeleted" class="w-50 w-md-100 p-6">
+              <FormInput
+                label="刪除時間"
+                :modelValue="detail.deletedAt || '-'"
+                disabled
+              />
+            </div>
+
             <div class="w-100 p-6">
               <FormTextarea
                 label="需求簡述"
@@ -83,6 +107,7 @@
                 v-model="status"
                 :options="statusOptions"
                 :error="errors.status"
+                :disabled="isDeleted"
                 required
               />
             </div>
@@ -93,6 +118,7 @@
                 v-model="remark"
                 :error="errors.remark"
                 :rows="6"
+                :disabled="isDeleted"
                 placeholder="可輸入處理紀錄、聯繫結果或內部備註"
               />
             </div>
@@ -100,11 +126,68 @@
         </div>
       </FormSection>
 
-      <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
-        <MButton type="submit"> 儲存 </MButton>
+      <FormSection title="處理歷程">
+        <div class="cooperation-inquiry-form__card">
+          <div
+            v-if="statusLogs.length === 0"
+            class="cooperation-inquiry-form__empty"
+          >
+            尚無處理歷程
+          </div>
 
-        <MButton type="button" class="mbtn--red" @click="deleteCurrent">
-          刪除
+          <div v-else class="cooperation-inquiry-form__history">
+            <div
+              v-for="log in statusLogs"
+              :key="log.id"
+              class="cooperation-inquiry-form__history-item"
+            >
+              <div class="cooperation-inquiry-form__history-main">
+                <div class="cooperation-inquiry-form__history-status">
+                  <span>{{ statusText(log.beforeStatus) }}</span>
+                  <span class="cooperation-inquiry-form__history-arrow">→</span>
+                  <span>{{ statusText(log.afterStatus) }}</span>
+                </div>
+
+                <div class="cooperation-inquiry-form__history-time">
+                  {{ log.createdAt || '-' }}
+                </div>
+              </div>
+
+              <div
+                v-if="log.remark"
+                class="cooperation-inquiry-form__history-remark"
+              >
+                {{ log.remark }}
+              </div>
+
+              <div class="cooperation-inquiry-form__history-operator">
+                操作者：
+                {{
+                  log.operatorDisplayName ||
+                  log.operatorUsername ||
+                  log.operatorId ||
+                  '系統'
+                }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </FormSection>
+
+      <div class="flex justify-center m-y-12 gap-x-12 flex-wrap">
+        <MButton v-if="!isDeleted" type="submit"> 儲存 </MButton>
+
+        <MButton v-if="canConvertVendor" type="button" @click="convertVendor">
+          轉成廠商
+        </MButton>
+
+        <MButton
+          v-if="!isDeleted"
+          type="button"
+          class="mbtn--red"
+          @click="deleteCurrent"
+        >
+          注記刪除
         </MButton>
 
         <MButton type="button" class="mbtn--gray" @click="navigateBack">
@@ -116,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -136,7 +219,40 @@ import {
   getCooperationInquiryById,
   updateCooperationInquiryStatus,
   deleteCooperationInquiry,
+  convertCooperationInquiryToVendor,
 } from '@/services/adminCooperationInquiryService';
+
+type StatusLog = {
+  id?: string;
+  inquiryId?: string;
+  beforeStatus?: string;
+  afterStatus?: string;
+  remark?: string;
+  operatorId?: string;
+  operatorUsername?: string;
+  operatorDisplayName?: string;
+  createdAt?: string;
+};
+
+type CooperationInquiryDetail = {
+  id?: string;
+  company?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  type?: string;
+  message?: string;
+  status?: string;
+  remark?: string;
+  convertedToVendor?: boolean | number | string;
+  vendorAdminUserId?: string;
+  deleted?: boolean | number | string;
+  deletedAt?: string;
+  deletedBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  statusLogs?: StatusLog[];
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -144,7 +260,29 @@ const store = useCooperationInquiryStore();
 
 const id = String(route.params.id || '');
 
-const detail = ref<any>({});
+const detail = ref<CooperationInquiryDetail>({});
+
+const toBoolean = (value: unknown): boolean => {
+  return value === true || value === 1 || value === '1';
+};
+
+const isDeleted = computed(() => toBoolean(detail.value.deleted));
+
+const isConvertedToVendor = computed(() =>
+  toBoolean(detail.value.convertedToVendor),
+);
+
+const canConvertVendor = computed(() => {
+  return (
+    !isDeleted.value &&
+    !isConvertedToVendor.value &&
+    !detail.value.vendorAdminUserId
+  );
+});
+
+const statusLogs = computed<StatusLog[]>(() => {
+  return detail.value.statusLogs ?? [];
+});
 
 const statusOptions: SelectOption[] = [
   { label: '待處理', value: 'PENDING' },
@@ -178,6 +316,15 @@ const typeText = (v?: string) => {
   return v || '-';
 };
 
+const statusText = (v?: string) => {
+  if (v === 'PENDING') return '待處理';
+  if (v === 'PROCESSING') return '處理中';
+  if (v === 'DONE') return '已完成';
+  if (v === 'CLOSED') return '已關閉';
+
+  return v || '-';
+};
+
 const loadDetail = async () => {
   await executeApi({
     fn: async () => getCooperationInquiryById(id),
@@ -199,6 +346,8 @@ const loadDetail = async () => {
 };
 
 const onSubmit = handleSubmit(async (values) => {
+  if (isDeleted.value) return;
+
   const ok = await openConfirmDialog({
     title: '儲存確認',
     message: '確定要儲存處理狀態嗎？',
@@ -221,10 +370,34 @@ const onSubmit = handleSubmit(async (values) => {
   });
 });
 
+const convertVendor = async () => {
+  const ok = await openConfirmDialog({
+    title: '轉成廠商確認',
+    message:
+      '確定要將此合作洽談轉成廠商帳號嗎？系統會建立後台廠商帳號並綁定店家負責人角色。',
+  });
+
+  if (!ok) return;
+
+  await executeApi({
+    fn: async () =>
+      convertCooperationInquiryToVendor(id, {
+        remark: remark.value,
+      }),
+    showSuccessDialog: true,
+    successMessage: '轉成廠商成功',
+    onSuccess: async () => {
+      store.setShouldRefresh(true);
+      await loadDetail();
+    },
+  });
+};
+
 const deleteCurrent = async () => {
   const ok = await openConfirmDialog({
-    title: '刪除確認',
-    message: '確定要刪除此合作洽談資料嗎？',
+    title: '注記刪除確認',
+    message:
+      '確定要注記刪除此合作洽談資料嗎？資料不會真的刪除，但列表將不再顯示。',
   });
 
   if (!ok) return;
@@ -232,7 +405,7 @@ const deleteCurrent = async () => {
   await executeApi({
     fn: async () => deleteCooperationInquiry(id),
     showSuccessDialog: true,
-    successMessage: '刪除成功',
+    successMessage: '注記刪除成功',
     onSuccess: async () => {
       store.setShouldRefresh(true);
       router.push({ name: 'CooperationInquiryList' });
@@ -278,6 +451,65 @@ onMounted(async () => {
     border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
     border-radius: 14px;
     background: tokens.$form-bg;
+  }
+
+  &__empty {
+    padding: 16px;
+    color: tokens.$form-muted;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  &__history {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__history-item {
+    padding: 12px 14px;
+    border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  &__history-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__history-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: tokens.$form-text;
+  }
+
+  &__history-arrow {
+    color: tokens.$form-muted;
+  }
+
+  &__history-time {
+    color: tokens.$form-muted;
+    font-size: 13px;
+  }
+
+  &__history-remark {
+    margin-top: 8px;
+    color: tokens.$form-text;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  &__history-operator {
+    margin-top: 8px;
+    color: tokens.$form-muted;
+    font-size: 13px;
   }
 }
 </style>
