@@ -3,11 +3,13 @@ import { api } from './FrontAPI';
 
 const basePath = '/admin/system-config';
 
+export type SystemConfigType = 'STRING' | 'INTEGER' | 'BOOLEAN' | 'JSON';
+
 export interface SystemConfigRes {
   id: string;
   configKey: string;
   configValue: string;
-  configType: 'STRING' | 'INTEGER' | 'BOOLEAN';
+  configType: SystemConfigType;
   configGroup: string;
   description?: string;
   version: number;
@@ -18,7 +20,7 @@ export interface SystemConfigRes {
 export interface SystemConfigCreateReq {
   configKey: string;
   configValue: string;
-  configType: 'STRING' | 'INTEGER' | 'BOOLEAN';
+  configType: SystemConfigType;
   configGroup: string;
   description?: string;
 }
