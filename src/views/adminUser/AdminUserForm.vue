@@ -1,4 +1,4 @@
-<!-- src/views/adminUser/AdminUserForm.vue -->
+﻿<!-- src/views/adminUser/AdminUserForm.vue -->
 <template>
   <MCard>
     <div class="admin-user-form__header">
@@ -30,7 +30,8 @@
                       label="Email（登入帳號）"
                       v-model="email"
                       :error="displayErrors.email"
-                      required
+                      :required="!isEdit"
+                      :disabled="isEdit"
                       maxlength="100"
                       placeholder="store@example.com"
                     />
@@ -74,7 +75,7 @@
         </Tab>
 
         <!-- 新增負責人：店家資訊 -->
-        <Tab v-if="mode === 'add-owner' && !isDetail" name="store">
+        <Tab v-if="isOwnerFormMode && !isDetail" name="store">
           <div class="admin-user-form__layout">
             <div class="admin-user-form__left">
               <FormSection title="店家基本資料">
@@ -152,14 +153,10 @@
                       />
                     </div>
 
-                    <div class="w-50 w-md-100 p-6">
-                      <FormInput
-                        label="營業時間"
-                        v-model="businessHours"
-                        :error="displayErrors.businessHours"
-                        required
-                        maxlength="100"
-                        placeholder="每日 10:00~22:00"
+                    <div class="w-100 p-6">
+                      <BusinessHoursStructuredEditor
+                        v-model="businessHoursStructured"
+                        :error="displayErrors.businessHoursStructured"
                       />
                     </div>
                   </div>
@@ -341,7 +338,7 @@
         </Tab>
 
         <!-- 新增編輯：關聯店家 -->
-        <Tab v-if="mode === 'add-editor' && !isDetail" name="stores">
+        <Tab v-if="isEditorFormMode && !isDetail" name="stores">
           <FormSection title="關聯店家">
             <div class="admin-user-form__card">
               <div class="admin-user-form__store-panel">
@@ -440,6 +437,104 @@
             </div>
 
             <div class="admin-user-form__right">
+              <FormSection v-if="detailStore" title="店家資訊">
+                <div class="admin-user-form__card">
+                  <div class="admin-user-form__detail-list">
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">店家名稱</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailStore?.storeName || '-' }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">商品數</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailProductCountText }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">店家狀態</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailStoreStatusText }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">店家電話</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailStore?.phone || '-' }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">店家 Email</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailStore?.email || '-' }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">店家地址</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailStore?.address || '-' }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">短描述</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailStore?.shortDescription || '-' }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">社群連結</span>
+                      <span class="admin-user-form__detail-value">
+                        {{
+                          [
+                            detailStore?.facebookUrl,
+                            detailStore?.instagramUrl,
+                            detailStore?.lineId,
+                          ]
+                            .filter(Boolean)
+                            .join(' / ') || '-'
+                        }}
+                      </span>
+                    </div>
+
+                    <div class="admin-user-form__detail-item">
+                      <span class="admin-user-form__detail-label">營業時間</span>
+                      <span class="admin-user-form__detail-value">
+                        {{ detailBusinessHoursLines.join('\n') }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+
+              <FormSection v-if="detailStore" title="小編名單">
+                <div class="admin-user-form__card">
+                  <div v-if="detailEditors.length" class="admin-user-form__detail-list">
+                    <div
+                      v-for="editor in detailEditors"
+                      :key="editor.id"
+                      class="admin-user-form__detail-item"
+                    >
+                      <span class="admin-user-form__detail-label">
+                        {{ editor.displayName || editor.email || editor.id }}
+                      </span>
+                      <span class="admin-user-form__detail-value">
+                        {{ [editor.email, editor.phone].filter(Boolean).join(' / ') || '-' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p v-else class="admin-user-form__empty">目前沒有綁定小編。</p>
+                </div>
+              </FormSection>
+
               <FormSection title="系統資訊">
                 <div class="admin-user-form__card">
                   <div class="admin-user-form__detail-list">
@@ -502,7 +597,7 @@
       <div class="flex justify-end m-y-8 gap-x-12 flex-wrap">
         <template v-if="!isDetail">
           <MButton
-            v-if="mode === 'add-owner' && activeTab === 'account'"
+            v-if="isOwnerFormMode && activeTab === 'account'"
             type="button"
             @click="goNextTab"
           >
@@ -510,7 +605,7 @@
           </MButton>
 
           <MButton
-            v-if="mode === 'add-owner' && activeTab === 'store'"
+            v-if="isOwnerFormMode && activeTab === 'store'"
             type="button"
             class="mbtn--gray"
             @click="activeTab = 'account'"
@@ -529,6 +624,10 @@
         </template>
 
         <template v-else>
+          <MButton type="button" @click="goToEdit">
+            編輯
+          </MButton>
+
           <MButton
             type="button"
             :disabled="isActive(detail)"
@@ -579,6 +678,7 @@ import FormTextarea from '@/components/common/FormTextarea.vue';
 import FormSection from '@/components/common/FormSection.vue';
 import FormCheckTagGroup from '@/components/common/FormCheckTagGroup.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
+import BusinessHoursStructuredEditor from '@/components/store/BusinessHoursStructuredEditor.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
@@ -589,22 +689,44 @@ import {
   createStoreOwner,
   createStoreEditor,
   getAdminUserById,
+  getAdminUsersByStore,
+  updateAdminUser,
   activateAdminUser,
   deactivateAdminUser,
   resetAdminUserPassword,
   deleteAdminUser,
 } from '@/services/adminUserService';
 
-import { getStoreOptions } from '@/services/adminStoreService';
+import { getStoreOptions, getStoreById, updateStore } from '@/services/adminStoreService';
 import { uploadStoreImage } from '@/services/adminUploadService';
 
-type AdminUserMode = 'add-owner' | 'add-editor' | 'detail';
+type AdminUserMode =
+  | 'add-owner'
+  | 'add-editor'
+  | 'edit-owner'
+  | 'edit-editor'
+  | 'detail';
 
 interface SelectOption {
   label: string;
   value: any;
   disabled?: boolean;
   description?: string;
+}
+
+type WeekDay = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+
+interface BusinessHourSchedule {
+  day: WeekDay;
+  open?: string;
+  close?: string;
+  closed: boolean;
+}
+
+interface BusinessHoursStructured {
+  schedules: BusinessHourSchedule[];
+  exceptions?: Array<Record<string, any>>;
+  tz?: string;
 }
 
 const LIST_PATH = '/home/admin-users';
@@ -617,21 +739,36 @@ const routeAction = computed(() => String(route.params.action || ''));
 const mode = computed<AdminUserMode>(() => {
   if (routeAction.value === 'add-owner') return 'add-owner';
   if (routeAction.value === 'add-editor') return 'add-editor';
+  if (routeAction.value === 'edit-owner') return 'edit-owner';
+  if (routeAction.value === 'edit-editor') return 'edit-editor';
   if (routeAction.value === 'detail') return 'detail';
 
   return 'detail';
 });
 
 const isValidAction = computed(() =>
-  ['add-owner', 'add-editor', 'detail'].includes(routeAction.value),
+  ['add-owner', 'add-editor', 'edit-owner', 'edit-editor', 'detail'].includes(
+    routeAction.value,
+  ),
 );
 
 const isDetail = computed(() => mode.value === 'detail');
+const isEdit = computed(() =>
+  ['edit-owner', 'edit-editor'].includes(mode.value),
+);
+const isOwnerFormMode = computed(() =>
+  ['add-owner', 'edit-owner'].includes(mode.value),
+);
+const isEditorFormMode = computed(() =>
+  ['add-editor', 'edit-editor'].includes(mode.value),
+);
 const userId = computed(() => String(route.params.id || ''));
 
 const pageTitle = computed(() => {
   if (mode.value === 'add-owner') return '新增店家負責人帳號';
   if (mode.value === 'add-editor') return '新增店家編輯帳號';
+  if (mode.value === 'edit-owner') return '編輯店家負責人帳號';
+  if (mode.value === 'edit-editor') return '編輯店家編輯帳號';
 
   return '帳號詳情';
 });
@@ -639,6 +776,8 @@ const pageTitle = computed(() => {
 const submitButtonText = computed(() => {
   if (mode.value === 'add-owner') return '建立負責人';
   if (mode.value === 'add-editor') return '建立編輯';
+  if (mode.value === 'edit-owner') return '更新負責人';
+  if (mode.value === 'edit-editor') return '更新編輯';
 
   return '送出';
 });
@@ -653,7 +792,7 @@ const tabList = computed(() => {
     return [{ code: 'detail', label: '帳號詳情' }];
   }
 
-  if (mode.value === 'add-owner') {
+  if (isOwnerFormMode.value) {
     return [
       { code: 'account', label: '帳號資訊' },
       { code: 'store', label: '店家資訊' },
@@ -686,7 +825,7 @@ const fieldTabMap: Record<string, string> = {
   storeEmail: 'store',
   storePhone: 'store',
   storeAddress: 'store',
-  businessHours: 'store',
+  businessHoursStructured: 'store',
   facebookUrl: 'store',
   instagramUrl: 'store',
   lineId: 'store',
@@ -700,12 +839,12 @@ const jumpToErrorTab = (errorMap: Record<string, any>) => {
 };
 
 const goNextTab = () => {
-  if (mode.value === 'add-owner') {
+  if (isOwnerFormMode.value) {
     activeTab.value = 'store';
     return;
   }
 
-  if (mode.value === 'add-editor') {
+  if (isEditorFormMode.value) {
     activeTab.value = 'stores';
   }
 };
@@ -755,6 +894,80 @@ const displayErrors = computed<Record<string, string | undefined>>(() => {
   return errors.value;
 });
 
+const weekDays: WeekDay[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+const createDefaultBusinessHoursStructured = (): BusinessHoursStructured => ({
+  schedules: weekDays.map((day) => ({
+    day,
+    open: '',
+    close: '',
+    closed: false,
+  })),
+  exceptions: [],
+  tz: 'Asia/Taipei',
+});
+
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const normalizeBusinessHoursStructured = (
+  value: any,
+): BusinessHoursStructured => {
+  const fallback = createDefaultBusinessHoursStructured();
+  const source = value && typeof value === 'object' ? value : fallback;
+  const scheduleMap = new Map<WeekDay, Partial<BusinessHourSchedule>>(
+    (Array.isArray(source.schedules) ? source.schedules : []).map((item: any) => [
+      item?.day as WeekDay,
+      item as Partial<BusinessHourSchedule>,
+    ]),
+  );
+
+  return {
+    schedules: weekDays.map((day) => {
+      const existing = scheduleMap.get(day);
+      return {
+        day,
+        open: existing?.open ?? '',
+        close: existing?.close ?? '',
+        closed: existing?.closed ?? false,
+      };
+    }),
+    exceptions: Array.isArray(source.exceptions) ? source.exceptions : [],
+    tz: String(source.tz || 'Asia/Taipei').trim() || 'Asia/Taipei',
+  };
+};
+
+const serializeBusinessHoursStructured = (
+  value: any,
+): BusinessHoursStructured => {
+  const normalized = normalizeBusinessHoursStructured(value);
+
+  return {
+    ...normalized,
+    schedules: normalized.schedules.map((schedule) => ({
+      ...schedule,
+      open: schedule.closed ? null : normalizeText(schedule.open) || null,
+      close: schedule.closed ? null : normalizeText(schedule.close) || null,
+    })),
+    exceptions: (normalized.exceptions || []).map((item: any) => ({
+      ...item,
+      open: normalizeText(item?.open) || null,
+      close: normalizeText(item?.close) || null,
+    })),
+  };
+};
+
+const hasValidBusinessHoursStructured = (value: any) => {
+  const normalized = normalizeBusinessHoursStructured(value);
+
+  return normalized.schedules.every((schedule) => {
+    if (schedule.closed) return true;
+    return (
+      timePattern.test(String(schedule.open ?? '')) &&
+      timePattern.test(String(schedule.close ?? ''))
+    );
+  });
+};
+
 const initialValues = {
   email: '',
   displayName: '',
@@ -771,7 +984,7 @@ const initialValues = {
   storeEmail: '',
   storePhone: '',
   storeAddress: '',
-  businessHours: '',
+  businessHoursStructured: createDefaultBusinessHoursStructured(),
   facebookUrl: '',
   instagramUrl: '',
   lineId: '',
@@ -795,7 +1008,7 @@ const schema = computed(() => {
       storeEmail: yup.string().nullable(),
       storePhone: yup.string().nullable(),
       storeAddress: yup.string().nullable(),
-      businessHours: yup.string().nullable(),
+      businessHoursStructured: yup.mixed().nullable(),
       facebookUrl: yup.string().nullable(),
       instagramUrl: yup.string().nullable(),
       lineId: yup.string().nullable(),
@@ -803,12 +1016,14 @@ const schema = computed(() => {
   }
 
   const common = {
-    email: yup
-      .string()
-      .trim()
-      .required('Email 不可為空')
-      .email('Email 格式不正確')
-      .max(100, 'Email 最多 100 字'),
+    email: isEdit.value
+      ? yup.string().nullable()
+      : yup
+          .string()
+          .trim()
+          .required('Email 不可為空')
+          .email('Email 格式不正確')
+          .max(100, 'Email 最多 100 字'),
 
     displayName: yup
       .string()
@@ -821,7 +1036,7 @@ const schema = computed(() => {
     remark: yup.string().nullable().max(200, '備註最多 200 字'),
   };
 
-  if (mode.value === 'add-editor') {
+  if (isEditorFormMode.value) {
     return yup.object({
       ...common,
 
@@ -835,7 +1050,7 @@ const schema = computed(() => {
       storeEmail: yup.string().nullable(),
       storePhone: yup.string().nullable(),
       storeAddress: yup.string().nullable(),
-      businessHours: yup.string().nullable(),
+      businessHoursStructured: yup.mixed().nullable(),
       facebookUrl: yup.string().nullable(),
       instagramUrl: yup.string().nullable(),
       lineId: yup.string().nullable(),
@@ -889,11 +1104,14 @@ const schema = computed(() => {
       .required('店家地址不可為空')
       .max(200, '店家地址最多 200 字'),
 
-    businessHours: yup
-      .string()
-      .trim()
+    businessHoursStructured: yup
+      .mixed<BusinessHoursStructured>()
       .required('營業時間不可為空')
-      .max(100, '營業時間最多 100 字'),
+      .test(
+        'business-hours-structured',
+        '請填完整的開始與結束時間',
+        hasValidBusinessHoursStructured,
+      ),
 
     facebookUrl: yup.string().nullable().max(500, 'Facebook 連結最多 500 字'),
 
@@ -926,7 +1144,7 @@ const [coverImageUrl] = defineField('coverImageUrl');
 const [storeEmail] = defineField('storeEmail');
 const [storePhone] = defineField('storePhone');
 const [storeAddress] = defineField('storeAddress');
-const [businessHours] = defineField('businessHours');
+const [businessHoursStructured] = defineField('businessHoursStructured');
 const [facebookUrl] = defineField('facebookUrl');
 const [instagramUrl] = defineField('instagramUrl');
 const [lineId] = defineField('lineId');
@@ -1165,6 +1383,9 @@ const uploadCroppedCoverImage = async (file: File) => {
  * Detail
  * ============================== */
 const detail = ref<any>(null);
+const editableStoreId = ref('');
+const detailStore = ref<any>(null);
+const detailEditors = ref<any[]>([]);
 
 const roleText = (user: any) => {
   const roles = user?.roles;
@@ -1205,15 +1426,65 @@ const statusText = (user: any) => {
 
 const isActive = (user: any) => user?.status === 'ACTIVE';
 
+const detailStoreStatusText = computed(() => {
+  const status = detailStore.value?.status;
+  if (status === 'ACTIVE') return '啟用';
+  if (status === 'INACTIVE') return '停用';
+  return status ? String(status) : '-';
+});
+
+const detailProductCountText = computed(() => {
+  const count = Number(detailStore.value?.productCount ?? 0);
+  return Number.isFinite(count) ? String(count) : '0';
+});
+
+const detailBusinessHoursLines = computed(() => {
+  const source = detailStore.value?.businessHoursStructured;
+  const schedules = Array.isArray(source?.schedules) ? source.schedules : [];
+  const labels: Record<string, string> = {
+    MON: '週一',
+    TUE: '週二',
+    WED: '週三',
+    THU: '週四',
+    FRI: '週五',
+    SAT: '週六',
+    SUN: '週日',
+  };
+
+  if (!schedules.length) {
+    const text = String(detailStore.value?.businessHours ?? '').trim();
+    return text ? [text] : ['-'];
+  }
+
+  return ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => {
+    const item = schedules.find((schedule: any) => schedule?.day === day);
+    if (!item || item.closed) return `${labels[day]}：公休`;
+    return `${labels[day]}：${item.open || '-'} - ${item.close || '-'}`;
+  });
+});
+
 const reloadDetail = async () => {
-  if (!isDetail.value || !userId.value) return;
+  if ((!isDetail.value && !isEdit.value) || !userId.value) return;
 
   await executeApi({
     fn: async () => getAdminUserById(userId.value),
-    onSuccess: (res: any) => {
+    onSuccess: async (res: any) => {
       const data = res?.data ?? res;
 
       detail.value = data;
+      editableStoreId.value = '';
+      detailStore.value = null;
+      detailEditors.value = [];
+
+      const currentStoreIds = Array.isArray(data?.stores)
+        ? data.stores
+            .map((store: any) => String(store?.id || '').trim())
+            .filter(Boolean)
+        : [];
+
+      const isOwnerRole = Array.isArray(data?.roles)
+        ? data.roles.some((role: any) => role?.code === 'ROLE_STORE_OWNER')
+        : false;
 
       setValues(
         {
@@ -1221,7 +1492,7 @@ const reloadDetail = async () => {
           displayName: data?.displayName ?? '',
           phone: data?.phone ?? '',
           remark: data?.remark ?? '',
-          storeIds: [],
+          storeIds: currentStoreIds,
 
           storeName: '',
           shortDescription: '',
@@ -1231,7 +1502,7 @@ const reloadDetail = async () => {
           storeEmail: '',
           storePhone: '',
           storeAddress: '',
-          businessHours: '',
+          businessHoursStructured: createDefaultBusinessHoursStructured(),
           facebookUrl: '',
           instagramUrl: '',
           lineId: '',
@@ -1241,6 +1512,54 @@ const reloadDetail = async () => {
 
       logoImagePreview.value = '';
       coverImagePreview.value = '';
+
+      if (currentStoreIds.length > 0) {
+        const storeRes = await getStoreById(currentStoreIds[0]);
+        const storeData = storeRes?.data ?? storeRes;
+        detailStore.value = storeData;
+        editableStoreId.value = String(storeData?.id ?? currentStoreIds[0]);
+        logoImagePreview.value = storeData?.logoUrl ?? '';
+        coverImagePreview.value = storeData?.coverImageUrl ?? '';
+
+        const editorsRes = await getAdminUsersByStore(currentStoreIds[0]);
+        const editorItems = Array.isArray(editorsRes?.data)
+          ? editorsRes.data
+          : Array.isArray(editorsRes)
+            ? editorsRes
+            : [];
+        detailEditors.value = editorItems.filter((item: any) =>
+          Array.isArray(item?.roles)
+            ? item.roles.some((role: any) => role?.code === 'ROLE_STORE_EDITOR')
+            : false,
+        );
+
+        if (isOwnerRole) {
+        setValues(
+          {
+            email: data?.email ?? '',
+            displayName: data?.displayName ?? '',
+            phone: data?.phone ?? '',
+            remark: data?.remark ?? '',
+            storeIds: currentStoreIds,
+            storeName: storeData?.storeName ?? '',
+            shortDescription: storeData?.shortDescription ?? '',
+            longDescription: storeData?.longDescription ?? '',
+            logoUrl: storeData?.logoUrl ?? '',
+            coverImageUrl: storeData?.coverImageUrl ?? '',
+            storeEmail: storeData?.email ?? '',
+            storePhone: storeData?.phone ?? '',
+            storeAddress: storeData?.address ?? '',
+            businessHoursStructured: normalizeBusinessHoursStructured(
+              storeData?.businessHoursStructured,
+            ),
+            facebookUrl: storeData?.facebookUrl ?? '',
+            instagramUrl: storeData?.instagramUrl ?? '',
+            lineId: storeData?.lineId ?? '',
+          },
+          false,
+        );
+        }
+      }
     },
     showSuccessDialog: false,
     showFailDialog: true,
@@ -1259,23 +1578,43 @@ const emptyToNull = (value: any) => {
 
 const normalizeText = (value: any) => String(value ?? '').trim();
 
-const buildOwnerPayload = (values: any) => ({
-  email: normalizeText(values.email),
+const buildAccountPayload = (values: any) => ({
   displayName: normalizeText(values.displayName),
   phone: emptyToNull(values.phone),
   remark: emptyToNull(values.remark),
+});
 
+const buildStorePayload = (values: any) => ({
   storeName: normalizeText(values.storeName),
   shortDescription: normalizeText(values.shortDescription),
   longDescription: emptyToNull(values.longDescription),
   logoUrl: normalizeText(values.logoUrl),
   coverImageUrl: emptyToNull(values.coverImageUrl),
+  email: normalizeText(values.storeEmail),
+  phone: normalizeText(values.storePhone),
+  address: normalizeText(values.storeAddress),
+  businessHoursStructured: serializeBusinessHoursStructured(
+    values.businessHoursStructured,
+  ),
+  facebookUrl: emptyToNull(values.facebookUrl),
+  instagramUrl: emptyToNull(values.instagramUrl),
+  lineId: emptyToNull(values.lineId),
+});
 
+const buildOwnerPayload = (values: any) => ({
+  email: normalizeText(values.email),
+  ...buildAccountPayload(values),
+  storeName: normalizeText(values.storeName),
+  shortDescription: normalizeText(values.shortDescription),
+  longDescription: emptyToNull(values.longDescription),
+  logoUrl: normalizeText(values.logoUrl),
+  coverImageUrl: emptyToNull(values.coverImageUrl),
   storeEmail: normalizeText(values.storeEmail),
   storePhone: normalizeText(values.storePhone),
   storeAddress: normalizeText(values.storeAddress),
-  businessHours: normalizeText(values.businessHours),
-
+  businessHoursStructured: serializeBusinessHoursStructured(
+    values.businessHoursStructured,
+  ),
   facebookUrl: emptyToNull(values.facebookUrl),
   instagramUrl: emptyToNull(values.instagramUrl),
   lineId: emptyToNull(values.lineId),
@@ -1284,9 +1623,7 @@ const buildOwnerPayload = (values: any) => ({
 const buildEditorPayload = (values: any) => ({
   storeIds: Array.isArray(values.storeIds) ? values.storeIds : [],
   email: normalizeText(values.email),
-  displayName: normalizeText(values.displayName),
-  phone: emptyToNull(values.phone),
-  remark: emptyToNull(values.remark),
+  ...buildAccountPayload(values),
 });
 
 /* ==============================
@@ -1319,7 +1656,11 @@ const onSubmit = handleSubmit(
       message:
         mode.value === 'add-owner'
           ? '確定要建立店家負責人帳號嗎？'
-          : '確定要建立店家編輯帳號嗎？',
+          : mode.value === 'add-editor'
+            ? '確定要建立店家編輯帳號嗎？'
+            : mode.value === 'edit-owner'
+              ? '確定要更新店家負責人資料嗎？'
+              : '確定要更新店家編輯資料嗎？',
     });
 
     if (!ok) return;
@@ -1330,7 +1671,27 @@ const onSubmit = handleSubmit(
           return createStoreOwner(buildOwnerPayload(values));
         }
 
-        return createStoreEditor(buildEditorPayload(values));
+        if (mode.value === 'add-editor') {
+          return createStoreEditor(buildEditorPayload(values));
+        }
+
+        if (!userId.value) {
+          throw new Error('缺少使用者 ID');
+        }
+
+        if (mode.value === 'edit-owner') {
+          if (!editableStoreId.value) {
+            throw new Error('缺少店家 ID');
+          }
+
+          await updateAdminUser(userId.value, buildAccountPayload(values));
+          return updateStore(editableStoreId.value, buildStorePayload(values));
+        }
+
+        return updateAdminUser(userId.value, {
+          ...buildAccountPayload(values),
+          storeIds: Array.isArray(values.storeIds) ? values.storeIds : [],
+        });
       },
       onSuccess: async () => {
         await openInfoDialog({
@@ -1338,9 +1699,18 @@ const onSubmit = handleSubmit(
           message:
             mode.value === 'add-owner'
               ? `建立店家負責人成功，初始密碼已發送至 ${values.email}`
-              : `建立店家編輯成功，初始密碼已發送至 ${values.email}`,
+              : mode.value === 'add-editor'
+                ? `建立店家編輯成功，初始密碼已發送至 ${values.email}`
+                : mode.value === 'edit-owner'
+                  ? '店家負責人資料已更新'
+                  : '店家編輯資料已更新',
           iconType: 'success',
         });
+
+        if (isEdit.value && userId.value) {
+          router.push(`/home/admin-users/form/detail/${userId.value}`);
+          return;
+        }
 
         router.push(LIST_PATH);
       },
@@ -1467,10 +1837,20 @@ const doDelete = async () => {
 /* ==============================
  * Reset / Navigation
  * ============================== */
+const goToEdit = () => {
+  if (!detail.value?.id) return;
+
+  const roles = Array.isArray(detail.value?.roles) ? detail.value.roles : [];
+  const hasOwnerRole = roles.some((role: any) => role?.code === 'ROLE_STORE_OWNER');
+  const action = hasOwnerRole ? 'edit-owner' : 'edit-editor';
+
+  router.push(`/home/admin-users/form/${action}/${detail.value.id}`);
+};
+
 const resetFormValues = async () => {
-  if (isDetail.value) {
+  if (isDetail.value || isEdit.value) {
     await reloadDetail();
-    activeTab.value = 'detail';
+    activeTab.value = isDetail.value ? 'detail' : 'account';
     return;
   }
 
@@ -1488,6 +1868,11 @@ const resetFormValues = async () => {
 };
 
 const goBack = () => {
+  if (isEdit.value && userId.value) {
+    router.push(`/home/admin-users/form/detail/${userId.value}`);
+    return;
+  }
+
   router.push(LIST_PATH);
 };
 
@@ -1506,7 +1891,7 @@ const initPage = async () => {
     return;
   }
 
-  if (isDetail.value && !userId.value) {
+  if ((isDetail.value || isEdit.value) && !userId.value) {
     await openInfoDialog({
       title: '提示訊息',
       message: '查無帳號資料',
@@ -1522,14 +1907,20 @@ const initPage = async () => {
   logoImagePreview.value = '';
   coverImagePreview.value = '';
 
-  if (mode.value === 'add-editor') {
+  if (isEditorFormMode.value) {
     activeTab.value = 'account';
     await loadStoreOptions();
+    if (isEdit.value) {
+      await reloadDetail();
+    }
     return;
   }
 
-  if (mode.value === 'add-owner') {
+  if (isOwnerFormMode.value) {
     activeTab.value = 'account';
+    if (isEdit.value) {
+      await reloadDetail();
+    }
     return;
   }
 
@@ -1821,6 +2212,7 @@ watch(
     font-size: 13px;
     line-height: 1.5;
     word-break: break-word;
+    white-space: pre-line;
   }
 
   @media (max-width: 1180px) {

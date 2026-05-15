@@ -436,8 +436,8 @@ const parseDesignatedPrizeNumbers = (value: any) => {
 
 const normalizePrizePayload = (prize: any, index: number) => {
   const isScratchGrandPrize =
-    toBoolean(prize.isGrandPrize) ||
-    String(prize.level || '').toUpperCase() === 'GRAND';
+    toBoolean(prize.isGrandPrize) 
+    // || String(prize.level || '').toUpperCase() === 'GRAND';
 
   return {
     ...(prize.id ? { id: prize.id } : {}),
@@ -447,7 +447,7 @@ const normalizePrizePayload = (prize: any, index: number) => {
 
     description: cleanText(String(prize.description || '').trim()),
     imageUrl: cleanText(prize.imageUrl),
-    level: isScratchGrandPrize ? 'GRAND' : cleanText(prize.level),
+    level: cleanText(prize.level),
 
     prizeNumber: cleanText(prize.prizeNumber),
     prizeType: cleanText(prize.prizeType),
@@ -457,7 +457,7 @@ const normalizePrizePayload = (prize: any, index: number) => {
         : undefined,
 
     isLastPrize: isScratchGrandPrize ? false : toBoolean(prize.isLastPrize),
-    isGrandPrize: isScratchGrandPrize ? true : toBoolean(prize.isGrandPrize),
+    isGrandPrize : isScratchGrandPrize,
     orderNum:
       prize.orderNum === '' || prize.orderNum == null
         ? index + 1
@@ -496,6 +496,11 @@ const buildSubmitPayload = (values: any) => {
   const galleryImages = parseTextList(values.galleryImagesText, '\n');
   const tags = parseTextList(values.tagsText, ',');
   const multiDrawOptions = parseNumberList(values.multiDrawOptionsText);
+  const designatedPrizeNumbers =
+    parseDesignatedPrizeNumbers(values.designatedPrizeNumbers) ??
+    (isScratchStoreMode(values)
+      ? parseDesignatedPrizeNumbers(values.pendingDesignatedPrizeNumber)
+      : undefined);
 
   return {
     lottery: {
@@ -507,9 +512,7 @@ const buildSubmitPayload = (values: any) => {
       playMode: cleanText(values.playMode),
       gameMode: cleanText(values.gameMode),
 
-      designatedPrizeNumbers: parseDesignatedPrizeNumbers(
-        values.designatedPrizeNumbers,
-      ),
+      designatedPrizeNumbers,
 
       status: cleanText(values.status),
 

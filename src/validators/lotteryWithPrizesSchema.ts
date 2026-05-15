@@ -264,7 +264,59 @@ export const lotteryWithPrizesSchema = yup
     }
 
     return true;
-  });
+  })
+  .test(
+    'custom-lottery-single-grand-prize',
+    '自製賞抽籤型必須只有第 1 筆是唯一大獎',
+    function (values) {
+      const isCustomLotteryMode =
+        String(values?.category || '') === 'CUSTOM_GACHA' &&
+        (String(values?.subCategory || '') === 'LOTTERY_MODE' ||
+          String(values?.playMode || '') === 'LOTTERY_MODE');
+
+      if (!isCustomLotteryMode) return true;
+
+      const prizes = Array.isArray(values?.prizes)
+        ? values.prizes.filter((item: any) => String(item?.name || '').trim())
+        : [];
+
+      if (prizes.length === 0) return true;
+
+      const grandPrizeCount = prizes.filter(
+        (item: any) => item?.isGrandPrize === true,
+      ).length;
+      if (grandPrizeCount !== 1) {
+        return this.createError({
+          path: 'prizes',
+          message: '自製賞抽籤型必須且只能有 1 個大獎。',
+        });
+      }
+
+      const firstPrize = prizes[0];
+      if (firstPrize?.isGrandPrize !== true) {
+        return this.createError({
+          path: 'prizes',
+          message: '自製賞抽籤型固定由第 1 筆獎品作為大獎。',
+        });
+      }
+
+      if (String(firstPrize?.level || '').toUpperCase() !== 'GRAND') {
+        return this.createError({
+          path: 'prizes',
+          message: '自製賞抽籤型第 1 筆獎品的 level 必須為 GRAND。',
+        });
+      }
+
+      if (prizes.slice(1).some((item: any) => item?.isGrandPrize === true)) {
+        return this.createError({
+          path: 'prizes',
+          message: '自製賞抽籤型只有第 1 筆獎品可以是大獎。',
+        });
+      }
+
+      return true;
+    },
+  );
 
 export const lotteryWithPrizesInitialValues = {
   storeId: '',

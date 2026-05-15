@@ -17,6 +17,10 @@
         </div>
       </div>
 
+      <p v-if="isCustomLotteryMode" class="tab-lottery-prizes__hint">
+        自製賞抽籤型固定只有 1 個大獎，系統會自動將第 1 筆獎品設為唯一大獎。
+      </p>
+
       <div v-if="!fields.length">
         <NoData message="尚未建立獎品，請點擊「新增獎品」加入獎品" />
       </div>
@@ -135,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useFieldArray, useFormContext } from 'vee-validate';
 
 import MButton from '@/components/common/MButton.vue';
@@ -149,6 +153,7 @@ import { levelOptions, prizeTypeOptions } from '@/constants/lotteryOptions';
 
 const { errors, submitCount, defineField } = useFormContext();
 
+const [category] = defineField('category');
 const [subCategory] = defineField('subCategory');
 const [playMode] = defineField('playMode');
 const [gameMode] = defineField('gameMode');
@@ -162,6 +167,17 @@ const isScratchMode = computed(() => {
     values.includes('SCRATCH_MODE') ||
     values.includes('SCRATCH_STORE') ||
     values.includes('SCRATCH_PLAYER')
+  );
+});
+
+const isCustomLotteryMode = computed(() => {
+  const values = [subCategory.value, playMode.value]
+    .map((item) => String(item || ''))
+    .filter(Boolean);
+
+  return (
+    String(category.value || '') === 'CUSTOM_GACHA' &&
+    values.includes('LOTTERY_MODE')
   );
 });
 
@@ -181,6 +197,52 @@ const normalizeScratchPrize = (row: PrizeFormRow): PrizeFormRow => ({
   isLastPrize: false,
 });
 
+const normalizeCustomLotteryPrize = (
+  row: PrizeFormRow,
+  index: number,
+): PrizeFormRow => ({
+  ...row,
+  name: String(row.name || '').trim(),
+  level: index === 0 ? 'GRAND' : row.level === 'GRAND' ? 'A' : row.level,
+  isGrandPrize: index === 0,
+});
+
+const normalizePrizeForCurrentMode = (
+  row: PrizeFormRow,
+  index: number,
+): PrizeFormRow => {
+  if (isScratchMode.value) {
+    return normalizeScratchPrize(row);
+  }
+
+  if (isCustomLotteryMode.value) {
+    return normalizeCustomLotteryPrize(row, index);
+  }
+
+  return {
+    ...row,
+    name: String(row.name || '').trim(),
+  };
+};
+
+const syncPrizesForCurrentMode = () => {
+  fields.value.forEach((field, index) => {
+    const normalized = normalizePrizeForCurrentMode(field.value, index);
+    if (JSON.stringify(normalized) !== JSON.stringify(field.value)) {
+      update(index, normalized);
+    }
+  });
+};
+
+watch(
+  () => [category.value, subCategory.value, playMode.value, gameMode.value],
+  () => {
+    if (isScratchMode.value || isCustomLotteryMode.value) {
+      syncPrizesForCurrentMode();
+    }
+  },
+);
+
 const openAddDialog = async () => {
   if (isScratchMode.value && fields.value.length >= 1) {
     const { openInfoDialog } = await import('@/utils/dialog/infoDialog');
@@ -197,7 +259,7 @@ const openAddDialog = async () => {
     data: {
       mode: 'add',
       isScratchPrize: isScratchMode.value,
-      ...(isScratchMode.value
+      ...(isScratchMode.value || (isCustomLotteryMode.value && fields.value.length === 0)
         ? { prize: { _key: '', name: '', quantity: 1, level: 'GRAND', prizeType: 'physical', isLastPrize: false, isGrandPrize: true } }
         : {}),
     },
@@ -205,7 +267,8 @@ const openAddDialog = async () => {
 
   if (!result) return;
 
-  push(isScratchMode.value ? normalizeScratchPrize(result) : result);
+  push(normalizePrizeForCurrentMode(result, fields.value.length));
+  syncPrizesForCurrentMode();
 };
 
 const openEditDialog = async (index: number) => {
@@ -226,11 +289,13 @@ const openEditDialog = async (index: number) => {
 
   if (!result) return;
 
-  update(index, isScratchMode.value ? normalizeScratchPrize(result) : result);
+  update(index, normalizePrizeForCurrentMode(result, index));
+  syncPrizesForCurrentMode();
 };
 
 const removePrize = (index: number) => {
   remove(index);
+  syncPrizesForCurrentMode();
 };
 
 const showError = (field: string) => {
@@ -252,4 +317,11 @@ const getPrizeTypeLabel = (value?: string) => {
 };
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.tab-lottery-prizes__hint {
+  margin: 0 0 12px;
+  color: #b45309;
+  font-size: 14px;
+  line-height: 1.6;
+}
+</style>

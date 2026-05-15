@@ -49,6 +49,20 @@ export const getAdminUserById = async (
   }
 };
 
+/** 更新後台帳號 */
+export const updateAdminUser = async (
+  id: string,
+  req: RequestData
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.put(`${basePath}/${id}`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminUser - updateAdminUser error:', e);
+    throw e;
+  }
+};
+
 /** 取得所有帳號列表（條件查詢，後端：POST /admin/users/list） */
 export const queryAdminUsers = async (req: {
   condition?: {
