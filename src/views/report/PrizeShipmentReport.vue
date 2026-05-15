@@ -260,6 +260,7 @@ import { exportToCsv } from '@/utils/csvExport';
 
 import {
   getPrizeShipmentReport,
+  type PrizeShipmentReportRes,
   type QueryReq,
 } from '@/services/adminReportService';
 import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
@@ -347,7 +348,7 @@ const storeId = ref('');
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
-const reportData = ref<Record<string, any> | null>(null);
+const reportData = ref<PrizeShipmentReportRes | null>(null);
 const tableSections = ref<TableSection[]>([]);
 const storeOptions = ref<StoreOption[]>([]);
 const forbiddenMessage = ref('');
@@ -722,8 +723,8 @@ async function onSubmit(values: any) {
   forbiddenMessage.value = '';
 
   const condition = {
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    startDate: values.startDate || undefined,
+    endDate: values.endDate || undefined,
     ...(values.storeId ? { storeId: values.storeId } : {}),
   };
 

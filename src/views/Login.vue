@@ -74,7 +74,7 @@ const onSubmit = handleSubmit(async (values) => {
       authStore.setAuthFromLogin?.(data);
 
       if (forceChangePassword) {
-        router.push('/first-login/change-password');
+        router.push('/change-password');
         return;
       }
 

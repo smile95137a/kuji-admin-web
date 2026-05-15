@@ -4,6 +4,7 @@ import Login from '@/views/Login.vue';
 import Home from '@/views/Home.vue';
 import NotFound from '@/views/NotFound.vue';
 import ChangePassword from '@/views/ChangePassword.vue';
+import ForgotPassword from '@/views/ForgotPassword.vue';
 
 import bannerRoutes from './bannerRoutes';
 import newsRoutes from './newsRoutes';
@@ -40,6 +41,11 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/change-password',
     component: ChangePassword,
+    meta: { layout: 'default' },
+  },
+  {
+    path: '/forgot-password',
+    component: ForgotPassword,
     meta: { layout: 'default' },
   },
 

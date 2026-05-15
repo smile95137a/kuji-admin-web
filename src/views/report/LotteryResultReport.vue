@@ -296,7 +296,10 @@ import FormInput from '@/components/common/FormInput.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
 import { useAuthStore } from '@/stores';
-import { getLotteryResultReport } from '@/services/adminReportService';
+import {
+  getLotteryResultReport,
+  type LotteryResultReportRes,
+} from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
@@ -351,7 +354,7 @@ const initValues = ref({
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
-const reportData = ref<any | null>(null);
+const reportData = ref<LotteryResultReportRes | null>(null);
 const forbiddenMessage = ref('');
 const loading = ref(false);
 
@@ -566,8 +569,8 @@ async function onSubmit(values: any) {
   forbiddenMessage.value = '';
 
   const condition = {
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    startDate: values.startDate || undefined,
+    endDate: values.endDate || undefined,
   };
 
   lastQuery.value = {

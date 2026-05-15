@@ -13,6 +13,9 @@
 - `npm run preview`
 - No test framework is configured in this repository (no test scripts / spec files).
 
+## Completion Gate (required)
+- Any task that modifies code must pass local compile/build before it can be considered complete.
+
 ## Core Architecture (how features are wired)
 - Views are under `src/views/<module>/...`; reusable UI is under `src/components/...`.
 - Routes are split by module and merged in `src/router/index.ts` (example: `src/router/lotteryWithPrizesRoutes.ts`).

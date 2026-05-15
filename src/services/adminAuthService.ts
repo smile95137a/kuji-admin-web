@@ -46,6 +46,19 @@ export const changePassword = async (
   }
 };
 
+/** 忘記密碼（寄送臨時密碼） */
+export const forgotPassword = async (
+  req: RequestData
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/forgot-password`, req);
+    return res.data;
+  } catch (e) {
+    console.error('AdminAuth - forgotPassword error:', e);
+    throw e;
+  }
+};
+
 /** 刷新 Token */
 export const refreshToken = async (
   req: RequestData

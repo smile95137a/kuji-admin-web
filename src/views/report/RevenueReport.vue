@@ -326,7 +326,7 @@ import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 
 import { useAuthStore } from '@/stores';
-import { getRevenueReport } from '@/services/adminReportService';
+import { getRevenueReport, type RevenueReportRes } from '@/services/adminReportService';
 import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -382,7 +382,7 @@ const storeId = ref('');
 const startDate = ref(dateRange.value.startDate);
 const endDate = ref(dateRange.value.endDate);
 
-const reportData = ref<any | null>(null);
+const reportData = ref<RevenueReportRes | null>(null);
 const storeOptions = ref<StoreOption[]>([]);
 const forbiddenMessage = ref('');
 const loading = ref(false);
@@ -662,8 +662,8 @@ async function onSubmit(values: any) {
   forbiddenMessage.value = '';
 
   const condition = {
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    startDate: values.startDate || undefined,
+    endDate: values.endDate || undefined,
     ...(values.storeId ? { storeId: values.storeId } : {}),
   };
 
