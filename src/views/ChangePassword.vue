@@ -1,63 +1,127 @@
 <template>
-  <div class="login">
-    <div class="login__main">
-      <div class="login__container">
-        <aside class="login__aside">
-          <img src="@/assets/image/logo.png" alt="logo" class="login__logo" />
-        </aside>
-        <section class="login__card">
-          <div class="login__card-header">
-            <h2>首次登入 — 請修改密碼</h2>
-            <p class="login__card-subtitle">為確保帳號安全，請輸入初始密碼並設定新密碼後繼續使用。</p>
-          </div>
-          <div class="login__forms">
-            <form @submit.prevent="onSubmit">
-              <div class="form-group">
-                <label for="oldPassword">目前密碼（初始密碼）</label>
-                <input
-                  id="oldPassword"
-                  v-model="oldPassword"
-                  type="password"
-                  placeholder="請輸入 Email 收到的初始密碼"
-                  :class="['form-control', { 'is-invalid': oldPasswordError }]"
-                />
-                <div v-if="oldPasswordError" class="invalid-feedback">{{ oldPasswordError }}</div>
+  <div class="change-password">
+    <div class="change-password__bg-circle change-password__bg-circle--one" />
+    <div class="change-password__bg-circle change-password__bg-circle--two" />
+
+    <main class="change-password__main">
+      <div class="change-password__container">
+        <LoginAside />
+
+        <section class="change-password__card">
+          <header class="change-password__header">
+            <div class="change-password__header-title-box">
+              <div class="change-password__header-icon">
+                <font-awesome-icon :icon="['fas', 'key']" />
               </div>
 
-              <div class="form-group mt-3">
-                <label for="newPassword">新密碼</label>
-                <input
-                  id="newPassword"
-                  v-model="newPassword"
-                  type="password"
-                  placeholder="請輸入新密碼（至少 8 碼）"
-                  :class="['form-control', { 'is-invalid': newPasswordError }]"
-                />
-                <div v-if="newPasswordError" class="invalid-feedback">{{ newPasswordError }}</div>
+              <div>
+                <p class="change-password__header-kicker">First Login</p>
+                <h3 class="change-password__header-title">首次登入修改密碼</h3>
+                <p class="change-password__header-subtitle">
+                  為確保帳號安全，請輸入初始密碼並設定新密碼後繼續使用。
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <div class="change-password__forms">
+            <form class="change-password-form" @submit.prevent="onSubmit">
+              <label class="change-password-field" for="oldPassword">
+                <span class="change-password-field__label">目前密碼</span>
+
+                <span class="change-password-field__input-box">
+                  <font-awesome-icon
+                    class="change-password-field__prefix-icon"
+                    :icon="['fas', 'lock']"
+                  />
+
+                  <input
+                    id="oldPassword"
+                    v-model="oldPassword"
+                    type="password"
+                    class="change-password-field__input change-password-field__input--with-icon"
+                    :class="{ 'is-invalid': oldPasswordError }"
+                    placeholder="請輸入 Email 收到的初始密碼"
+                    autocomplete="current-password"
+                  />
+                </span>
+
+                <p class="change-password-field__error">
+                  {{ oldPasswordError }}
+                </p>
+              </label>
+
+              <label class="change-password-field" for="newPassword">
+                <span class="change-password-field__label">新密碼</span>
+
+                <span class="change-password-field__input-box">
+                  <font-awesome-icon
+                    class="change-password-field__prefix-icon"
+                    :icon="['fas', 'shield-halved']"
+                  />
+
+                  <input
+                    id="newPassword"
+                    v-model="newPassword"
+                    type="password"
+                    class="change-password-field__input change-password-field__input--with-icon"
+                    :class="{ 'is-invalid': newPasswordError }"
+                    placeholder="請輸入新密碼，至少 8 碼"
+                    autocomplete="new-password"
+                  />
+                </span>
+
+                <p class="change-password-field__error">
+                  {{ newPasswordError }}
+                </p>
+              </label>
+
+              <label class="change-password-field" for="confirmPassword">
+                <span class="change-password-field__label">確認新密碼</span>
+
+                <span class="change-password-field__input-box">
+                  <font-awesome-icon
+                    class="change-password-field__prefix-icon"
+                    :icon="['fas', 'check']"
+                  />
+
+                  <input
+                    id="confirmPassword"
+                    v-model="confirmPassword"
+                    type="password"
+                    class="change-password-field__input change-password-field__input--with-icon"
+                    :class="{ 'is-invalid': confirmPasswordError }"
+                    placeholder="請再次輸入新密碼"
+                    autocomplete="new-password"
+                  />
+                </span>
+
+                <p class="change-password-field__error">
+                  {{ confirmPasswordError }}
+                </p>
+              </label>
+
+              <div
+                v-if="submitError"
+                class="change-password-form__message change-password-form__message--danger"
+              >
+                <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
+                <span>{{ submitError }}</span>
               </div>
 
-              <div class="form-group mt-3">
-                <label for="confirmPassword">確認新密碼</label>
-                <input
-                  id="confirmPassword"
-                  v-model="confirmPassword"
-                  type="password"
-                  placeholder="請再次輸入新密碼"
-                  :class="['form-control', { 'is-invalid': confirmPasswordError }]"
-                />
-                <div v-if="confirmPasswordError" class="invalid-feedback">{{ confirmPasswordError }}</div>
-              </div>
-
-              <div v-if="submitError" class="alert alert-danger mt-3">{{ submitError }}</div>
-
-              <button type="submit" class="btn btn-primary w-100 mt-4" :disabled="isSubmitting">
-                {{ isSubmitting ? '處理中…' : '確認修改' }}
+              <button
+                class="change-password-form__submit"
+                type="submit"
+                :disabled="isSubmitting"
+              >
+                <span>{{ isSubmitting ? '處理中…' : '確認修改' }}</span>
+                <font-awesome-icon :icon="['fas', 'arrow-right']" />
               </button>
             </form>
           </div>
         </section>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -66,6 +130,9 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useField, useForm } from 'vee-validate';
 import * as yup from 'yup';
+
+import LoginAside from '@/components/login/LoginAside.vue';
+
 import { firstLoginChangePassword } from '@/services/adminAuthService';
 import { useAuthStore } from '@/stores';
 
@@ -84,16 +151,29 @@ const schema = yup.object({
     .oneOf([yup.ref('newPassword')], '兩次密碼不一致'),
 });
 
-const { handleSubmit, isSubmitting } = useForm({ validationSchema: schema });
+const { handleSubmit, isSubmitting } = useForm({
+  validationSchema: schema,
+  initialValues: {
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  },
+});
 
-const { value: oldPassword, errorMessage: oldPasswordError } = useField<string>('oldPassword');
-const { value: newPassword, errorMessage: newPasswordError } = useField<string>('newPassword');
-const { value: confirmPassword, errorMessage: confirmPasswordError } = useField<string>('confirmPassword');
+const { value: oldPassword, errorMessage: oldPasswordError } =
+  useField<string>('oldPassword');
+
+const { value: newPassword, errorMessage: newPasswordError } =
+  useField<string>('newPassword');
+
+const { value: confirmPassword, errorMessage: confirmPasswordError } =
+  useField<string>('confirmPassword');
 
 const submitError = ref<string | null>(null);
 
 const onSubmit = handleSubmit(async (values) => {
   submitError.value = null;
+
   try {
     const res = await firstLoginChangePassword({
       oldPassword: values.oldPassword,
@@ -104,11 +184,13 @@ const onSubmit = handleSubmit(async (values) => {
     if (res?.success) {
       authStore.setForceChangePassword(false);
       router.push('/home');
-    } else {
-      submitError.value = res?.message ?? '密碼修改失敗，請稍後再試';
+      return;
     }
+
+    submitError.value = res?.message ?? '密碼修改失敗，請稍後再試';
   } catch (e: any) {
-    submitError.value = e?.response?.data?.message ?? '密碼修改失敗，請聯絡系統管理員';
+    submitError.value =
+      e?.response?.data?.message ?? '密碼修改失敗，請聯絡系統管理員';
   }
 });
 </script>

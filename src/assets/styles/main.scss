@@ -39,6 +39,7 @@
 /* 頁面級樣式 */
 @use 'pages/loader' as *;
 @use 'pages/login' as *;
+@use 'pages/change-password' as *;
 
 /* Dialogs */
 @use 'components/dialog/dialog' as *;
