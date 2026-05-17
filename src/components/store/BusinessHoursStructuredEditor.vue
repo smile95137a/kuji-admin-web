@@ -92,9 +92,9 @@ const dayLabelMap: Record<WeekDay, string> = {
 const createDefaultValue = (): BusinessHoursStructured => ({
   schedules: dayOrder.map((day) => ({
     day,
-    open: '',
-    close: '',
-    closed: false,
+    open: ['MON', 'TUE', 'WED', 'THU', 'FRI'].includes(day) ? '10:00' : '',
+    close: ['MON', 'TUE', 'WED', 'THU', 'FRI'].includes(day) ? '18:00' : '',
+    closed: ['SAT', 'SUN'].includes(day),
   })),
   exceptions: [],
   tz: 'Asia/Taipei',

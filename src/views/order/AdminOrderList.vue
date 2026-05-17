@@ -499,6 +499,17 @@ const normalizeCondition = (values: any) => {
   return condition;
 };
 
+const extractOrderItems = (raw: any) => {
+  const payload = raw?.data ?? raw;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.list)) return payload.list;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.list)) return raw.list;
+  if (Array.isArray(raw)) return raw;
+  return [];
+};
+
 const onSubmit = async (values: any) => {
   const condition = {
     orderNo: values.orderNo ?? '',
@@ -517,13 +528,7 @@ const onSubmit = async (values: any) => {
 
   await query(async () => {
     const res = await queryOrders(req);
-    const data = (res as any)?.data ?? res;
-
-    if (Array.isArray(data)) return data;
-    if (Array.isArray((data as any)?.list)) return (data as any).list;
-    if (Array.isArray((res as any)?.list)) return (res as any).list;
-
-    return [];
+    return extractOrderItems(res);
   });
 
   adminOrderStore.setSearchCondition(condition);

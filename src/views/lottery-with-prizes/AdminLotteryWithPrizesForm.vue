@@ -165,7 +165,6 @@ import {
   createLotteryWithPrizes,
   updateLotteryWithPrizes,
   getLotteryWithPrizes,
-  designatePrize,
 } from '@/services/adminLotteryWithPrizesService';
 
 interface SelectOption {
@@ -610,83 +609,98 @@ const loadDetail = async () => {
   try {
     const res = await getLotteryWithPrizes(id.value);
     const data = (res as any)?.data ?? res;
+    const lotteryData = data?.lottery ?? data;
+    const resolvedGameMode = String(
+      lotteryData?.gameMode ?? data?.gameMode ?? '',
+    ).toUpperCase();
+    const resolvedDesignationStatus =
+      lotteryData?.designationStatus ?? data?.designationStatus ?? null;
+    const resolvedDesignatedPrizeNumbers =
+      lotteryData?.designatedPrizeNumbers ?? data?.designatedPrizeNumbers;
 
-    loadedTitle.value = data?.title ?? '';
-    loadedMaxDraws.value = Number(data?.maxDraws ?? 0);
-    originalStatus.value = data?.status ?? '';
-    lotteryDesignationStatus.value = data?.designationStatus ?? null;
+    loadedTitle.value = lotteryData?.title ?? data?.title ?? '';
+    loadedMaxDraws.value = Number(lotteryData?.maxDraws ?? data?.maxDraws ?? 0);
+    originalStatus.value = lotteryData?.status ?? data?.status ?? '';
+    lotteryDesignationStatus.value = resolvedDesignationStatus;
 
-    // 只看 gameMode，與 copy form 行為一致
-    isScratchStoreEdit.value = String(data?.gameMode ?? '') === 'SCRATCH_STORE';
-    isScratchPlayerEdit.value =
-      String(data?.gameMode ?? '') === 'SCRATCH_PLAYER';
+    isScratchStoreEdit.value = resolvedGameMode === 'SCRATCH_STORE';
+    isScratchPlayerEdit.value = resolvedGameMode === 'SCRATCH_PLAYER';
 
-    ensureStoreOptionExists(data?.storeId ?? '');
+    ensureStoreOptionExists(lotteryData?.storeId ?? data?.storeId ?? '');
 
     formRef.value?.setValues?.({
-      storeId: data?.storeId ?? '',
+      storeId: lotteryData?.storeId ?? data?.storeId ?? '',
 
-      title: data?.title ?? '',
-      category: data?.category ?? 'OFFICIAL_ICHIBAN',
-      subCategory: data?.subCategory ?? '',
-      playMode: data?.playMode ?? 'LOTTERY_MODE',
-      gameMode: data?.gameMode ?? '',
+      title: lotteryData?.title ?? data?.title ?? '',
+      category: lotteryData?.category ?? data?.category ?? 'OFFICIAL_ICHIBAN',
+      subCategory: lotteryData?.subCategory ?? data?.subCategory ?? '',
+      playMode: lotteryData?.playMode ?? data?.playMode ?? 'LOTTERY_MODE',
+      gameMode: resolvedGameMode,
 
-      designatedPrizeNumbers: Array.isArray(data?.designatedPrizeNumbers)
-        ? data.designatedPrizeNumbers.join(',')
-        : data?.designatedPrizeNumbers
-          ? String(data.designatedPrizeNumbers)
+      designatedPrizeNumbers: Array.isArray(resolvedDesignatedPrizeNumbers)
+        ? resolvedDesignatedPrizeNumbers.join(',')
+        : resolvedDesignatedPrizeNumbers
+          ? String(resolvedDesignatedPrizeNumbers)
           : '',
 
-      delistStrategy: data?.delistStrategy ?? '',
-      paymentType: data?.paymentType ?? 'GOLD',
+      delistStrategy: lotteryData?.delistStrategy ?? data?.delistStrategy ?? '',
+      paymentType: lotteryData?.paymentType ?? data?.paymentType ?? 'GOLD',
       freeDrawThreshold:
-        data?.freeDrawThreshold == null ? undefined : data.freeDrawThreshold,
-      status: data?.status ?? 'DRAFT',
+        lotteryData?.freeDrawThreshold == null
+          ? data?.freeDrawThreshold == null
+            ? undefined
+            : data.freeDrawThreshold
+          : lotteryData.freeDrawThreshold,
+      status: lotteryData?.status ?? data?.status ?? 'DRAFT',
+      designationStatus: resolvedDesignationStatus ?? '',
 
-      pricePerDraw: Number(data?.pricePerDraw ?? 0),
-      maxDraws: Number(data?.maxDraws ?? 0),
+      pricePerDraw: Number(lotteryData?.pricePerDraw ?? data?.pricePerDraw ?? 0),
+      maxDraws: Number(lotteryData?.maxDraws ?? data?.maxDraws ?? 0),
 
-      hotCount: data?.hotCount ?? undefined,
-      theme: data?.theme ?? '',
+      hotCount: lotteryData?.hotCount ?? data?.hotCount ?? undefined,
+      theme: lotteryData?.theme ?? data?.theme ?? '',
 
-      imageUrl: data?.imageUrl ?? '',
-      galleryImagesText: Array.isArray(data?.galleryImages)
-        ? data.galleryImages.join('\n')
+      imageUrl: lotteryData?.imageUrl ?? data?.imageUrl ?? '',
+      galleryImagesText: Array.isArray(lotteryData?.galleryImages ?? data?.galleryImages)
+        ? (lotteryData?.galleryImages ?? data?.galleryImages).join('\n')
         : '',
 
-      description: data?.description ?? '',
-      content: data?.content ?? '',
-      tagsText: Array.isArray(data?.tags) ? data.tags.join(',') : '',
+      description: lotteryData?.description ?? data?.description ?? '',
+      content: lotteryData?.content ?? data?.content ?? '',
+      tagsText: Array.isArray(lotteryData?.tags ?? data?.tags)
+        ? (lotteryData?.tags ?? data?.tags).join(',')
+        : '',
 
-      remark: data?.remark ?? '',
+      remark: lotteryData?.remark ?? data?.remark ?? '',
 
-      scheduledAt: data?.scheduledAt ?? '',
-      startTime: data?.startTime ?? '',
-      endTime: data?.endTime ?? '',
+      scheduledAt: lotteryData?.scheduledAt ?? data?.scheduledAt ?? '',
+      startTime: lotteryData?.startTime ?? data?.startTime ?? '',
+      endTime: lotteryData?.endTime ?? data?.endTime ?? '',
 
-      discountedPrice: data?.discountedPrice ?? undefined,
-      autoDiscountEnabled: data?.autoDiscountEnabled ?? false,
+      discountedPrice: lotteryData?.discountedPrice ?? data?.discountedPrice ?? undefined,
+      autoDiscountEnabled: lotteryData?.autoDiscountEnabled ?? data?.autoDiscountEnabled ?? false,
 
-      allowMultiDraw: data?.allowMultiDraw ?? true,
-      multiDrawOptionsText: Array.isArray(data?.multiDrawOptions)
-        ? data.multiDrawOptions.join(',')
+      allowMultiDraw: lotteryData?.allowMultiDraw ?? data?.allowMultiDraw ?? true,
+      multiDrawOptionsText: Array.isArray(lotteryData?.multiDrawOptions ?? data?.multiDrawOptions)
+        ? (lotteryData?.multiDrawOptions ?? data?.multiDrawOptions).join(',')
         : '10',
 
       pendingDesignatedPrizeNumber: undefined,
 
-      bonusEnabled: data?.bonusEnabled ?? false,
-      bonusPointsPerDraw: data?.bonusPointsPerDraw ?? undefined,
-      bonusCostPerDraw: data?.bonusCostPerDraw ?? undefined,
+      bonusEnabled: lotteryData?.bonusEnabled ?? data?.bonusEnabled ?? false,
+      bonusPointsPerDraw:
+        lotteryData?.bonusPointsPerDraw ?? data?.bonusPointsPerDraw ?? undefined,
+      bonusCostPerDraw:
+        lotteryData?.bonusCostPerDraw ?? data?.bonusCostPerDraw ?? undefined,
 
       prizes:
-        String(data?.subCategory ?? '') === 'SCRATCH_MODE'
+        String(lotteryData?.subCategory ?? data?.subCategory ?? '') === 'SCRATCH_MODE'
           ? normalizeScratchFormPrizes(mapPrizesToForm(data?.prizes ?? []))
           : mapPrizesToForm(data?.prizes ?? []),
     });
   } catch (error: any) {
     await openInfoDialog({
-      title: '載入失敗',
+      title: '讀取失敗',
       message: getErrorMessage(error, '請稍後再試'),
       iconType: 'warning',
     });
@@ -707,9 +721,9 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
     activeTab.value = 'basic';
 
     await openInfoDialog({
-      title: '商品已上架，無法直接儲存',
-      message:
-        '此商品目前狀態為「抽獎中 / 上架中」，無法直接修改內容。\n請先至列表頁將商品下架後，再進行編輯。',
+      title: '商品已上架，部分欄位不可修改',
+      message: '商品一旦上架，遊戲模式與上下架狀態不可任意修改。請先下架後再調整相關設定。',
+
       iconType: 'warning',
     });
 
@@ -720,8 +734,8 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
     activeTab.value = 'prizes';
 
     await openInfoDialog({
-      title: '請至少新增 1 個獎品',
-      message: '獎品清單不可為空',
+      title: '請至少新增 1 個獎項',
+      message: '建立商品前，請先新增至少一個獎項。',
       iconType: 'warning',
     });
 
@@ -739,8 +753,8 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
       activeTab.value = 'prizes';
 
       await openInfoDialog({
-        title: '刮刮樂獎品設定不完整',
-        message: '刮刮樂模式需至少設定 1 個「大獎」。',
+        title: '刮刮樂獎項設定不完整',
+        message: '刮刮樂模式必須只有 1 個獎項，且該獎項需為唯一大獎。',
         iconType: 'warning',
       });
 
@@ -762,9 +776,9 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
     activeTab.value = 'basic';
 
     await openInfoDialog({
-      title: '無法儲存',
-      message:
-        '此刮刮樂商品（店家指定模式）尚未完成大獎號碼指定，請先完成指定流程。',
+      title: '無法直接上架',
+      message: '刮刮樂店家指定模式尚未完成大獎號碼設定，請先完成指定後再上架。',
+
       iconType: 'warning',
     });
 
@@ -799,69 +813,11 @@ const onSubmitForm = async (values: any, actions: any) => {
     console.log('[LotteryWithPrizesForm] submit payload:', payload);
 
     if (!isEdit.value) {
-      const createRes = await createLotteryWithPrizes(payload);
-      const newId = createRes?.data?.id ?? createRes?.data;
-
-      const pendingDesignatedPrizeNumber = toNumberOrUndefined(
-        values.pendingDesignatedPrizeNumber,
-      );
-
-      /**
-       * 舊版新增時：
-       * 如果是 SCRATCH_STORE，且新增畫面有填大獎號碼，
-       * 建立商品後會補呼叫 designatePrize。
-       */
-      if (
-        isScratchStoreMode(values) &&
-        pendingDesignatedPrizeNumber != null &&
-        newId
-      ) {
-        // 從建立回應取得大獎 prizeId（新 designations 格式必要欄位）
-        const createdGrandPrize = (
-          (createRes?.data?.prizes ?? []) as any[]
-        ).find((p: any) => p.isGrandPrize === true);
-
-        const grandPrizeIdForDesignate = createdGrandPrize?.id;
-
-        if (!grandPrizeIdForDesignate) {
-          await openInfoDialog({
-            title: '大獎號碼指定失敗',
-            message:
-              '商品已建立，但無法取得大獎 ID。請至編輯頁手動指定大獎號碼。',
-            iconType: 'warning',
-          });
-
-          router.push(LIST_PATH);
-          return;
-        }
-
-        try {
-          await designatePrize(String(newId), {
-            designations: [
-              {
-                revealedNumber: pendingDesignatedPrizeNumber,
-                prizeId: grandPrizeIdForDesignate,
-              },
-            ],
-          });
-        } catch (designateError: any) {
-          await openInfoDialog({
-            title: '大獎號碼指定失敗',
-            message: `商品已建立，但大獎號碼指定失敗：${getErrorMessage(
-              designateError,
-              '請到編輯頁重試',
-            )}`,
-            iconType: 'warning',
-          });
-
-          router.push(LIST_PATH);
-          return;
-        }
-      }
+      await createLotteryWithPrizes(payload);
 
       await openInfoDialog({
-        title: '新增成功',
-        message: '商品與獎品已建立完成',
+        title: '建立成功',
+        message: '商品與獎項已建立完成',
         iconType: 'success',
       });
 
@@ -873,20 +829,19 @@ const onSubmitForm = async (values: any, actions: any) => {
 
     await openInfoDialog({
       title: '更新成功',
-      message: '商品與獎品已更新',
+      message: '商品與獎項已更新完成',
       iconType: 'success',
     });
 
     router.push(LIST_PATH);
   } catch (error: any) {
     await openInfoDialog({
-      title: '儲存失敗',
+      title: '送出失敗',
       message: getErrorMessage(error, '請稍後再試'),
       iconType: 'warning',
     });
   }
 };
-
 const onInvalidSubmit = ({ errors }: any) => {
   jumpToErrorTab(errors || {});
 };

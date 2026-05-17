@@ -230,6 +230,7 @@ interface SelectOption {
 }
 
 export interface PrizeFormRow {
+   id?: string;
   _key: string;
   name: string;
   quantity: number | string;

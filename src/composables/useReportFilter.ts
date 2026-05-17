@@ -42,7 +42,7 @@ function calcRange(preset: ReportPreset): { start: string; end: string } {
 }
 
 export function useReportFilter() {
-  const preset = ref<ReportPreset>('thisMonth');
+  const preset = ref<ReportPreset>('today');
   const startDate = ref('');
   const endDate = ref('');
 

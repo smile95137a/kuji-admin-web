@@ -899,9 +899,9 @@ const weekDays: WeekDay[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const createDefaultBusinessHoursStructured = (): BusinessHoursStructured => ({
   schedules: weekDays.map((day) => ({
     day,
-    open: '',
-    close: '',
-    closed: false,
+    open: ['MON', 'TUE', 'WED', 'THU', 'FRI'].includes(day) ? '10:00' : '',
+    close: ['MON', 'TUE', 'WED', 'THU', 'FRI'].includes(day) ? '18:00' : '',
+    closed: ['SAT', 'SUN'].includes(day),
   })),
   exceptions: [],
   tz: 'Asia/Taipei',

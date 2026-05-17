@@ -288,8 +288,9 @@ const openEditDialog = async (index: number) => {
   });
 
   if (!result) return;
+   const mergedPrize = mergeEditedPrize(prize, result);
 
-  update(index, normalizePrizeForCurrentMode(result, index));
+  update(index, normalizePrizeForCurrentMode(mergedPrize , index));
   syncPrizesForCurrentMode();
 };
 
@@ -314,6 +315,20 @@ const getPrizeTypeLabel = (value?: string) => {
   return (
     prizeTypeOptions.find((item) => item.value === value)?.label || value || '-'
   );
+};
+
+const mergeEditedPrize = (
+  original: PrizeFormRow,
+  edited: Partial<PrizeFormRow>
+): PrizeFormRow => {
+  return {
+    ...original,
+    ...edited,
+
+    // 編輯既有獎品時，id / _key 不應該被 dialog 洗掉
+    id: edited.id || original.id,
+    _key: edited._key || original._key,
+  };
 };
 </script>
 

@@ -213,8 +213,8 @@ const keyword = ref('');
 const filterStatus = ref('');
 
 const statusOptions = [
-  { label: '啟用', value: 'ENABLED' },
-  { label: '停用', value: 'DISABLED' },
+  { label: '啟用', value: 'ACTIVE' },
+  { label: '停用', value: 'INACTIVE' },
 ];
 
 /* ==============================

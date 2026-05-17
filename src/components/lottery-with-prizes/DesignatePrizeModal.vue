@@ -1,82 +1,79 @@
-<!-- src/components/lottery-with-prizes/DesignatePrizeModal.vue -->
-<template>
+﻿<template>
   <div v-if="show" class="designate-modal__overlay" @click.self="emit('close')">
     <div class="designate-modal__box">
-      <!-- Header -->
       <div class="designate-modal__header">
-        <p class="designate-modal__title">指定大獎號碼 — {{ lotteryName }}</p>
+        <p class="designate-modal__title">{{ modalTitle }}｜{{ lotteryName }}</p>
       </div>
 
-      <!-- Body -->
       <div class="designate-modal__body">
-        <!-- 載入大獎資訊中 -->
         <div
-          v-if="fetchingPrizeId"
+          v-if="loadingLottery"
           class="designate-modal__hint designate-modal__hint--info m-b-12"
         >
-          載入獎品資訊中，請稍候…
+          讀取商品資料中...
         </div>
 
-        <!-- 無法取得大獎 prizeId -->
         <div
-          v-else-if="!resolvedGrandPrizeId"
+          v-else-if="!resolvedGameMode"
           class="designate-modal__hint designate-modal__hint--error m-b-12"
         >
-          ⚠️ 無法取得大獎資訊，請確認商品已設定「大獎（isGrandPrize）」後重新開啟。
+          無法判斷目前的刮刮樂模式，請重新整理後再試。
+        </div>
+
+        <div
+          v-else-if="needsGrandPrize && !resolvedGrandPrizeId"
+          class="designate-modal__hint designate-modal__hint--error m-b-12"
+        >
+          找不到大獎資料，請先確認商品獎項設定後再指定號碼。
         </div>
 
         <template v-else>
-          <p class="form__text m-b-12">
-            請選擇大獎對應的籤號（1 ~ {{ maxDraws }}），指定後無法更改。
-          </p>
+          <p class="form__text m-b-12">{{ modeDescription }}</p>
 
-          <!-- maxDraws=1 auto-select hint -->
           <div
             v-if="maxDraws === 1"
             class="designate-modal__hint designate-modal__hint--info m-b-12"
           >
-            僅有 1 個籤號，已自動選取第 1 號。
+            此商品只有 1 個號碼，系統會自動指定為 1。
           </div>
 
-          <!-- Number input (hidden when maxDraws=1) -->
           <div v-if="maxDraws > 1" class="m-b-8">
-            <label class="form__label">籤號</label>
+            <label class="form__label">指定號碼</label>
             <input
+              v-model.number="prizeNumber"
               type="number"
               class="designate-modal__input"
               :min="1"
               :max="maxDraws"
-              v-model.number="prizeNumber"
               @input="validateInput"
-              placeholder="請輸入號碼"
+              placeholder="請輸入 1 到最大抽數之間的整數"
             />
             <p v-if="inputError" class="error-text m-t-4">{{ inputError }}</p>
           </div>
         </template>
       </div>
 
-      <!-- Footer -->
       <div class="designate-modal__footer">
-        <MButton
-          variant="secondary"
-          @click="emit('close')"
-          :disabled="submitting"
-          >取消</MButton
-        >
-        <MButton :disabled="!canConfirm || submitting" @click="handleConfirm"
-          >確認</MButton
-        >
+        <MButton variant="secondary" :disabled="submitting" @click="emit('close')">
+          取消
+        </MButton>
+        <MButton :disabled="!canConfirm || submitting" @click="handleConfirm">
+          確認指定
+        </MButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import MButton from '@/components/common/MButton.vue';
-import { useDialogStore } from '@/stores';
 import { executeApi } from '@/utils/executeApiUtils';
-import { designatePrize, getLotteryWithPrizes } from '@/services/adminLotteryWithPrizesService';
+import {
+  designatePrize,
+  getLotteryWithPrizes,
+  updateLotteryWithPrizes,
+} from '@/services/adminLotteryWithPrizesService';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
 
 const props = defineProps<{
@@ -91,83 +88,139 @@ const emit = defineEmits<{
   (e: 'success'): void;
 }>();
 
-const dialogStore = useDialogStore();
-
 const prizeNumber = ref<number | null>(null);
 const inputError = ref('');
 const submitting = ref(false);
-const fetchingPrizeId = ref(false);
+const loadingLottery = ref(false);
 const resolvedGrandPrizeId = ref('');
+const resolvedGameMode = ref('');
 
-/* T005 — maxDraws=1 auto-select; also reset state on modal open */
+const isScratchStoreMode = computed(
+  () => resolvedGameMode.value === 'SCRATCH_STORE',
+);
+const isScratchPlayerMode = computed(
+  () => resolvedGameMode.value === 'SCRATCH_PLAYER',
+);
+const needsGrandPrize = computed(
+  () => isScratchStoreMode.value || isScratchPlayerMode.value,
+);
+const modalTitle = computed(() =>
+  isScratchStoreMode.value ? '店家指定大獎號碼' : '玩家指定大獎位置',
+);
+const modeDescription = computed(() => {
+  if (isScratchStoreMode.value) {
+    return `請設定店家指定的大獎號碼。可指定範圍為 1 ~ ${props.maxDraws}。`;
+  }
+  return `請設定玩家指定的大獎位置。可指定範圍為 1 ~ ${props.maxDraws}。`;
+});
+
 watch(
   () => props.show,
-  async (val) => {
-    if (val) {
-      if (props.maxDraws === 1) {
-        prizeNumber.value = 1;
-        inputError.value = '';
-      } else {
-        prizeNumber.value = null;
-        inputError.value = '';
-      }
-      submitting.value = false;
+  async (show) => {
+    if (!show) return;
 
-      // 取得大獎 prizeId（新 designations 格式必要欄位）
-      fetchingPrizeId.value = true;
-      resolvedGrandPrizeId.value = '';
-      try {
-        const res = await getLotteryWithPrizes(props.lotteryId);
-        const data = (res as any)?.data ?? res;
-        const prizes: any[] = Array.isArray(data?.prizes) ? data.prizes : [];
-        const grandPrize = prizes.find((p: any) => p.isGrandPrize === true);
-        resolvedGrandPrizeId.value = grandPrize?.id ?? '';
-      } catch {
-        resolvedGrandPrizeId.value = '';
-      } finally {
-        fetchingPrizeId.value = false;
+    prizeNumber.value = props.maxDraws === 1 ? 1 : null;
+    inputError.value = '';
+    submitting.value = false;
+    loadingLottery.value = true;
+    resolvedGrandPrizeId.value = '';
+    resolvedGameMode.value = '';
+
+    try {
+      const res = await getLotteryWithPrizes(props.lotteryId);
+      const data = (res as any)?.data ?? res;
+      const prizes: any[] = Array.isArray(data?.prizes) ? data.prizes : [];
+      const grandPrize = prizes.find((p: any) => p.isGrandPrize === true);
+
+      resolvedGrandPrizeId.value = grandPrize?.id ?? '';
+      resolvedGameMode.value = String(
+        data?.lottery?.gameMode ?? data?.gameMode ?? '',
+      ).toUpperCase();
+
+      const designated = data?.lottery?.designatedPrizeNumbers ?? data?.designatedPrizeNumbers;
+      const currentNumber = Array.isArray(designated)
+        ? designated[0]
+        : String(designated ?? '')
+            .replace(/[\[\]\s]/g, '')
+            .split(',')
+            .find(Boolean);
+      if (currentNumber) {
+        const parsed = Number(currentNumber);
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= props.maxDraws) {
+          prizeNumber.value = parsed;
+        }
       }
+    } catch {
+      resolvedGameMode.value = '';
+      resolvedGrandPrizeId.value = '';
+    } finally {
+      loadingLottery.value = false;
     }
   },
 );
 
-/* T004 — Real-time validation */
 const validateInput = () => {
-  const v = prizeNumber.value;
-  if (v === null || v === undefined || String(v) === '') {
+  const value = prizeNumber.value;
+  if (value == null || String(value) === '') {
     inputError.value = '';
     return;
   }
-  if (!Number.isInteger(v) || v < 1 || v > props.maxDraws) {
-    inputError.value = `請輸入 1 到 ${props.maxDraws} 之間的號碼`;
-  } else {
-    inputError.value = '';
+  if (!Number.isInteger(value) || value < 1 || value > props.maxDraws) {
+    inputError.value = `請輸入 1 到 ${props.maxDraws} 的整數`;
+    return;
   }
+  inputError.value = '';
 };
 
 const canConfirm = computed(() => {
-  if (fetchingPrizeId.value || !resolvedGrandPrizeId.value) return false;
+  if (loadingLottery.value || !resolvedGameMode.value) return false;
+  if (needsGrandPrize.value && !resolvedGrandPrizeId.value) return false;
   if (props.maxDraws === 1) return true;
-  return prizeNumber.value !== null && !inputError.value;
+  return prizeNumber.value != null && !inputError.value;
 });
 
-/* T006 — Confirm → double-confirm → API call */
+const updateScratchStoreDesignation = async (num: number) => {
+  await updateLotteryWithPrizes(props.lotteryId, {
+    lottery: {
+      designatedPrizeNumbers: String(num),
+    },
+  });
+};
+
+const designateScratchPlayerPrize = async (num: number) => {
+  await designatePrize(props.lotteryId, {
+    designations: [
+      {
+        revealedNumber: num,
+        prizeId: resolvedGrandPrizeId.value,
+      },
+    ],
+  });
+};
+
 const handleConfirm = async () => {
   if (!canConfirm.value || submitting.value) return;
 
   const num = props.maxDraws === 1 ? 1 : prizeNumber.value!;
-
   const ok = await openConfirmDialog({
-    title: '確認指定',
-    message: `確定將第 ${num} 號指定為大獎？指定後系統將自動將其餘籤號設為銘謝惠顧，且此操作不可撤銷。`,
+    title: modalTitle.value,
+    message: isScratchStoreMode.value
+      ? `確認將店家指定的大獎號碼設為 ${num} 嗎？若商品已產生籤位，系統會依既有規則清除並待重新生成。`
+      : `確認將玩家指定的大獎位置設為 ${num} 嗎？`,
   });
   if (!ok) return;
 
   submitting.value = true;
   await executeApi({
-    fn: () => designatePrize(props.lotteryId, {
-      designations: [{ revealedNumber: num, prizeId: resolvedGrandPrizeId.value }],
-    }),
+    fn: async () => {
+      if (isScratchStoreMode.value) {
+        await updateScratchStoreDesignation(num);
+        return { success: true, data: null, message: '店家指定的大獎號碼已更新' };
+      }
+
+      await designateScratchPlayerPrize(num);
+      return { success: true, data: null, message: '玩家指定的大獎位置已更新' };
+    },
     onSuccess: () => {
       emit('success');
     },
@@ -258,7 +311,7 @@ const handleConfirm = async () => {
 }
 
 .error-text {
-  color: #dc2626;
+  color: #cf1322;
   font-size: 12px;
 }
 </style>

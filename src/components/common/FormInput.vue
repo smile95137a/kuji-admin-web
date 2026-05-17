@@ -49,6 +49,7 @@
           :aria-required="required ? 'true' : 'false'"
           :aria-invalid="!!error ? 'true' : 'false'"
           @input="onInput"
+          @click="onClick"
           @focus="onFocus"
           @blur="onBlur"
         />
@@ -202,13 +203,33 @@ const showClearButton = computed(() => {
   );
 });
 
+const pickerTypes = new Set(['date', 'datetime-local', 'time', 'month', 'week']);
+
+function openNativePicker() {
+  const input = inputEl.value as (HTMLInputElement & { showPicker?: () => void }) | null;
+  if (!input || props.disabled || props.readonly) return;
+  if (!pickerTypes.has(String(resolvedType.value))) return;
+  if (typeof input.showPicker === 'function') {
+    try {
+      input.showPicker();
+    } catch {
+      // ignore unsupported browsers
+    }
+  }
+}
+
 function onInput(e: Event) {
   const val = (e.target as HTMLInputElement).value;
   emit('update:modelValue', val);
 }
 
+function onClick() {
+  openNativePicker();
+}
+
 function onFocus(ev: FocusEvent) {
   isFocus.value = true;
+  openNativePicker();
   emit('focus', ev);
 }
 
