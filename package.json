@@ -28,6 +28,7 @@
     "@tiptap/extension-link": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",
     "@tiptap/vue-3": "^3.22.3",
+    "@vuepic/vue-datepicker": "^12.1.0",
     "axios": "^1.7.7",
     "cropperjs": "^2.1.0",
     "echarts": "^5.5.1",

@@ -37,25 +37,16 @@
 
       <!-- 開始日期 -->
       <div class="marquee-search-form__item marquee-search-form__item--wide">
-        <p class="form__text">開始日期</p>
-
-        <div class="marquee-search-form__date-range">
-          <FormInput
-            type="date"
-            v-model="startDate"
-            :error="errors.startDate"
-            :show-label="false"
-          />
-
-          <span class="marquee-search-form__date-separator">~</span>
-
-          <FormInput
-            type="date"
-            v-model="endDate"
-            :error="errors.endDate"
-            :show-label="false"
-          />
-        </div>
+        <FormDateRangeField
+          label="開始日期"
+          type="date"
+          v-model:start="startDate"
+          v-model:end="endDate"
+          :start-error="errors.startDate"
+          :end-error="errors.endDate"
+          separator="~"
+          :auto-apply-default="true"
+        />
       </div>
     </div>
   </div>
@@ -66,6 +57,7 @@ import { useFormContext } from 'vee-validate';
 
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 
 defineProps<{
   activeOptions: SelectOption[];
@@ -128,19 +120,6 @@ const [endDate] = defineField('endDate');
       grid-column: span 2;
     }
   }
-
-  &__date-range {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  &__date-separator {
-    flex: 0 0 auto;
-    padding-top: 9px;
-    color: tokens.$form-muted;
-    font-size: 14px;
-  }
 }
 
 @media (max-width: 1180px) {
@@ -167,15 +146,6 @@ const [endDate] = defineField('endDate');
       &--wide {
         grid-column: span 1;
       }
-    }
-
-    &__date-range {
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    &__date-separator {
-      padding-top: 0;
     }
   }
 }

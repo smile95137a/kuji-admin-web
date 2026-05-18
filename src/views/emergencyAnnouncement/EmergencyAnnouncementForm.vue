@@ -105,6 +105,9 @@
                     v-model:end="displayEndTime"
                     :start-error="displayErrors.displayStartTime"
                     :end-error="displayErrors.displayEndTime"
+                    :auto-apply-default="true"
+                    :default-start="getDefaultDisplayStartTime()"
+                    :default-end="getDefaultDisplayEndTime()"
                     required
                   />
                 </div>
@@ -117,6 +120,9 @@
                     v-model:end="maintenanceEndTime"
                     :start-error="displayErrors.maintenanceStartTime"
                     :end-error="displayErrors.maintenanceEndTime"
+                    :auto-apply-default="true"
+                    :default-start="getDefaultMaintenanceStartTime()"
+                    :default-end="getDefaultMaintenanceEndTime()"
                   />
                 </div>
 
@@ -162,7 +168,6 @@ import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useEmergencyAnnouncementStore } from '@/stores/emergencyAnnouncement/useEmergencyAnnouncementStore';
 import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
-import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 import {
   getEmergencyAnnouncementById,
@@ -209,42 +214,16 @@ const forceShowOptions: SelectOption[] = [
 /* --------------------------------------
  * Date utils
  * -------------------------------------- */
-const normalizeToBackendLocalDateTime = (value?: string | null) => {
-  const text = String(value ?? '').trim();
-
-  if (!text) return null;
-
-  const normalized = text.replace('T', ' ');
-
-  if (normalized.length >= 19) {
-    return normalized.slice(0, 19);
-  }
-
-  if (normalized.length === 16) {
-    return `${normalized}:00`;
-  }
-
-  return normalized;
-};
-
-const normalizeToDatetimeLocalInput = (value?: string | null) => {
-  const text = String(value ?? '').trim();
-
-  if (!text) return '';
-
-  return text.length >= 16 ? text.slice(0, 16) : text;
-};
-
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
-const toDatetimeLocalString = (date: Date) => {
+const formatToPickerDateTime = (date: Date) => {
   const yyyy = date.getFullYear();
   const mm = pad2(date.getMonth() + 1);
   const dd = pad2(date.getDate());
   const hh = pad2(date.getHours());
   const mi = pad2(date.getMinutes());
 
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  return `${yyyy}/${mm}/${dd} ${hh}:${mi}`;
 };
 
 const addHours = (date: Date, hours: number) => {
@@ -257,6 +236,54 @@ const addDays = (date: Date, days: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
+};
+
+const getDefaultDisplayStartTime = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return formatToPickerDateTime(date);
+};
+
+const getDefaultDisplayEndTime = () => {
+  const date = addDays(new Date(), 7);
+  date.setHours(23, 59, 0, 0);
+  return formatToPickerDateTime(date);
+};
+
+const getDefaultMaintenanceStartTime = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return formatToPickerDateTime(date);
+};
+
+const getDefaultMaintenanceEndTime = () => {
+  const date = new Date();
+  date.setHours(23, 59, 0, 0);
+  return formatToPickerDateTime(date);
+};
+
+const normalizeToBackendLocalDateTime = (value?: string | null) => {
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ')
+    .replace(/\//g, '-');
+
+  if (!text) return null;
+  if (text.length >= 19) return text.slice(0, 19);
+  if (text.length === 16) return `${text}:00`;
+
+  return text;
+};
+
+const normalizeToPickerDateTime = (value?: string | null) => {
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ')
+    .replace(/-/g, '/');
+
+  if (!text) return '';
+
+  return text.length >= 16 ? text.slice(0, 16) : text;
 };
 
 /* --------------------------------------
@@ -293,7 +320,10 @@ const schema = yup.object({
 
         if (!start || !endValue) return true;
 
-        return endValue > start;
+        return (
+          normalizeToBackendLocalDateTime(endValue)! >
+          normalizeToBackendLocalDateTime(start)!
+        );
       },
     ),
 
@@ -310,7 +340,10 @@ const schema = yup.object({
 
         if (!start || !endValue) return true;
 
-        return endValue > start;
+        return (
+          normalizeToBackendLocalDateTime(endValue)! >
+          normalizeToBackendLocalDateTime(start)!
+        );
       },
     ),
 
@@ -340,10 +373,10 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
     content: '',
     announcementType: '',
     status: 'DRAFT',
-    displayStartTime: '',
-    displayEndTime: '',
-    maintenanceStartTime: '',
-    maintenanceEndTime: '',
+    displayStartTime: getDefaultDisplayStartTime(),
+    displayEndTime: getDefaultDisplayEndTime(),
+    maintenanceStartTime: getDefaultMaintenanceStartTime(),
+    maintenanceEndTime: getDefaultMaintenanceEndTime(),
     forceShow: false,
     sortOrder: 0 as number | null,
   },
@@ -428,16 +461,16 @@ const buildMockAnnouncementPayload = (index: number) => {
     announcementType: type.value,
     status,
     displayStartTime: normalizeToBackendLocalDateTime(
-      toDatetimeLocalString(displayStart),
+      formatToPickerDateTime(displayStart),
     )!,
     displayEndTime: normalizeToBackendLocalDateTime(
-      toDatetimeLocalString(displayEnd),
+      formatToPickerDateTime(displayEnd),
     )!,
     maintenanceStartTime: normalizeToBackendLocalDateTime(
-      toDatetimeLocalString(maintenanceStart),
+      formatToPickerDateTime(maintenanceStart),
     ),
     maintenanceEndTime: normalizeToBackendLocalDateTime(
-      toDatetimeLocalString(maintenanceEnd),
+      formatToPickerDateTime(maintenanceEnd),
     ),
     forceShow: index % 4 === 0,
     sortOrder: index + 1,
@@ -461,16 +494,18 @@ const loadDetail = async () => {
           content: data?.content ?? '',
           announcementType: data?.announcementType ?? '',
           status: data?.status ?? 'DRAFT',
-          displayStartTime: normalizeToDatetimeLocalInput(
-            data?.displayStartTime,
-          ),
-          displayEndTime: normalizeToDatetimeLocalInput(data?.displayEndTime),
-          maintenanceStartTime: normalizeToDatetimeLocalInput(
-            data?.maintenanceStartTime,
-          ),
-          maintenanceEndTime: normalizeToDatetimeLocalInput(
-            data?.maintenanceEndTime,
-          ),
+          displayStartTime:
+            normalizeToPickerDateTime(data?.displayStartTime) ||
+            getDefaultDisplayStartTime(),
+          displayEndTime:
+            normalizeToPickerDateTime(data?.displayEndTime) ||
+            getDefaultDisplayEndTime(),
+          maintenanceStartTime:
+            normalizeToPickerDateTime(data?.maintenanceStartTime) ||
+            getDefaultMaintenanceStartTime(),
+          maintenanceEndTime:
+            normalizeToPickerDateTime(data?.maintenanceEndTime) ||
+            getDefaultMaintenanceEndTime(),
           forceShow: Boolean(data?.forceShow),
           sortOrder: data?.sortOrder ?? 0,
         },

@@ -210,14 +210,15 @@
             <div class="tab-lottery-basic__schedule-layout">
               <!-- 定時上架時間 -->
               <div class="w-50 w-md-100 p-6">
-                <FormInput
+                <FormDateTimeField
                   label="定時上架時間"
+                  type="datetime-local"
                   v-model="scheduledAt"
                   :error="showError('scheduledAt')"
-                  type="datetime-local"
+                  placeholder="請選擇定時上架時間"
+                  :auto-apply-default="false"
                 />
               </div>
-
               <!-- 活動期間 -->
               <div class="w-100 p-6">
                 <FormDateRangeField
@@ -225,8 +226,10 @@
                   type="datetime-local"
                   v-model:start="startTime"
                   v-model:end="endTime"
-                  :startError="showError('startTime')"
-                  :endError="showError('endTime')"
+                  :start-error="showError('startTime')"
+                  :end-error="showError('endTime')"
+                  separator="~"
+                  :auto-apply-default="true"
                 />
               </div>
             </div>
@@ -482,6 +485,7 @@ import FormSelect from '@/components/common/FormSelect.vue';
 import FormTextarea from '@/components/common/FormTextarea.vue';
 import FormSection from '@/components/common/FormSection.vue';
 import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
+import FormDateTimeField from '@/components/common/FormDateTimeField.vue';
 import FormRadioTagGroup from '@/components/common/FormRadioTagGroup.vue';
 import FormCheckTagGroup from '@/components/common/FormCheckTagGroup.vue';
 

@@ -77,6 +77,9 @@
                     v-model:end="endTime"
                     :start-error="displayErrors.startTime"
                     :end-error="displayErrors.endTime"
+                    :auto-apply-default="true"
+                    :default-start="getDefaultStartTime()"
+                    :default-end="getDefaultEndTime()"
                   />
                 </div>
               </div>
@@ -263,8 +266,34 @@ const loadStoreOptions = async () => {
 /* --------------------------------------
  * Date utils
  * -------------------------------------- */
+const pad = (num: number) => String(num).padStart(2, '0');
+
+const formatToPickerDateTime = (date: Date) => {
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mi = pad(date.getMinutes());
+
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+};
+
+const getDefaultStartTime = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return formatToPickerDateTime(date);
+};
+
+const getDefaultEndTime = () => {
+  const date = new Date();
+  date.setHours(23, 59, 0, 0);
+  return formatToPickerDateTime(date);
+};
+
 const normalizeToBackendLocalDateTime = (value?: string | null) => {
-  const text = String(value ?? '').trim();
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ');
 
   if (!text) return null;
   if (text.length >= 19) return text.slice(0, 19);
@@ -273,8 +302,11 @@ const normalizeToBackendLocalDateTime = (value?: string | null) => {
   return text;
 };
 
-const normalizeToDatetimeLocalInput = (value?: string | null) => {
-  const text = String(value ?? '').trim();
+const normalizeToPickerDateTime = (value?: string | null) => {
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ');
+
   if (!text) return '';
   return text.length >= 16 ? text.slice(0, 16) : text;
 };
@@ -317,7 +349,10 @@ const schema = yup.object({
 
       if (!start || !endValue) return true;
 
-      return endValue > start;
+      return (
+        normalizeToBackendLocalDateTime(endValue)! >
+        normalizeToBackendLocalDateTime(start)!
+      );
     }),
 });
 
@@ -332,8 +367,8 @@ const { errors, handleSubmit, setValues, defineField } = useForm({
     imageUrl: '',
     orderNum: null as number | null,
     status: 'UNPUBLISHED',
-    startTime: '',
-    endTime: '',
+    startTime: getDefaultStartTime(),
+    endTime: getDefaultEndTime(),
   },
   validateOnMount: false,
 });
@@ -389,8 +424,10 @@ const loadDetail = async () => {
           imageUrl: data?.imageUrl ?? '',
           orderNum: data?.orderNum ?? null,
           status: data?.status ?? 'UNPUBLISHED',
-          startTime: normalizeToDatetimeLocalInput(data?.startTime),
-          endTime: normalizeToDatetimeLocalInput(data?.endTime),
+          startTime:
+            normalizeToPickerDateTime(data?.startTime) || getDefaultStartTime(),
+          endTime:
+            normalizeToPickerDateTime(data?.endTime) || getDefaultEndTime(),
         },
         false,
       );

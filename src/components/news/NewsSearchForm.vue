@@ -48,25 +48,16 @@
 
       <!-- 建立日期 -->
       <div class="news-search-form__item news-search-form__item--wide">
-        <p class="form__text">建立日期</p>
-
-        <div class="news-search-form__date-range">
-          <FormInput
-            type="date"
-            v-model="createdAtStart"
-            :error="errors.createdAtStart"
-            :show-label="false"
-          />
-
-          <span class="news-search-form__date-separator">~</span>
-
-          <FormInput
-            type="date"
-            v-model="createdAtEnd"
-            :error="errors.createdAtEnd"
-            :show-label="false"
-          />
-        </div>
+        <FormDateRangeField
+          label="建立日期"
+          type="date"
+          v-model:start="createdAtStart"
+          v-model:end="createdAtEnd"
+          :start-error="errors.createdAtStart"
+          :end-error="errors.createdAtEnd"
+          separator="~"
+          :auto-apply-default="true"
+        />
       </div>
     </div>
   </div>
@@ -77,6 +68,7 @@ import { useFormContext } from 'vee-validate';
 
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 
 defineProps<{
   statusOptions: SelectOption[];
@@ -140,19 +132,6 @@ const [createdAtEnd] = defineField('createdAtEnd');
       grid-column: span 2;
     }
   }
-
-  &__date-range {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  &__date-separator {
-    flex: 0 0 auto;
-    padding-top: 9px;
-    color: tokens.$form-muted;
-    font-size: 14px;
-  }
 }
 
 @media (max-width: 1180px) {
@@ -179,15 +158,6 @@ const [createdAtEnd] = defineField('createdAtEnd');
       &--wide {
         grid-column: span 1;
       }
-    }
-
-    &__date-range {
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    &__date-separator {
-      padding-top: 0;
     }
   }
 }

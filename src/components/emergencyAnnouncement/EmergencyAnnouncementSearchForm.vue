@@ -54,27 +54,16 @@
       <div
         class="emergency-announcement-search-form__item emergency-announcement-search-form__item--wide"
       >
-        <p class="form__text">公告顯示日期</p>
-
-        <div class="emergency-announcement-search-form__date-range">
-          <FormInput
-            type="date"
-            v-model="displayStartTime"
-            :error="errors.displayStartTime"
-            :show-label="false"
-          />
-
-          <span class="emergency-announcement-search-form__date-separator">
-            ~
-          </span>
-
-          <FormInput
-            type="date"
-            v-model="displayEndTime"
-            :error="errors.displayEndTime"
-            :show-label="false"
-          />
-        </div>
+        <FormDateRangeField
+          label="公告顯示日期"
+          type="date"
+          v-model:start="displayStartTime"
+          v-model:end="displayEndTime"
+          :start-error="errors.displayStartTime"
+          :end-error="errors.displayEndTime"
+          separator="~"
+          :auto-apply-default="true"
+        />
       </div>
     </div>
   </div>
@@ -85,6 +74,7 @@ import { useFormContext } from 'vee-validate';
 
 import FormSelect from '@/components/common/FormSelect.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 
 defineProps<{
   statusOptions: SelectOption[];
@@ -149,19 +139,6 @@ const [displayEndTime] = defineField('displayEndTime');
       grid-column: span 2;
     }
   }
-
-  &__date-range {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  &__date-separator {
-    flex: 0 0 auto;
-    padding-top: 9px;
-    color: tokens.$form-muted;
-    font-size: 14px;
-  }
 }
 
 @media (max-width: 1180px) {
@@ -188,15 +165,6 @@ const [displayEndTime] = defineField('displayEndTime');
       &--wide {
         grid-column: span 1;
       }
-    }
-
-    &__date-range {
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    &__date-separator {
-      padding-top: 0;
     }
   }
 }

@@ -396,7 +396,28 @@ const toNumberOrUndefined = (value: any) => {
 const toBoolean = (value: any) => {
   return value === true || value === 'true';
 };
+const normalizeToBackendLocalDateTime = (value?: string | null) => {
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ')
+    .replace(/\//g, '-');
 
+  if (!text) return undefined;
+  if (text.length >= 19) return text.slice(0, 19);
+  if (text.length === 16) return `${text}:00`;
+
+  return text;
+};
+const normalizeToPickerDateTime = (value?: string | null) => {
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ')
+    .replace(/-/g, '/');
+
+  if (!text) return '';
+
+  return text.length >= 16 ? text.slice(0, 16) : text;
+};
 const parseTextList = (value: any, separator: string | RegExp) => {
   return String(value || '')
     .split(separator)
@@ -434,9 +455,8 @@ const parseDesignatedPrizeNumbers = (value: any) => {
 };
 
 const normalizePrizePayload = (prize: any, index: number) => {
-  const isScratchGrandPrize =
-    toBoolean(prize.isGrandPrize) 
-    // || String(prize.level || '').toUpperCase() === 'GRAND';
+  const isScratchGrandPrize = toBoolean(prize.isGrandPrize);
+  // || String(prize.level || '').toUpperCase() === 'GRAND';
 
   return {
     ...(prize.id ? { id: prize.id } : {}),
@@ -456,7 +476,7 @@ const normalizePrizePayload = (prize: any, index: number) => {
         : undefined,
 
     isLastPrize: isScratchGrandPrize ? false : toBoolean(prize.isLastPrize),
-    isGrandPrize : isScratchGrandPrize,
+    isGrandPrize: isScratchGrandPrize,
     orderNum:
       prize.orderNum === '' || prize.orderNum == null
         ? index + 1
@@ -526,10 +546,9 @@ const buildSubmitPayload = (values: any) => {
       allowMultiDraw: values.allowMultiDraw !== false,
       multiDrawOptions,
 
-      scheduledAt: cleanText(values.scheduledAt),
-      startTime: cleanText(values.startTime),
-      endTime: cleanText(values.endTime),
-
+      scheduledAt: normalizeToBackendLocalDateTime(values.scheduledAt),
+      startTime: normalizeToBackendLocalDateTime(values.startTime),
+      endTime: normalizeToBackendLocalDateTime(values.endTime),
       maxDraws: Number(values.maxDraws ?? 0),
 
       remark: cleanText(values.remark),
@@ -654,14 +673,18 @@ const loadDetail = async () => {
       status: lotteryData?.status ?? data?.status ?? 'DRAFT',
       designationStatus: resolvedDesignationStatus ?? '',
 
-      pricePerDraw: Number(lotteryData?.pricePerDraw ?? data?.pricePerDraw ?? 0),
+      pricePerDraw: Number(
+        lotteryData?.pricePerDraw ?? data?.pricePerDraw ?? 0,
+      ),
       maxDraws: Number(lotteryData?.maxDraws ?? data?.maxDraws ?? 0),
 
       hotCount: lotteryData?.hotCount ?? data?.hotCount ?? undefined,
       theme: lotteryData?.theme ?? data?.theme ?? '',
 
       imageUrl: lotteryData?.imageUrl ?? data?.imageUrl ?? '',
-      galleryImagesText: Array.isArray(lotteryData?.galleryImages ?? data?.galleryImages)
+      galleryImagesText: Array.isArray(
+        lotteryData?.galleryImages ?? data?.galleryImages,
+      )
         ? (lotteryData?.galleryImages ?? data?.galleryImages).join('\n')
         : '',
 
@@ -673,15 +696,24 @@ const loadDetail = async () => {
 
       remark: lotteryData?.remark ?? data?.remark ?? '',
 
-      scheduledAt: lotteryData?.scheduledAt ?? data?.scheduledAt ?? '',
-      startTime: lotteryData?.startTime ?? data?.startTime ?? '',
-      endTime: lotteryData?.endTime ?? data?.endTime ?? '',
+      scheduledAt: normalizeToPickerDateTime(
+        lotteryData?.scheduledAt ?? data?.scheduledAt,
+      ),
+      startTime: normalizeToPickerDateTime(
+        lotteryData?.startTime ?? data?.startTime,
+      ),
+      endTime: normalizeToPickerDateTime(lotteryData?.endTime ?? data?.endTime),
 
-      discountedPrice: lotteryData?.discountedPrice ?? data?.discountedPrice ?? undefined,
-      autoDiscountEnabled: lotteryData?.autoDiscountEnabled ?? data?.autoDiscountEnabled ?? false,
+      discountedPrice:
+        lotteryData?.discountedPrice ?? data?.discountedPrice ?? undefined,
+      autoDiscountEnabled:
+        lotteryData?.autoDiscountEnabled ?? data?.autoDiscountEnabled ?? false,
 
-      allowMultiDraw: lotteryData?.allowMultiDraw ?? data?.allowMultiDraw ?? true,
-      multiDrawOptionsText: Array.isArray(lotteryData?.multiDrawOptions ?? data?.multiDrawOptions)
+      allowMultiDraw:
+        lotteryData?.allowMultiDraw ?? data?.allowMultiDraw ?? true,
+      multiDrawOptionsText: Array.isArray(
+        lotteryData?.multiDrawOptions ?? data?.multiDrawOptions,
+      )
         ? (lotteryData?.multiDrawOptions ?? data?.multiDrawOptions).join(',')
         : '10',
 
@@ -689,12 +721,15 @@ const loadDetail = async () => {
 
       bonusEnabled: lotteryData?.bonusEnabled ?? data?.bonusEnabled ?? false,
       bonusPointsPerDraw:
-        lotteryData?.bonusPointsPerDraw ?? data?.bonusPointsPerDraw ?? undefined,
+        lotteryData?.bonusPointsPerDraw ??
+        data?.bonusPointsPerDraw ??
+        undefined,
       bonusCostPerDraw:
         lotteryData?.bonusCostPerDraw ?? data?.bonusCostPerDraw ?? undefined,
 
       prizes:
-        String(lotteryData?.subCategory ?? data?.subCategory ?? '') === 'SCRATCH_MODE'
+        String(lotteryData?.subCategory ?? data?.subCategory ?? '') ===
+        'SCRATCH_MODE'
           ? normalizeScratchFormPrizes(mapPrizesToForm(data?.prizes ?? []))
           : mapPrizesToForm(data?.prizes ?? []),
     });
@@ -722,7 +757,8 @@ const validateBeforeSubmit = async (values: any, payload: any) => {
 
     await openInfoDialog({
       title: '商品已上架，部分欄位不可修改',
-      message: '商品一旦上架，遊戲模式與上下架狀態不可任意修改。請先下架後再調整相關設定。',
+      message:
+        '商品一旦上架，遊戲模式與上下架狀態不可任意修改。請先下架後再調整相關設定。',
 
       iconType: 'warning',
     });

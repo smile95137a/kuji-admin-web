@@ -88,17 +88,16 @@
         </div>
 
         <div class="sl-filter-grid">
-          <FormInput
-            label="開始時間"
-            type="datetime-local"
-            v-model="startInput"
-          />
-
-          <FormInput
-            label="結束時間"
-            type="datetime-local"
-            v-model="endInput"
-          />
+          <div class="sl-filter-grid__item sl-filter-grid__item--wide">
+            <FormDateRangeField
+              label="時間區間"
+              type="datetime-local"
+              v-model:start="startInput"
+              v-model:end="endInput"
+              separator="~"
+              :auto-apply-default="true"
+            />
+          </div>
 
           <FormInput
             label="Email 搜尋"
@@ -178,7 +177,7 @@
               <DateFormatter
                 v-if="item.createdAt"
                 :date="item.createdAt"
-                format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY/MM/DD HH:mm:ss"
               />
               <span v-else class="sl-empty">—</span>
             </template>
@@ -294,6 +293,7 @@ import Pagination from '@/components/common/Pagination.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 import DateFormatter from '@/components/common/DateFormatter.vue';
 
 import { executeApi } from '@/utils/executeApiUtils';
@@ -374,9 +374,15 @@ const { list, hasData, noDataMessage, query } = useSearchPage({
  * Utils
  * ============================== */
 const toBackendDateTime = (value?: string | null) => {
-  if (!value) return '';
+  const text = String(value ?? '')
+    .trim()
+    .replace('T', ' ')
+    .replace(/\//g, '-');
 
-  return String(value).length === 16 ? `${value}:00` : String(value);
+  if (!text) return '';
+  if (text.length === 16) return `${text}:00`;
+
+  return text;
 };
 
 const truncate = (value?: string, max = 60) => {
@@ -858,6 +864,14 @@ onMounted(async () => {
   border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
   border-radius: 16px;
   background: color.mix(tokens.$brand-light, #fff, 7%);
+
+  &__item {
+    min-width: 0;
+
+    &--wide {
+      grid-column: span 2;
+    }
+  }
 }
 
 .sl-filter-actions {
@@ -1047,6 +1061,12 @@ onMounted(async () => {
 
   .sl-filter-grid {
     grid-template-columns: 1fr;
+
+    &__item {
+      &--wide {
+        grid-column: span 1;
+      }
+    }
   }
 
   .sl-filter-actions {
