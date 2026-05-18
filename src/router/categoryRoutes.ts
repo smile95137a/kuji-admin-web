@@ -1,12 +1,21 @@
-// src/router/categoryRoutes.ts
-import type { RouteRecordRaw } from 'vue-router';
+import { RouteRecordRaw } from 'vue-router';
 
-const categoryRoutes: RouteRecordRaw[] = [
+const categoryRoutes: Array<RouteRecordRaw> = [
   {
-    path: 'categories',
-    name: 'CategoryManagement',
-    component: () => import('@/views/category/CategoryManagement.vue'),
-    meta: { requiresAuth: true, title: '類別管理', layout: 'default' },
+    path: 'category',
+    name: 'CategoryList',
+    component: () => import('@/views/category/CategoryList.vue'),
+  },
+  {
+    path: 'category/add',
+    name: 'CategoryAdd',
+    component: () => import('@/views/category/CategoryForm.vue'),
+  },
+  {
+    path: 'category/edit/:id',
+    name: 'CategoryEdit',
+    component: () => import('@/views/category/CategoryForm.vue'),
+    props: true,
   },
 ];
 

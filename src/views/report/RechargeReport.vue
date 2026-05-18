@@ -52,19 +52,18 @@
 
         <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
           <div class="rr-filter-grid">
-            <FormInput
-              label="開始日期"
-              type="date"
-              name="startDate"
-              v-model="startDate"
-            />
-
-            <FormInput
-              label="結束日期"
-              type="date"
-              name="endDate"
-              v-model="endDate"
-            />
+            <div class="rr-filter-grid__date">
+              <FormDateRangeField
+                label="查詢日期"
+                type="date"
+                v-model:start="startDate"
+                v-model:end="endDate"
+                separator="~"
+                :auto-apply-default="true"
+                :default-start="dateRange.startDate"
+                :default-end="dateRange.endDate"
+              />
+            </div>
           </div>
 
           <div class="rr-filter-actions">
@@ -163,6 +162,7 @@
               <VChart :option="chartOption" class="rr-chart__main" autoresize />
             </div>
 
+            <!-- 方案分布圖 -->
             <div v-if="planStats.length" class="rr-chart m-t-20">
               <div class="rr-chart__head">
                 <div>
@@ -281,7 +281,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { Form, type FormContext } from 'vee-validate';
 
 import VChart from 'vue-echarts';
@@ -298,11 +298,14 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
-import FormInput from '@/components/common/FormInput.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 
 import { useAuthStore } from '@/stores';
-import { getRechargeReport, type RechargeReportRes } from '@/services/adminReportService';
+import {
+  getRechargeReport,
+  type RechargeReportRes,
+} from '@/services/adminReportService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
 import { exportToCsv } from '@/utils/csvExport';
@@ -360,6 +363,37 @@ const lastQuery = ref({
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
+
+/**
+ * FormDateRangeField 會輸出 yyyy/MM/dd
+ * 後端通常吃 yyyy-MM-dd，這裡統一轉回去
+ */
+function normalizeDateForApi(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return undefined;
+
+  return text.replace(/\//g, '-').slice(0, 10);
+}
+
+function normalizeDateForDisplay(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return '';
+
+  return text.replace(/-/g, '/').slice(0, 10);
+}
+
+watch(
+  [startDate, endDate],
+  ([newStartDate, newEndDate]) => {
+    formRef.value?.setValues({
+      startDate: newStartDate,
+      endDate: newEndDate,
+    });
+  },
+  { flush: 'post' },
+);
 
 /* ==============================
  * 分頁
@@ -597,14 +631,17 @@ async function onSubmit(values: any) {
 
   forbiddenMessage.value = '';
 
+  const currentStartDate = startDate.value || values.startDate;
+  const currentEndDate = endDate.value || values.endDate;
+
   const condition = {
-    startDate: values.startDate || undefined,
-    endDate: values.endDate || undefined,
+    startDate: normalizeDateForApi(currentStartDate),
+    endDate: normalizeDateForApi(currentEndDate),
   };
 
   lastQuery.value = {
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    startDate: normalizeDateForDisplay(currentStartDate),
+    endDate: normalizeDateForDisplay(currentEndDate),
   };
 
   loading.value = true;
@@ -630,8 +667,8 @@ async function onSubmit(values: any) {
 
 function resetFilters() {
   const values = {
-    startDate: dateRange.value.startDate,
-    endDate: dateRange.value.endDate,
+    startDate: normalizeDateForDisplay(dateRange.value.startDate),
+    endDate: normalizeDateForDisplay(dateRange.value.endDate),
   };
 
   startDate.value = values.startDate;
@@ -681,8 +718,12 @@ onMounted(async () => {
   await nextTick();
 
   const values = {
-    ...initValues.value,
+    startDate: normalizeDateForDisplay(initValues.value.startDate),
+    endDate: normalizeDateForDisplay(initValues.value.endDate),
   };
+
+  startDate.value = values.startDate;
+  endDate.value = values.endDate;
 
   formRef.value?.setValues(values);
 
@@ -865,6 +906,11 @@ onMounted(async () => {
   border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
   border-radius: 16px;
   background: color.mix(tokens.$brand-light, #fff, 7%);
+
+  &__date {
+    grid-column: span 2;
+    min-width: 0;
+  }
 }
 
 .rr-filter-actions {
@@ -1013,6 +1059,12 @@ onMounted(async () => {
   .rr-summary-row,
   .rr-filter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .rr-filter-grid {
+    &__date {
+      grid-column: span 1;
+    }
   }
 
   .rr-card-head {

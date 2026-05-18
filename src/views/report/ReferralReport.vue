@@ -58,36 +58,39 @@
         <div class="rf-card-head">
           <div>
             <p class="rf-card-head__title">查詢條件</p>
-            <p class="rf-card-head__sub">可依推薦店家與日期區間查詢招商成效資料。</p>
+            <p class="rf-card-head__sub">
+              可依推薦店家與日期區間查詢招商成效資料。
+            </p>
           </div>
         </div>
 
         <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
           <div class="rf-filter-grid">
-            <FormSelect
-              label="推薦店家"
-              name="storeId"
-              v-model="storeId"
-              :options="storeOptions"
-              :showAll="true"
-              allLabel="全部"
-              :allValue="''"
-              :disabled="!isAdmin"
-            />
+            <div class="rf-filter-grid__store">
+              <FormSelect
+                label="推薦店家"
+                name="storeId"
+                v-model="storeId"
+                :options="storeOptions"
+                :showAll="true"
+                allLabel="全部"
+                :allValue="''"
+                :disabled="!isAdmin"
+              />
+            </div>
 
-            <FormInput
-              label="開始日期"
-              type="date"
-              name="startDate"
-              v-model="startDate"
-            />
-
-            <FormInput
-              label="結束日期"
-              type="date"
-              name="endDate"
-              v-model="endDate"
-            />
+            <div class="rf-filter-grid__date">
+              <FormDateRangeField
+                label="查詢日期"
+                type="date"
+                v-model:start="startDate"
+                v-model:end="endDate"
+                separator="~"
+                :auto-apply-default="true"
+                :default-start="dateRange.startDate"
+                :default-end="dateRange.endDate"
+              />
+            </div>
           </div>
 
           <div class="rf-filter-actions">
@@ -133,7 +136,7 @@
           </div>
         </div>
 
-        <div v-if="forbiddenMessage" class="rf-state m-t-16">
+        <div v-if="forbiddenMessage" class="rf-forbidden m-t-16">
           {{ forbiddenMessage }}
         </div>
 
@@ -169,7 +172,9 @@
               <div class="rf-stat-card">
                 <span class="rf-stat-card__label">本期啟用店數</span>
                 <strong class="rf-stat-card__value">
-                  {{ formatNumber(reportData.currentPeriodActivatedStoreCount) }}
+                  {{
+                    formatNumber(reportData.currentPeriodActivatedStoreCount)
+                  }}
                 </strong>
               </div>
 
@@ -222,9 +227,12 @@
                     "
                     :currentPage="getCurrentPage('performance')"
                     :nextPage="() => nextPage('performance', performanceRows)"
-                    :previousPage="() => previousPage('performance', performanceRows)"
+                    :previousPage="
+                      () => previousPage('performance', performanceRows)
+                    "
                     :goToPage="
-                      (page: number) => goToPage('performance', performanceRows, page)
+                      (page: number) =>
+                        goToPage('performance', performanceRows, page)
                     "
                     :pageLimitSize="getPageLimitSize('performance')"
                     :totalItems="performanceRows.length"
@@ -281,7 +289,10 @@
               </template>
             </div>
 
-            <NoData v-if="!performanceRows.length && !dailyRows.length" message="無資料" />
+            <NoData
+              v-if="!performanceRows.length && !dailyRows.length"
+              message="無資料"
+            />
           </div>
         </template>
       </MCard>
@@ -290,7 +301,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { Form, type FormContext } from 'vee-validate';
 
 import VChart from 'vue-echarts';
@@ -307,12 +318,18 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
-import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 
-import { getReferralReport, type ReferralReportRes } from '@/services/adminReportService';
-import { getAllStoreOptions, toSelectOptions } from '@/services/adminStoreService';
+import {
+  getReferralReport,
+  type ReferralReportRes,
+} from '@/services/adminReportService';
+import {
+  getAllStoreOptions,
+  toSelectOptions,
+} from '@/services/adminStoreService';
 import { useAuthStore } from '@/stores';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -349,9 +366,20 @@ const dailyColumns: TableColumn[] = [
 
 const { dateRange } = useReportFilter();
 const authStore = useAuthStore();
-const isAdmin = computed(() =>
-  (authStore.user?.roles ?? []).includes('ROLE_ADMIN'),
-);
+
+const isAdmin = computed(() => {
+  const roles = (authStore.user as any)?.roles ?? [];
+  const role = (authStore.user as any)?.role;
+  const roleCode = (authStore.user as any)?.roleCode;
+
+  const roleSet = new Set(
+    [...roles, role, roleCode]
+      .filter(Boolean)
+      .map((item) => String(item).toUpperCase()),
+  );
+
+  return roleSet.has('ROLE_ADMIN') || roleSet.has('ADMIN');
+});
 
 const formRef = ref<FormContext | null>(null);
 
@@ -368,6 +396,7 @@ const storeOptions = ref<any[]>([]);
 
 const reportData = ref<ReferralReportRes | null>(null);
 const loading = ref(false);
+
 const forbiddenMessage = computed(() =>
   isAdmin.value ? '' : '此報表僅限平台管理員查看。',
 );
@@ -377,6 +406,37 @@ const lastQuery = ref({
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
+
+/**
+ * FormDateRangeField 會輸出 yyyy/MM/dd
+ * 後端通常吃 yyyy-MM-dd，這裡統一轉回去
+ */
+function normalizeDateForApi(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return undefined;
+
+  return text.replace(/\//g, '-').slice(0, 10);
+}
+
+function normalizeDateForDisplay(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return '';
+
+  return text.replace(/-/g, '/').slice(0, 10);
+}
+
+watch(
+  [startDate, endDate],
+  ([newStartDate, newEndDate]) => {
+    formRef.value?.setValues({
+      startDate: newStartDate,
+      endDate: newEndDate,
+    });
+  },
+  { flush: 'post' },
+);
 
 /* ==============================
  * 分頁
@@ -504,8 +564,9 @@ const selectedStoreText = computed(() => {
   if (!lastQuery.value.storeId) return '全部推薦店家';
 
   return (
-    storeOptions.value.find((item) => String(item.value) === String(lastQuery.value.storeId))
-      ?.label ?? '指定推薦店家'
+    storeOptions.value.find(
+      (item) => String(item.value) === String(lastQuery.value.storeId),
+    )?.label ?? '指定推薦店家'
   );
 });
 
@@ -551,7 +612,9 @@ function rankingWithIndex(list: any[]) {
     .sort((a, b) => {
       const activatedDiff =
         (b.activatedStoreCount ?? 0) - (a.activatedStoreCount ?? 0);
+
       if (activatedDiff !== 0) return activatedDiff;
+
       return (b.referralCodeCount ?? 0) - (a.referralCodeCount ?? 0);
     })
     .slice(0, 10)
@@ -578,6 +641,7 @@ function formatPercent(value: any) {
   if (value === null || value === undefined || value === '') return '-';
 
   const num = Number(value);
+
   if (Number.isNaN(num)) return String(value);
 
   return `${num.toFixed(2)}%`;
@@ -593,16 +657,20 @@ async function onSubmit(values: any) {
     return;
   }
 
+  const currentStartDate = startDate.value || values.startDate;
+  const currentEndDate = endDate.value || values.endDate;
+  const currentStoreId = storeId.value || values.storeId || '';
+
   const condition = {
-    ...(values.storeId ? { storeId: values.storeId } : {}),
-    startDate: values.startDate || undefined,
-    endDate: values.endDate || undefined,
+    ...(currentStoreId ? { storeId: currentStoreId } : {}),
+    startDate: normalizeDateForApi(currentStartDate),
+    endDate: normalizeDateForApi(currentEndDate),
   };
 
   lastQuery.value = {
-    storeId: values.storeId ?? '',
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    storeId: currentStoreId,
+    startDate: normalizeDateForDisplay(currentStartDate),
+    endDate: normalizeDateForDisplay(currentEndDate),
   };
 
   loading.value = true;
@@ -629,8 +697,8 @@ async function onSubmit(values: any) {
 function resetFilters() {
   const values = {
     storeId: '',
-    startDate: dateRange.value.startDate,
-    endDate: dateRange.value.endDate,
+    startDate: normalizeDateForDisplay(dateRange.value.startDate),
+    endDate: normalizeDateForDisplay(dateRange.value.endDate),
   };
 
   storeId.value = values.storeId;
@@ -642,7 +710,11 @@ function resetFilters() {
 
 function handleExport() {
   if (performanceRows.value.length) {
-    exportToCsv(performanceRows.value, performanceColumns, `${REPORT_TITLE}_推薦店家排行`);
+    exportToCsv(
+      performanceRows.value,
+      performanceColumns,
+      `${REPORT_TITLE}_推薦店家排行`,
+    );
   }
 
   if (dailyRows.value.length) {
@@ -669,8 +741,14 @@ onMounted(async () => {
   await loadStoreOptions();
 
   const values = {
-    ...initValues.value,
+    storeId: '',
+    startDate: normalizeDateForDisplay(initValues.value.startDate),
+    endDate: normalizeDateForDisplay(initValues.value.endDate),
   };
+
+  storeId.value = values.storeId;
+  startDate.value = values.startDate;
+  endDate.value = values.endDate;
 
   formRef.value?.setValues(values);
 
@@ -763,7 +841,7 @@ onMounted(async () => {
  * ============================== */
 .rf-summary-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -848,13 +926,22 @@ onMounted(async () => {
  * ============================== */
 .rf-filter-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 14px;
   padding: 14px;
   border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
   border-radius: 16px;
   background: color.mix(tokens.$brand-light, #fff, 7%);
+
+  &__store {
+    min-width: 0;
+  }
+
+  &__date {
+    grid-column: span 2;
+    min-width: 0;
+  }
 }
 
 .rf-filter-actions {
@@ -872,12 +959,22 @@ onMounted(async () => {
   font-size: 14px;
 }
 
+.rf-forbidden {
+  padding: 10px 12px;
+  border: 1px solid color.mix(#ef4444, #fff, 60%);
+  border-radius: 10px;
+  background: color.mix(#ef4444, #fff, 92%);
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 /* ==============================
  * Stat Cards
  * ============================== */
 .rf-stat-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -975,8 +1072,12 @@ onMounted(async () => {
 /* ==============================
  * RWD
  * ============================== */
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .rf-stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .rf-summary-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -995,6 +1096,12 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  .rf-filter-grid {
+    &__date {
+      grid-column: span 1;
+    }
+  }
+
   .rf-card-head {
     flex-direction: column;
   }
@@ -1002,6 +1109,10 @@ onMounted(async () => {
   .rf-result-actions,
   .rf-filter-actions {
     justify-content: flex-start;
+  }
+
+  .rf-stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

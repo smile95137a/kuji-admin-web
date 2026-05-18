@@ -61,37 +61,38 @@
 
         <Form ref="formRef" :initial-values="initValues" @submit="onSubmit">
           <div class="rv-filter-grid">
-            <FormSelect
-              v-if="isAdmin"
-              label="店家"
-              name="storeId"
-              v-model="storeId"
-              :options="storeOptions"
-              :showAll="true"
-              allLabel="全部"
-              :allValue="''"
-            />
+            <div class="rv-filter-grid__store">
+              <FormSelect
+                v-if="isAdmin"
+                label="店家"
+                name="storeId"
+                v-model="storeId"
+                :options="storeOptions"
+                :showAll="true"
+                allLabel="全部"
+                :allValue="''"
+              />
 
-            <FormInput
-              v-else
-              label="店家"
-              :modelValue="currentStoreLabel"
-              disabled
-            />
+              <FormInput
+                v-else
+                label="店家"
+                :modelValue="currentStoreLabel"
+                disabled
+              />
+            </div>
 
-            <FormInput
-              label="開始日期"
-              type="date"
-              name="startDate"
-              v-model="startDate"
-            />
-
-            <FormInput
-              label="結束日期"
-              type="date"
-              name="endDate"
-              v-model="endDate"
-            />
+            <div class="rv-filter-grid__date">
+              <FormDateRangeField
+                label="查詢日期"
+                type="date"
+                v-model:start="startDate"
+                v-model:end="endDate"
+                separator="~"
+                :auto-apply-default="true"
+                :default-start="dateRange.startDate"
+                :default-end="dateRange.endDate"
+              />
+            </div>
           </div>
 
           <div class="rv-filter-actions">
@@ -303,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { Form, type FormContext } from 'vee-validate';
 import { isAxiosError } from 'axios';
 
@@ -324,9 +325,13 @@ import Pagination from '@/components/common/Pagination.vue';
 import FormInput from '@/components/common/FormInput.vue';
 import FormSelect from '@/components/common/FormSelect.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
 
 import { useAuthStore } from '@/stores';
-import { getRevenueReport, type RevenueReportRes } from '@/services/adminReportService';
+import {
+  getRevenueReport,
+  type RevenueReportRes,
+} from '@/services/adminReportService';
 import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
 import { useReportFilter } from '@/composables/useReportFilter';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -392,6 +397,37 @@ const lastQuery = ref({
   startDate: dateRange.value.startDate,
   endDate: dateRange.value.endDate,
 });
+
+/**
+ * FormDateRangeField 會輸出 yyyy/MM/dd
+ * 後端通常吃 yyyy-MM-dd，這裡統一轉回去
+ */
+function normalizeDateForApi(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return undefined;
+
+  return text.replace(/\//g, '-').slice(0, 10);
+}
+
+function normalizeDateForDisplay(value?: string | null) {
+  const text = String(value ?? '').trim();
+
+  if (!text) return '';
+
+  return text.replace(/-/g, '/').slice(0, 10);
+}
+
+watch(
+  [startDate, endDate],
+  ([newStartDate, newEndDate]) => {
+    formRef.value?.setValues({
+      startDate: newStartDate,
+      endDate: newEndDate,
+    });
+  },
+  { flush: 'post' },
+);
 
 /* ==============================
  * 分頁
@@ -661,16 +697,23 @@ async function loadStoreOptions() {
 async function onSubmit(values: any) {
   forbiddenMessage.value = '';
 
+  const currentStartDate = startDate.value || values.startDate;
+  const currentEndDate = endDate.value || values.endDate;
+
+  const currentStoreId = isAdmin.value
+    ? storeId.value || values.storeId || ''
+    : storeId.value || values.storeId || '';
+
   const condition = {
-    startDate: values.startDate || undefined,
-    endDate: values.endDate || undefined,
-    ...(values.storeId ? { storeId: values.storeId } : {}),
+    startDate: normalizeDateForApi(currentStartDate),
+    endDate: normalizeDateForApi(currentEndDate),
+    ...(currentStoreId ? { storeId: currentStoreId } : {}),
   };
 
   lastQuery.value = {
-    storeId: values.storeId ?? '',
-    startDate: values.startDate ?? '',
-    endDate: values.endDate ?? '',
+    storeId: currentStoreId,
+    startDate: normalizeDateForDisplay(currentStartDate),
+    endDate: normalizeDateForDisplay(currentEndDate),
   };
 
   loading.value = true;
@@ -709,8 +752,8 @@ async function onSubmit(values: any) {
 function resetFilters() {
   const values = {
     storeId: isAdmin.value ? '' : storeId.value,
-    startDate: dateRange.value.startDate,
-    endDate: dateRange.value.endDate,
+    startDate: normalizeDateForDisplay(dateRange.value.startDate),
+    endDate: normalizeDateForDisplay(dateRange.value.endDate),
   };
 
   storeId.value = values.storeId;
@@ -741,7 +784,13 @@ onMounted(async () => {
   const values = {
     ...initValues.value,
     storeId: storeId.value,
+    startDate: normalizeDateForDisplay(initValues.value.startDate),
+    endDate: normalizeDateForDisplay(initValues.value.endDate),
   };
+
+  storeId.value = values.storeId;
+  startDate.value = values.startDate;
+  endDate.value = values.endDate;
 
   formRef.value?.setValues(values);
 
@@ -924,6 +973,15 @@ onMounted(async () => {
   border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
   border-radius: 16px;
   background: color.mix(tokens.$brand-light, #fff, 7%);
+
+  &__store {
+    min-width: 0;
+  }
+
+  &__date {
+    grid-column: span 2;
+    min-width: 0;
+  }
 }
 
 .rv-filter-actions {
@@ -1072,6 +1130,12 @@ onMounted(async () => {
   .rv-summary-row,
   .rv-filter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .rv-filter-grid {
+    &__date {
+      grid-column: span 1;
+    }
   }
 
   .rv-card-head {
