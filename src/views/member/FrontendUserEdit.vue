@@ -332,7 +332,7 @@
   </MCard>
 
   <!-- ===== 點數管理 ===== -->
-  <div class="m-t-12">
+  <div v-if="false" class="m-t-12">
     <MCard>
       <p class="form__text form__text--title">點數管理</p>
 
@@ -472,7 +472,7 @@
   </div>
 
   <!-- ===== 賞品盒 ===== -->
-  <div class="m-t-12">
+  <div v-if="false" class="m-t-12">
     <MCard>
       <p class="form__text form__text--title">賞品盒</p>
 
@@ -544,9 +544,7 @@ import {
   getLoginHistory,
   coinAdjust,
 } from '@/services/adminFrontendUserService';
-
 import { getUserWallet } from '@/services/adminWalletService';
-
 import {
   getPrizeBoxByUserId,
   getPrizeBoxSummaryByStore,
@@ -1003,12 +1001,8 @@ const unlockOne = async () => {
 
 onMounted(async () => {
   await loadDetail();
-  await loadWallet();
 });
 
-/* ==============================
- * 點數 / 錢包（唯讀餘額）
- * ============================== */
 const wallet = ref<any>(null);
 const walletLoading = ref(false);
 
@@ -1025,14 +1019,19 @@ const loadWallet = async () => {
   }
 };
 
-/* ==============================
- * 賞品盒
- * ============================== */
 const prizeBoxMode = ref<'summary' | 'detail'>('summary');
 const prizeBoxList = ref<any[]>([]);
 const prizeBoxSearched = ref(false);
-
 const prizeBoxModeOptions = [
+
+/* ==============================
+ * 點數 / 錢包（唯讀餘額）
+ * ============================== */
+
+/* ==============================
+ * 賞品盒
+ * ============================== */
+
   { label: '按店家分組（Summary）', value: 'summary' },
   { label: '明細（Detail）', value: 'detail' },
 ];

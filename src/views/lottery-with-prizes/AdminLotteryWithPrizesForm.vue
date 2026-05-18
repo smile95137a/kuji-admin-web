@@ -454,6 +454,52 @@ const parseDesignatedPrizeNumbers = (value: any) => {
   }
 };
 
+const inferScratchGameMode = (lotteryData: any, rootData: any) => {
+  const explicitGameMode = String(
+    lotteryData?.gameMode ?? rootData?.gameMode ?? '',
+  )
+    .trim()
+    .toUpperCase();
+
+  if (explicitGameMode) return explicitGameMode;
+
+  const isScratchMode =
+    String(lotteryData?.subCategory ?? rootData?.subCategory ?? '') ===
+      'SCRATCH_MODE' ||
+    String(lotteryData?.playMode ?? rootData?.playMode ?? '') ===
+      'SCRATCH_MODE';
+
+  if (!isScratchMode) return '';
+
+  const designationStatus = String(
+    lotteryData?.designationStatus ?? rootData?.designationStatus ?? '',
+  )
+    .trim()
+    .toUpperCase();
+
+  if (designationStatus === 'PENDING' || designationStatus === 'DESIGNATED') {
+    return 'SCRATCH_STORE';
+  }
+
+  const lotteryText = [
+    lotteryData?.title,
+    lotteryData?.description,
+    lotteryData?.content,
+    ...(Array.isArray(lotteryData?.tags) ? lotteryData.tags : []),
+    rootData?.title,
+    rootData?.description,
+    rootData?.content,
+    ...(Array.isArray(rootData?.tags) ? rootData.tags : []),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (lotteryText.includes('玩家指定')) return 'SCRATCH_PLAYER';
+  if (lotteryText.includes('店家指定')) return 'SCRATCH_STORE';
+
+  return '';
+};
+
 const normalizePrizePayload = (prize: any, index: number) => {
   const isScratchGrandPrize = toBoolean(prize.isGrandPrize);
   // || String(prize.level || '').toUpperCase() === 'GRAND';
@@ -629,9 +675,7 @@ const loadDetail = async () => {
     const res = await getLotteryWithPrizes(id.value);
     const data = (res as any)?.data ?? res;
     const lotteryData = data?.lottery ?? data;
-    const resolvedGameMode = String(
-      lotteryData?.gameMode ?? data?.gameMode ?? '',
-    ).toUpperCase();
+    const resolvedGameMode = inferScratchGameMode(lotteryData, data);
     const resolvedDesignationStatus =
       lotteryData?.designationStatus ?? data?.designationStatus ?? null;
     const resolvedDesignatedPrizeNumbers =

@@ -1557,17 +1557,25 @@ onMounted(loadDetail);
   &__modal {
     width: 100%;
     min-width: 0;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    max-height: min(88vh, 760px);
+    padding: 22px 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 232, 204, 0.6) 0, rgba(255, 232, 204, 0.14) 96px, #fff 96px),
+      #fff;
   }
 
   &__modal-head {
-    margin-bottom: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid color.mix(tokens.$form-border, #fff, 58%);
   }
 
   &__modal-title {
     margin: 0;
     color: tokens.$form-text;
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 800;
     line-height: 1.4;
   }
@@ -1595,13 +1603,16 @@ onMounted(loadDetail);
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-width: 0;
   }
 
   &__modal-actions {
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 12px;
-    margin-top: 12px;
+    margin-top: 6px;
+    padding-top: 16px;
+    border-top: 1px solid color.mix(tokens.$form-border, #fff, 58%);
     flex-wrap: wrap;
   }
 
@@ -1663,6 +1674,14 @@ onMounted(loadDetail);
     &__report-card {
       border-radius: 14px;
       padding: 12px;
+    }
+
+    &__modal {
+      padding: 18px 16px 20px;
+    }
+
+    &__modal-title {
+      font-size: 18px;
     }
   }
 }

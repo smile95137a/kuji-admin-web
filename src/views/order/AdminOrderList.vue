@@ -992,31 +992,79 @@ onMounted(async () => {
 }
 
 .order-action-dialog {
-  padding: 16px;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 232, 204, 0.6) 0, rgba(255, 232, 204, 0.12) 88px, #fff 88px),
+    #fff;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, tokens.$brand 0%, tokens.$brand-hover 100%);
+  }
 
   &__title {
-    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px;
     color: tokens.$form-text;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
     line-height: 1.4;
   }
 
   &__warning {
-    margin: 0 0 12px;
-    padding: 10px 12px;
-    border-left: 4px solid tokens.$brand;
-    border-radius: tokens.$form-radius;
-    background: color.mix(tokens.$brand-light, #fff, 35%);
-    color: tokens.$brand-dark;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-left: 4px solid tokens.$danger;
+    border-radius: 14px;
+    background: color.mix(tokens.$danger-light, #fff, 12%);
+    color: color.adjust(tokens.$danger, $lightness: -8%);
     font-size: 13px;
-    line-height: 1.5;
+    font-weight: 700;
+    line-height: 1.6;
   }
 
   &__form {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+
+    > .flex {
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 4px;
+      padding-top: 16px;
+      border-top: 1px solid color.mix(tokens.$form-border, #fff, 58%);
+      flex-wrap: wrap;
+    }
+  }
+
+  @media (max-width: 767px) {
+    padding: 18px 16px 20px;
+
+    &::before {
+      left: 16px;
+      right: 16px;
+    }
+
+    &__title {
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+
+    &__form > .flex {
+      justify-content: stretch;
+    }
   }
 }
 </style>
