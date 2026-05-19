@@ -698,7 +698,10 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions, getStoreById, updateStore } from '@/services/adminStoreService';
-import { uploadStoreImage } from '@/services/adminUploadService';
+import {
+  uploadStoreCoverImage,
+  uploadStoreLogoImage,
+} from '@/services/adminUploadService';
 
 type AdminUserMode =
   | 'add-owner'
@@ -1311,7 +1314,7 @@ const uploadCroppedLogoImage = async (file: File) => {
   logoUploading.value = true;
 
   await executeApi<{ imageUrl: string }>({
-    fn: async () => uploadStoreImage(file),
+    fn: async () => uploadStoreLogoImage(file),
     onSuccess: async (res: any) => {
       const url = res?.imageUrl || res?.data?.imageUrl || '';
 
@@ -1347,7 +1350,7 @@ const uploadCroppedCoverImage = async (file: File) => {
   coverUploading.value = true;
 
   await executeApi<{ imageUrl: string }>({
-    fn: async () => uploadStoreImage(file),
+    fn: async () => uploadStoreCoverImage(file),
     onSuccess: async (res: any) => {
       const url = res?.imageUrl || res?.data?.imageUrl || '';
 

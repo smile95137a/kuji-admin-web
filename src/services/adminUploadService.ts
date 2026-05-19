@@ -3,7 +3,14 @@ import { api } from './FrontAPI';
 
 const basePath = '/admin/upload';
 
-type UploadImageType = 'news' | 'banner' | 'lottery' | 'prize' | 'store';
+type UploadImageType =
+  | 'news'
+  | 'banner'
+  | 'lottery'
+  | 'prize'
+  | 'store'
+  | 'store-logo'
+  | 'store-cover';
 
 /**
  * 通用：上傳圖片（news/banner/lottery/prize/store）
@@ -64,6 +71,18 @@ export const uploadStoreImage = async (
   file: File,
 ): Promise<ApiResponse<{ imageUrl: string }>> => {
   return uploadImage('store', file);
+};
+
+export const uploadStoreLogoImage = async (
+  file: File,
+): Promise<ApiResponse<{ imageUrl: string }>> => {
+  return uploadImage('store-logo', file);
+};
+
+export const uploadStoreCoverImage = async (
+  file: File,
+): Promise<ApiResponse<{ imageUrl: string }>> => {
+  return uploadImage('store-cover', file);
 };
 
 /**
