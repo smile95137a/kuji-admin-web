@@ -140,6 +140,7 @@ export const lotteryWithPrizesSchema = yup
     remark: yup.string().notRequired(),
 
     scheduledAt: yup.string().notRequired(),
+    enableActivityTime: yup.boolean().notRequired(),
     startTime: yup.string().notRequired(),
     endTime: yup.string().notRequired(),
 
@@ -307,6 +308,20 @@ export const lotteryWithPrizesSchema = yup
         });
       }
 
+      if (Number(firstPrize?.quantity ?? 0) !== 1) {
+        return this.createError({
+          path: 'prizes',
+          message: '自製賞抽籤型第 1 筆大獎數量必須為 1。',
+        });
+      }
+
+      if (prizes.some((item: any) => item?.isLastPrize === true)) {
+        return this.createError({
+          path: 'prizes',
+          message: '自製賞抽籤型不支援最後賞。',
+        });
+      }
+
       if (prizes.slice(1).some((item: any) => item?.isGrandPrize === true)) {
         return this.createError({
           path: 'prizes',
@@ -316,7 +331,28 @@ export const lotteryWithPrizesSchema = yup
 
       return true;
     },
-  );
+  )
+  .test('single-last-prize', '最後賞規則不合法', function (values) {
+    const prizes = Array.isArray(values?.prizes)
+      ? values.prizes.filter((item: any) => String(item?.name || '').trim())
+      : [];
+
+    const lastPrizeRows = prizes.filter((item: any) => item?.isLastPrize === true);
+    if (lastPrizeRows.length <= 1) {
+      if (lastPrizeRows.length === 1 && Number(lastPrizeRows[0]?.quantity ?? 0) !== 1) {
+        return this.createError({
+          path: 'prizes',
+          message: '最後賞數量必須固定為 1。',
+        });
+      }
+      return true;
+    }
+
+    return this.createError({
+      path: 'prizes',
+      message: '最後賞只能有一個。',
+    });
+  });
 
 export const lotteryWithPrizesInitialValues = {
   storeId: '',
@@ -348,6 +384,7 @@ export const lotteryWithPrizesInitialValues = {
   remark: '',
 
   scheduledAt: '',
+  enableActivityTime: false,
   startTime: '',
   endTime: '',
 

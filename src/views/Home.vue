@@ -186,19 +186,59 @@ watch([isMobile, sidebarVisible], ([mobile, open]) => {
 /* --------------------------------------
  * Menu transform
  * -------------------------------------- */
+const normalizeMenuRoute = (route?: string | null): string => {
+  const value = String(route ?? '').trim();
+  if (!value) return '';
+
+  const legacyRouteMap: Record<string, string> = {
+    '/admin/stores': '/home/stores',
+    '/admin/stores/list': '/home/stores',
+    '/admin/stores/create': '/home/stores/add',
+    '/admin/lotteries': '/home/lottery-with-prizes',
+    '/admin/lotteries/list': '/home/lottery-with-prizes',
+    '/admin/lotteries/create': '/home/lottery-with-prizes/add',
+    '/admin/prizes': '/home/lottery-with-prizes',
+    '/admin/orders': '/home/order',
+    '/admin/orders/list': '/home/order',
+    '/admin/shipping': '/home/order',
+    '/admin/users': '/home/admin-users',
+    '/admin/reports': '/home/report',
+    '/admin/reports/revenue': '/home/report/revenue',
+    '/admin/reports/draw-stats': '/home/report/lottery-result',
+    '/admin/reports/referral': '/home/report/referral',
+    '/admin/reports/recharge': '/home/report/recharge',
+    '/admin/reports/bonus': '/home/report/bonus',
+    '/admin/reports/member-growth': '/home/report/member-growth',
+    '/admin/reports/lottery-sales': '/home/report/lottery-sales',
+    '/admin/reports/store-perf': '/home/report/store-performance',
+    '/admin/reports/prize-shipment': '/home/report/prize-shipment',
+    '/admin/permissions': '/home/roles',
+    '/admin/permissions/roles': '/home/roles',
+    '/admin/permissions/menus': '/home/menus',
+    '/admin/permissions/accounts': '/home/admin-users',
+    '/admin/system': '/home/system-config',
+    '/admin/system/logs': '/home/system-log',
+    '/admin/system/marquee': '/home/marquee',
+    '/admin/system/recharge': '/home/recharge-plan',
+    '/admin/system/notices': '/home/emergency-announcements',
+  };
+
+  return legacyRouteMap[value] ?? value;
+};
+
 const transformMenu = (raw: any[]): MenuItem[] => {
   return (Array.isArray(raw) ? raw : [])
     .filter((m) => m?.isVisible !== false)
     .sort((a, b) => (a?.orderNum ?? 9999) - (b?.orderNum ?? 9999))
     .map((m) => ({
       title: m?.name ?? '',
-      route: m?.path ?? '',
+      route: normalizeMenuRoute(m?.path),
       submenu: (Array.isArray(m?.children) ? m.children : [])
         .filter((c) => c?.isVisible !== false)
         .sort((a, b) => (a?.orderNum ?? 9999) - (b?.orderNum ?? 9999))
         .map((c) => ({
           title: c?.name ?? '',
-          route: c?.path ?? '',
+          route: normalizeMenuRoute(c?.path),
         })),
     }));
 };

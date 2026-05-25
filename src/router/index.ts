@@ -128,6 +128,16 @@ router.beforeEach(async (to) => {
     return '/login';
   }
 
+  // 角色限制檢查（meta.roles 有設定才檢查）
+  const requiredRoles = to.meta?.roles as string[] | undefined;
+  if (requiredRoles && requiredRoles.length > 0 && authStore.isLogin) {
+    const userRoles: string[] = (authStore.user?.roles ?? []) as string[];
+    const hasRole = requiredRoles.some((r) => userRoles.includes(r));
+    if (!hasRole) {
+      return '/home';
+    }
+  }
+
   // 首次登入強制修改密碼
   if (authStore.forceChangePassword && to.path !== '/change-password') {
     return '/change-password';

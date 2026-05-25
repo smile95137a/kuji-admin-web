@@ -183,6 +183,7 @@ import { useRouter } from 'vue-router';
 import { usePagination } from '@/hook/usePagination';
 import { useSearchPage } from '@/hook/useSearchPage';
 import { compareByKeySmart } from '@/utils/sortUtils';
+import { formatDateTime as formatDateTimeUtil } from '@/utils/DateUtils';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
@@ -312,18 +313,7 @@ const columns = [
  * ============================== */
 function formatDateTime(val: any): string {
   if (!val) return '-';
-  try {
-    return new Date(val).toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return String(val);
-  }
+  return formatDateTimeUtil(val, 'YYYY/MM/DD HH:mm') || String(val);
 }
 
 function statusLabel(s: string): string {

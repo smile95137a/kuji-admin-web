@@ -23,7 +23,16 @@
 
             <!-- 指定店家 -->
             <div class="w-50 w-md-100 p-6">
+              <!-- 編輯模式：只顯示店家名稱，不可修改 -->
+              <FormInput
+                v-if="isEdit"
+                label="指定店家"
+                :modelValue="currentStoreName"
+                disabled
+              />
+              <!-- 新增模式：下拉選單（已有推薦碼的店家不顯示） -->
               <FormSelect
+                v-else
                 label="指定店家"
                 v-model="storeId"
                 :options="storeOptions"
@@ -100,6 +109,7 @@ import {
   getReferralCodeById,
   createReferralCode,
   updateReferralCode,
+  getAllReferralCodes,
 } from '@/services/adminReferralCodeService';
 
 import { getStoreOptions, toSelectOptions } from '@/services/adminStoreService';
@@ -134,6 +144,7 @@ const enabledOptions: SelectOption[] = [
 ];
 
 const storeOptions = ref<SelectOption[]>([]);
+const currentStoreName = ref('');
 
 /* --------------------------------------
  * Utils
@@ -165,7 +176,7 @@ const ensureStoreOptionExists = (storeIdValue: string) => {
 
   if (!exists) {
     storeOptions.value.unshift({
-      label: `店家（${storeIdValue}）`,
+      label: '未命名店家',
       value: storeIdValue,
     });
   }
@@ -224,18 +235,41 @@ const [remark] = defineField('remark');
  * Load options / detail
  * -------------------------------------- */
 const loadStoreOptions = async () => {
+  // In edit mode we only show the store name as text — no need to load the full option list
+  if (isEdit.value) return;
+
+  // Fetch stores and existing codes in parallel
+  let storeData: any[] = [];
+  let occupiedStoreIds = new Set<string>();
+
   await executeApi({
     fn: async () => getStoreOptions({ activeOnly: true }),
     onSuccess: (res: any) => {
-      const data = normalizeStoreOptions(res);
-
-      storeOptions.value = toSelectOptions(data);
-      ensureStoreOptionExists(String(storeId.value || ''));
+      storeData = normalizeStoreOptions(res);
     },
     showSuccessDialog: false,
     showFailDialog: true,
     showCatchDialog: true,
   });
+
+  // Fetch all existing referral codes to know which stores already have one
+  await executeApi({
+    fn: async () => getAllReferralCodes(),
+    onSuccess: (res: any) => {
+      const codes: any[] = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      codes.forEach((c: any) => {
+        if (c.storeId) occupiedStoreIds.add(c.storeId);
+      });
+    },
+    showSuccessDialog: false,
+    showFailDialog: false,
+    showCatchDialog: false,
+  });
+
+  // Filter out stores that already have a referral code
+  storeOptions.value = toSelectOptions(storeData).filter(
+    (opt) => !occupiedStoreIds.has(String(opt.value)),
+  );
 };
 
 const loadDetail = async () => {
@@ -259,18 +293,17 @@ const loadDetail = async () => {
       const data = res?.data ?? res;
 
       const nextStoreId = data?.storeId ? String(data.storeId) : '';
+      currentStoreName.value = data?.storeName || '-';
 
       setValues(
         {
           code: data?.code ?? '',
           storeId: nextStoreId,
-          enabled: normalizeBoolean(data?.enabled),
-          remark: data?.remark ?? '',
+          enabled: normalizeBoolean(data?.isActive ?? data?.enabled),
+          remark: data?.description ?? data?.remark ?? '',
         },
         false,
       );
-
-      ensureStoreOptionExists(nextStoreId);
     },
     showSuccessDialog: false,
     showFailDialog: true,
@@ -295,8 +328,8 @@ const onSubmit = handleSubmit(
     const payload = {
       code: String(values.code ?? '').trim(),
       storeId: values.storeId,
-      enabled: normalizeBoolean(values.enabled),
-      remark: String(values.remark ?? '').trim(),
+      isActive: normalizeBoolean(values.enabled),
+      description: String(values.remark ?? '').trim(),
     };
 
     await executeApi({

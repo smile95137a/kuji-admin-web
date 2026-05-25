@@ -277,6 +277,15 @@
                         {{
                           detail.trackingNo || shippingInfo?.trackingNo || '-'
                         }}
+                        <a
+                          v-if="detail.trackingUrl"
+                          :href="detail.trackingUrl"
+                          target="_blank"
+                          rel="noreferrer"
+                          class="admin-order-detail__tracking-link"
+                        >
+                          查詢物流
+                        </a>
                       </span>
                     </div>
 
@@ -493,6 +502,16 @@
 
                 <template v-else-if="detail.shippingStatus === 'PREPARING'">
                   <MButton
+                    v-if="canAutoCreateShipment"
+                    class="admin-order-detail__action-btn"
+                    :loading="actionLoading"
+                    @click="doCreateShipment"
+                  >
+                    <font-awesome-icon icon="fa-truck-ramp-box" class="m-r-4" />
+                    建立物流單
+                  </MButton>
+
+                  <MButton
                     class="admin-order-detail__action-btn"
                     :loading="actionLoading"
                     @click="openShipModal"
@@ -649,6 +668,7 @@ import { useAdminOrderStore } from '@/stores/order/useAdminOrderStore';
 import {
   getOrderDetail,
   prepareShipping,
+  createShipment,
   shipOrder,
   completeOrder,
   cancelOrderWithReason,
@@ -680,6 +700,12 @@ const shippingMethod = computed(
 
 const isConvenienceStore = computed(() =>
   ['CVS', 'CONVENIENCE_STORE'].includes(String(shippingMethod.value || '')),
+);
+
+const canAutoCreateShipment = computed(() =>
+  ['HOME_DELIVERY', 'SEVEN_ELEVEN', 'FAMILY_MART'].includes(
+    String(shippingMethod.value || ''),
+  ),
 );
 
 const prizes = computed<any[]>(
@@ -895,6 +921,41 @@ const doPrepare = async () => {
       openInfoDialog({
         title: '提示訊息',
         message: '狀態更新失敗，請重試',
+        iconType: 'warning',
+      });
+    }
+  } finally {
+    actionLoading.value = false;
+  }
+};
+
+const doCreateShipment = async () => {
+  const ok = await openConfirmDialog({
+    title: '建立物流單',
+    message: '系統會依訂單配送方式與收件資訊直接向物流商建單，是否繼續？',
+  });
+
+  if (!ok) return;
+
+  actionLoading.value = true;
+
+  try {
+    await createShipment(String(route.params.orderId));
+
+    markListShouldRefresh();
+
+    await openInfoDialog({
+      title: '操作完成',
+      message: '物流單已建立，訂單已同步更新為已出貨',
+      iconType: 'success',
+    });
+
+    await loadDetail();
+  } catch (e: any) {
+    if (!handle422(e)) {
+      openInfoDialog({
+        title: '操作失敗',
+        message: e?.response?.data?.message ?? '建立物流單失敗，請檢查物流設定或改用手動填單號',
         iconType: 'warning',
       });
     }
@@ -1205,6 +1266,19 @@ onMounted(loadDetail);
     &--money {
       color: tokens.$brand-dark;
       font-size: 16px;
+    }
+  }
+
+  &__tracking-link {
+    display: inline-flex;
+    margin-left: 10px;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
     }
   }
 

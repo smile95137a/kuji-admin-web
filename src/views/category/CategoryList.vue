@@ -268,7 +268,7 @@ const unwrapList = (res: any): CategoryRes[] => {
 /* --------------------------------------
  * Sorting
  * -------------------------------------- */
-const sortKey = ref('');
+const sortKey = ref('displayOrder');
 const sortOrder = ref<'asc' | 'desc' | ''>('asc');
 
 const handleSort = ({

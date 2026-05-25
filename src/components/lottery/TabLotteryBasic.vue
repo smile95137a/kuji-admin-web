@@ -219,19 +219,32 @@
                   :auto-apply-default="false"
                 />
               </div>
-              <!-- 活動期間 -->
-              <div class="w-100 p-6">
-                <FormDateRangeField
-                  label="活動期間"
-                  type="datetime-local"
-                  v-model:start="startTime"
-                  v-model:end="endTime"
-                  :start-error="showError('startTime')"
-                  :end-error="showError('endTime')"
-                  separator="~"
-                  :auto-apply-default="true"
+              <!-- 是否設定活動時間 -->
+              <div class="w-50 w-md-100 p-6">
+                <FormSelect
+                  label="是否設定活動時間"
+                  v-model="enableActivityTime"
+                  :options="boolOptions"
+                  :error="showError('enableActivityTime')"
+                  :showAll="false"
                 />
               </div>
+
+              <!-- 活動期間（僅在啟用時顯示） -->
+              <Transition name="fade">
+                <div v-if="isEnabled(enableActivityTime)" class="w-100 p-6">
+                  <FormDateRangeField
+                    label="活動期間"
+                    type="datetime-local"
+                    v-model:start="startTime"
+                    v-model:end="endTime"
+                    :start-error="showError('startTime')"
+                    :end-error="showError('endTime')"
+                    separator="~"
+                    :auto-apply-default="true"
+                  />
+                </div>
+              </Transition>
             </div>
           </div>
         </FormSection>
@@ -499,6 +512,7 @@ import {
   gameModeOptions,
   statusOptions,
   delistStrategyOptions,
+  boolOptions,
 } from '@/constants/lotteryOptions';
 
 interface SelectOption {
@@ -547,8 +561,11 @@ const [description] = defineField('description');
 const [tagsText] = defineField('tagsText');
 const [remark] = defineField('remark');
 const [scheduledAt] = defineField('scheduledAt');
+const [enableActivityTime] = defineField('enableActivityTime');
 const [startTime] = defineField('startTime');
 const [endTime] = defineField('endTime');
+
+const isEnabled = (value: any) => value === true || value === 'true';
 const [pendingDesignatedPrizeNumber] = defineField(
   'pendingDesignatedPrizeNumber',
 );
@@ -760,10 +777,10 @@ class MyCustomUploadAdapter {
 
   upload() {
     return this.loader.file.then(async (file: File) => {
-      const { data } = await uploadLotteryImage(file);
+      const result: any = await uploadLotteryImage(file);
 
       return {
-        default: data?.imageUrl,
+        default: result?.data?.imageUrl || result?.imageUrl,
       };
     });
   }
@@ -922,8 +939,8 @@ const cropAndUploadImage = async (file: File, target: CropTarget) => {
 
     uploading.value = true;
 
-    const { data } = await uploadLotteryImage(croppedFile);
-    const url = data?.imageUrl || '';
+    const result: any = await uploadLotteryImage(croppedFile);
+    const url = result?.data?.imageUrl || result?.imageUrl || '';
 
     if (!url) {
       await openInfoDialog({

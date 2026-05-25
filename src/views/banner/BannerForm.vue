@@ -293,7 +293,8 @@ const getDefaultEndTime = () => {
 const normalizeToBackendLocalDateTime = (value?: string | null) => {
   const text = String(value ?? '')
     .trim()
-    .replace('T', ' ');
+    .replace('T', ' ')
+    .replace(/\//g, '-');
 
   if (!text) return null;
   if (text.length >= 19) return text.slice(0, 19);
@@ -324,7 +325,7 @@ const schema = yup.object({
   orderNum: yup
     .number()
     .typeError('排序必須是數字')
-    .min(1, '排序最小為 1')
+    .min(0, '排序最小為 0')
     .nullable()
     .transform((value, originalValue) =>
       originalValue === '' ||

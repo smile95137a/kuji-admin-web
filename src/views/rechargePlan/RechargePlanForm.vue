@@ -277,10 +277,12 @@ const normalizeToBackendLocalDateTime = (value?: string | null) => {
   const text = String(value ?? '').trim();
 
   if (!text) return null;
-  if (text.length >= 19) return text.slice(0, 19);
-  if (text.length === 16) return `${text}:00`;
+  const normalized = text.replace(/\//g, '-').replace('T', ' ');
 
-  return text;
+  if (normalized.length >= 19) return normalized.slice(0, 19);
+  if (normalized.length === 16) return `${normalized}:00`;
+
+  return normalized;
 };
 
 /**
@@ -388,7 +390,11 @@ const schema = computed(() => {
 
                 if (!start || !endValue) return true;
 
-                return endValue > start;
+                // 統一轉成 ISO 格式再比較，避免 "/" vs "-" 導致字串比較錯誤
+                const toDate = (s: string) =>
+                  new Date(s.replace(/\//g, '-').replace(' ', 'T'));
+
+                return toDate(endValue) > toDate(start);
               },
             ),
       }),

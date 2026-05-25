@@ -593,8 +593,8 @@ const buildSubmitPayload = (values: any) => {
       multiDrawOptions,
 
       scheduledAt: normalizeToBackendLocalDateTime(values.scheduledAt),
-      startTime: normalizeToBackendLocalDateTime(values.startTime),
-      endTime: normalizeToBackendLocalDateTime(values.endTime),
+      startTime: values.enableActivityTime ? normalizeToBackendLocalDateTime(values.startTime) : undefined,
+      endTime: values.enableActivityTime ? normalizeToBackendLocalDateTime(values.endTime) : undefined,
       maxDraws: Number(values.maxDraws ?? 0),
 
       remark: cleanText(values.remark),
@@ -743,6 +743,7 @@ const loadDetail = async () => {
       scheduledAt: normalizeToPickerDateTime(
         lotteryData?.scheduledAt ?? data?.scheduledAt,
       ),
+      enableActivityTime: !!(lotteryData?.endTime ?? data?.endTime),
       startTime: normalizeToPickerDateTime(
         lotteryData?.startTime ?? data?.startTime,
       ),
@@ -793,16 +794,17 @@ const loadDetail = async () => {
  * ============================== */
 const validateBeforeSubmit = async (values: any, payload: any) => {
   /**
-   * 商品目前在後端為「上架 / 抽獎中」狀態時，後端禁止修改內容。
-   * 前端提早攔截，引導用戶先至列表頁下架後再編輯。
+   * 商品目前在後端為「上架」狀態且要「維持上架」送出時，提醒獎品無法同步修改。
+   * 若使用者同時將狀態改為下架（OFF_SHELF），則直接放行——
+   * 後端會更新商品欄位並下架，獎品因原始狀態限制不會被更動（需下架後再另行修改）。
    */
-  if (isEdit.value && isOnShelfStatus(originalStatus.value)) {
+  if (isEdit.value && isOnShelfStatus(originalStatus.value) && isOnShelfStatus(values.status)) {
     activeTab.value = 'basic';
 
     await openInfoDialog({
-      title: '商品已上架，部分欄位不可修改',
+      title: '商品目前上架中',
       message:
-        '商品一旦上架，遊戲模式與上下架狀態不可任意修改。請先下架後再調整相關設定。',
+        '商品上架期間，獎品內容無法修改，需先下架後才能調整獎品。\n若僅修改商品基本資訊或同時將狀態設為「下架」，請直接儲存即可。',
 
       iconType: 'warning',
     });

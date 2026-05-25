@@ -9,20 +9,23 @@
     <div class="form-date-range-field__body">
       <!-- 開始時間 -->
       <div class="form-date-range-field__item" @click="openStartPicker">
-        <VueDatePicker
-          ref="startPickerRef"
-          v-model="startValue"
-          :model-type="dateFormat"
-          :formats="pickerFormats"
-          :enable-time-picker="isDateTime"
-          :is-24="true"
-          :auto-apply="true"
-          :clearable="clearable"
-          :disabled="disabled"
-          :text-input="textInputOptions"
-          :placeholder="startPlaceholder"
-          :class="{ 'is-invalid': !!startError }"
-        />
+        <!-- @click.stop 防止 picker 關閉後因外層 click 立即 re-open -->
+        <div @click.stop>
+          <VueDatePicker
+            ref="startPickerRef"
+            v-model="startValue"
+            :model-type="dateFormat"
+            :formats="pickerFormats"
+            :enable-time-picker="isDateTime"
+            :is-24="true"
+            :auto-apply="true"
+            :clearable="clearable"
+            :disabled="disabled"
+            :text-input="textInputOptions"
+            :placeholder="startPlaceholder"
+            :class="{ 'is-invalid': !!startError }"
+          />
+        </div>
 
         <p v-if="startError" class="form-date-range-field__error">
           {{ startError }}
@@ -35,20 +38,23 @@
 
       <!-- 結束時間 -->
       <div class="form-date-range-field__item" @click="openEndPicker">
-        <VueDatePicker
-          ref="endPickerRef"
-          v-model="endValue"
-          :model-type="dateFormat"
-          :formats="pickerFormats"
-          :enable-time-picker="isDateTime"
-          :is-24="true"
-          :auto-apply="true"
-          :clearable="clearable"
-          :disabled="disabled"
-          :text-input="textInputOptions"
-          :placeholder="endPlaceholder"
-          :class="{ 'is-invalid': !!endError }"
-        />
+        <!-- @click.stop 防止 picker 關閉後因外層 click 立即 re-open -->
+        <div @click.stop>
+          <VueDatePicker
+            ref="endPickerRef"
+            v-model="endValue"
+            :model-type="dateFormat"
+            :formats="pickerFormats"
+            :enable-time-picker="isDateTime"
+            :is-24="true"
+            :auto-apply="true"
+            :clearable="clearable"
+            :disabled="disabled"
+            :text-input="textInputOptions"
+            :placeholder="endPlaceholder"
+            :class="{ 'is-invalid': !!endError }"
+          />
+        </div>
 
         <p v-if="endError" class="form-date-range-field__error">
           {{ endError }}

@@ -155,6 +155,8 @@ export interface ReferralReportRes {
   totalReferralCodeCount?: number;
   activeReferralCodeCount?: number;
   successfulReferralStoreCount?: number;
+  totalUserReferralCount?: number;
+  currentPeriodUserReferralCount?: number;
   currentPeriodActivatedStoreCount?: number;
   previousPeriodActivatedStoreCount?: number;
   growthRate?: number;
@@ -166,6 +168,16 @@ export interface ReferralReportRes {
     referrerStoreId?: string;
     referrerStoreName?: string;
     referralCodeCount?: number;
+    totalReferralCount?: number;
+    currentPeriodReferralCount?: number;
+    weeklyReferralCount?: number;
+    previousWeeklyReferralCount?: number;
+    weeklyReferralGrowthCount?: number;
+    weeklyGrowthRate?: number;
+    monthlyReferralCount?: number;
+    previousMonthlyReferralCount?: number;
+    monthlyReferralGrowthCount?: number;
+    monthlyGrowthRate?: number;
     activatedStoreCount?: number;
     lastActivatedDate?: string;
     rank?: number;

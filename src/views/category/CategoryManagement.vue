@@ -257,7 +257,7 @@ const loadThemes = async () => {
   loading.value = true;
   try {
     const res = await queryThemes({ condition: { status: 'ACTIVE' } });
-    themes.value = unwrapList(res);
+    themes.value = unwrapList(res).sort((a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
   } catch (error) {
     console.error('[CategoryManagement] loadThemes failed:', error);
     await openInfoDialog({

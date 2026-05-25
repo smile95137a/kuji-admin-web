@@ -12,6 +12,14 @@ export const safeValue = (val: any): string => {
 
 export const normalize = (val: any): string => safeValue(val).trim();
 
+const normalizeDateValue = (val: unknown): string => {
+  const text = normalize(val);
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(text)) {
+    return text.replace(' ', 'T');
+  }
+  return text;
+};
+
 /** 是否為 ASCII 開頭（英數 / 英文符號） */
 export const isAsciiStart = (s: string) => /^[\x00-\x7F]/.test(s);
 
@@ -283,8 +291,8 @@ export const compareByKeySmart = <T extends Record<string, any>>(
   }
 
   if (type === 'date' || type === 'auto') {
-    const ta = Date.parse(String(va ?? ''));
-    const tb = Date.parse(String(vb ?? ''));
+    const ta = Date.parse(normalizeDateValue(va));
+    const tb = Date.parse(normalizeDateValue(vb));
     if (!Number.isNaN(ta) && !Number.isNaN(tb)) {
       return order === 'asc' ? ta - tb : tb - ta;
     }

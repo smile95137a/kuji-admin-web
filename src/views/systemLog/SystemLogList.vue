@@ -209,12 +209,12 @@
               <span
                 class="sl-badge"
                 :class="
-                  item.userType === 'admin'
+                  item.userType?.toLowerCase() === 'admin'
                     ? 'sl-badge--admin'
                     : 'sl-badge--user'
                 "
               >
-                {{ item.userType === 'admin' ? '後台' : '前台' }}
+                {{ item.userType?.toLowerCase() === 'admin' ? '後台' : '前台' }}
               </span>
             </template>
 

@@ -273,6 +273,12 @@ const dialogTitle = computed(() =>
 );
 
 const isScratchPrize = computed(() => Boolean(props.data?.isScratchPrize));
+const disableLastPrizeTag = computed(() =>
+  Boolean(props.data?.disableLastPrizeTag),
+);
+const disableGrandPrizeTag = computed(() =>
+  Boolean(props.data?.disableGrandPrizeTag),
+);
 
 const createKey = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -323,6 +329,17 @@ const form = reactive<PrizeFormRow>({
       }),
 });
 
+if (disableLastPrizeTag.value) {
+  form.isLastPrize = false;
+  if (form.isGrandPrize) {
+    form.quantity = 1;
+  }
+}
+
+if (disableGrandPrizeTag.value) {
+  form.isGrandPrize = false;
+}
+
 const errors = reactive<Record<string, string>>({
   name: '',
   level: '',
@@ -334,10 +351,21 @@ const errors = reactive<Record<string, string>>({
   description: '',
 });
 
-const prizeTagOptions: SelectOption[] = [
+const allPrizeTagOptions: SelectOption[] = [
   { label: '最後賞', value: 'LAST_PRIZE' },
   { label: '大獎', value: 'GRAND_PRIZE' },
 ];
+
+const prizeTagOptions = computed<SelectOption[]>(() => {
+  let options = allPrizeTagOptions;
+  if (disableLastPrizeTag.value) {
+    options = options.filter((item) => item.value !== 'LAST_PRIZE');
+  }
+  if (disableGrandPrizeTag.value) {
+    options = options.filter((item) => item.value !== 'GRAND_PRIZE');
+  }
+  return options;
+});
 
 const prizeTags = computed<string[]>({
   get() {
@@ -352,6 +380,18 @@ const prizeTags = computed<string[]>({
     if (isScratchPrize.value) {
       form.isLastPrize = false;
       form.isGrandPrize = true;
+      return;
+    }
+
+    if (disableLastPrizeTag.value) {
+      form.isLastPrize = false;
+      form.isGrandPrize = value.includes('GRAND_PRIZE');
+      return;
+    }
+
+    if (disableGrandPrizeTag.value) {
+      form.isLastPrize = value.includes('LAST_PRIZE');
+      form.isGrandPrize = false;
       return;
     }
 
@@ -403,6 +443,26 @@ const validateForm = () => {
     valid = false;
   }
 
+  if (disableLastPrizeTag.value && form.isLastPrize) {
+    errors.level = '自製賞抽籤型不支援最後賞';
+    valid = false;
+  }
+
+  if (disableGrandPrizeTag.value && form.isGrandPrize) {
+    errors.level = '此模式不支援大獎標記';
+    valid = false;
+  }
+
+  if (form.isLastPrize && quantity !== 1) {
+    errors.quantity = '最後賞數量必須固定為 1';
+    valid = false;
+  }
+
+  if (disableLastPrizeTag.value && form.isGrandPrize && quantity !== 1) {
+    errors.quantity = '自製賞抽籤型的大獎數量必須為 1';
+    valid = false;
+  }
+
   if (form.prizeType === 'point') {
     const pointValue = Number(form.pointValue);
 
@@ -426,6 +486,17 @@ const handleConfirm = async () => {
     form.quantity = 1;
     form.isGrandPrize = true;
     form.isLastPrize = false;
+  }
+
+  if (disableLastPrizeTag.value) {
+    form.isLastPrize = false;
+    if (form.isGrandPrize) {
+      form.quantity = 1;
+    }
+  }
+
+  if (disableGrandPrizeTag.value) {
+    form.isGrandPrize = false;
   }
 
   if (!validateForm()) return;
@@ -538,8 +609,8 @@ const onCropConfirm = async (croppedFile: File) => {
   uploading.value = true;
 
   try {
-    const { data } = await uploadPrizeImage(croppedFile);
-    const url = data?.imageUrl || '';
+    const result: any = await uploadPrizeImage(croppedFile);
+    const url = result?.data?.imageUrl || result?.imageUrl || '';
 
     if (!url) {
       imageError.value = '上傳成功但未取得 imageUrl，請檢查後端回傳格式';

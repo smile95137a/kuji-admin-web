@@ -12,9 +12,13 @@ $root-block-name: '.mcard';
   background: #fff;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
   &__content {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
 }

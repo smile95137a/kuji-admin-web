@@ -215,6 +215,7 @@ import StoreEnableModal from './StoreEnableModal.vue';
 import { useDialogStore, useAuthStore } from '@/stores';
 import { getStoreById, updateStoreStatus } from '@/services/adminStoreService';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
+import { formatDateTime as formatDateTimeUtil } from '@/utils/DateUtils';
 
 /* ==============================
  * Router / Auth
@@ -270,19 +271,7 @@ function statusBadgeClass(s: string): string {
 
 function formatDateTime(val: any): string {
   if (!val) return '-';
-  try {
-    return new Date(val).toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return String(val);
-  }
+  return formatDateTimeUtil(val, 'YYYY/MM/DD HH:mm:ss') || String(val);
 }
 
 /* ==============================

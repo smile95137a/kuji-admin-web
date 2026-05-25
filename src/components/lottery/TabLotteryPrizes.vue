@@ -21,6 +21,10 @@
         自製賞抽籤型固定只有 1 個大獎，系統會自動將第 1 筆獎品設為唯一大獎。
       </p>
 
+      <p v-if="isOfficialIchibanMode && hasLastPrize" class="tab-lottery-prizes__hint">
+        官方一番賞最多只能設定 1 個最後賞，已達上限。
+      </p>
+
       <div v-if="!fields.length">
         <NoData message="尚未建立獎品，請點擊「新增獎品」加入獎品" />
       </div>
@@ -181,6 +185,31 @@ const isCustomLotteryMode = computed(() => {
   );
 });
 
+const isOfficialIchibanMode = computed(() => {
+  const values = [subCategory.value, playMode.value]
+    .map((item) => String(item || ''))
+    .filter(Boolean);
+
+  return (
+    String(category.value || '') === 'OFFICIAL_ICHIBAN' &&
+    values.includes('LOTTERY_MODE')
+  );
+});
+
+// 卡牌、扭蛋、自製賞不提供最後賞
+const isNoLastPrizeCategory = computed(() => {
+  const cat = String(category.value || '');
+  return cat === 'TRADING_CARD' || cat === 'GACHA' || cat === 'CUSTOM_GACHA';
+});
+
+const hasLastPrize = computed(() =>
+  fields.value.some((f) => Boolean(f.value.isLastPrize)),
+);
+
+const hasGrandPrize = computed(() =>
+  fields.value.some((f) => Boolean(f.value.isGrandPrize)),
+);
+
 const { fields, push, remove, update } = useFieldArray<PrizeFormRow>('prizes');
 
 const createKey = () =>
@@ -203,8 +232,10 @@ const normalizeCustomLotteryPrize = (
 ): PrizeFormRow => ({
   ...row,
   name: String(row.name || '').trim(),
+  quantity: index === 0 ? 1 : row.quantity,
   level: index === 0 ? 'GRAND' : row.level === 'GRAND' ? 'A' : row.level,
   isGrandPrize: index === 0,
+  isLastPrize: false,
 });
 
 const normalizePrizeForCurrentMode = (
@@ -254,11 +285,17 @@ const openAddDialog = async () => {
     return;
   }
 
+  const disableLastPrize = isNoLastPrizeCategory.value ||
+    (isOfficialIchibanMode.value && hasLastPrize.value);
+  const disableGrandPrize = isCustomLotteryMode.value && hasGrandPrize.value;
+
   const result = await openPrizeFormDialog({
     title: '新增獎品',
     data: {
       mode: 'add',
       isScratchPrize: isScratchMode.value,
+      disableLastPrizeTag: disableLastPrize,
+      disableGrandPrizeTag: disableGrandPrize,
       ...(isScratchMode.value || (isCustomLotteryMode.value && fields.value.length === 0)
         ? { prize: { _key: '', name: '', quantity: 1, level: 'GRAND', prizeType: 'physical', isLastPrize: false, isGrandPrize: true } }
         : {}),
@@ -276,11 +313,17 @@ const openEditDialog = async (index: number) => {
 
   if (!prize) return;
 
+  const disableLastPrize = isNoLastPrizeCategory.value ||
+    (isOfficialIchibanMode.value && hasLastPrize.value && !prize.isLastPrize);
+  const disableGrandPrize = isCustomLotteryMode.value && hasGrandPrize.value && !prize.isGrandPrize;
+
   const result = await openPrizeFormDialog({
     title: '編輯獎品',
     data: {
       mode: 'edit',
       isScratchPrize: isScratchMode.value,
+      disableLastPrizeTag: disableLastPrize,
+      disableGrandPrizeTag: disableGrandPrize,
       prize: {
         ...prize,
       },

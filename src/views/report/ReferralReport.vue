@@ -355,8 +355,10 @@ const performanceColumns: TableColumn[] = [
   { field: 'rank', label: '排名', width: 70 },
   { field: 'storeName', label: '推薦店家', width: 180 },
   { field: 'referralCodeCount', label: '推薦碼數', width: 110 },
-  { field: 'activatedStoreCount', label: '成功招商店數', width: 130 },
-  { field: 'activationRateText', label: '轉換率', width: 100 },
+  { field: 'totalReferralCount', label: '累計推薦註冊', width: 130 },
+  { field: 'currentPeriodReferralCount', label: '區間推薦註冊', width: 130 },
+  { field: 'weeklyReferralGrowthText', label: '週成長', width: 120 },
+  { field: 'monthlyReferralGrowthText', label: '月成長', width: 120 },
 ];
 
 const dailyColumns: TableColumn[] = [
@@ -610,10 +612,16 @@ const chartOption = computed(() => {
 function rankingWithIndex(list: any[]) {
   return [...list]
     .sort((a, b) => {
-      const activatedDiff =
-        (b.activatedStoreCount ?? 0) - (a.activatedStoreCount ?? 0);
+      const totalReferralDiff =
+        (b.totalReferralCount ?? 0) - (a.totalReferralCount ?? 0);
 
-      if (activatedDiff !== 0) return activatedDiff;
+      if (totalReferralDiff !== 0) return totalReferralDiff;
+
+      const currentReferralDiff =
+        (b.currentPeriodReferralCount ?? 0) -
+        (a.currentPeriodReferralCount ?? 0);
+
+      if (currentReferralDiff !== 0) return currentReferralDiff;
 
       return (b.referralCodeCount ?? 0) - (a.referralCodeCount ?? 0);
     })
@@ -622,7 +630,14 @@ function rankingWithIndex(list: any[]) {
       ...item,
       rank: index + 1,
       storeName: item.storeName ?? item.referrerStoreName ?? '-',
-      activationRateText: formatPercent(item.activationRate),
+      weeklyReferralGrowthText: formatGrowth(
+        item.weeklyReferralGrowthCount,
+        item.weeklyGrowthRate,
+      ),
+      monthlyReferralGrowthText: formatGrowth(
+        item.monthlyReferralGrowthCount,
+        item.monthlyGrowthRate,
+      ),
       __rowKey: `${item.storeId ?? item.storeName ?? 'store'}-${index}`,
     }));
 }
@@ -645,6 +660,18 @@ function formatPercent(value: any) {
   if (Number.isNaN(num)) return String(value);
 
   return `${num.toFixed(2)}%`;
+}
+
+function formatGrowth(countValue: any, rateValue: any) {
+  const count = Number(countValue ?? 0);
+  const sign = count > 0 ? '+' : '';
+  const rateText = formatPercent(rateValue);
+
+  if (rateText === '-') {
+    return `${sign}${count}`;
+  }
+
+  return `${sign}${count} (${rateText})`;
 }
 
 /* ==============================

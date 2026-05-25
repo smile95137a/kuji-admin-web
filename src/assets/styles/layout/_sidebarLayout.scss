@@ -110,7 +110,8 @@ $sidebar-width: 260px;
     height: 100%;
     min-width: 0;
     max-width: 100%;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 1.25rem;
     box-sizing: border-box;
   }

@@ -55,7 +55,7 @@ api.interceptors.response.use(
       }
       removeAllSession();
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = `${import.meta.env.BASE_URL}login`;
       return Promise.reject(error);
     }
 
@@ -63,18 +63,18 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const loginPath = `${import.meta.env.BASE_URL}login`;
+
     const url = originalRequest?.url || '';
-    if (url.includes('/admin/auth/refresh')) {
-      removeAllSession();
-      removeAllState();
-      window.location.href = '/login';
+    // Auth endpoints (login/refresh) handle their own errors — don't attempt refresh
+    if (url.includes('/admin/auth/refresh') || url.includes('/admin/auth/login')) {
       return Promise.reject(error);
     }
 
     if (originalRequest?._retry) {
       removeAllSession();
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = loginPath;
       return Promise.reject(error);
     }
     originalRequest._retry = true;
@@ -83,7 +83,7 @@ api.interceptors.response.use(
     if (!rt) {
       removeAllSession();
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = loginPath;
       return Promise.reject(error);
     }
 
@@ -145,7 +145,7 @@ api.interceptors.response.use(
       resolveQueue(null);
       removeAllSession();
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = loginPath;
       return Promise.reject(err);
     } finally {
       isRefreshing = false;

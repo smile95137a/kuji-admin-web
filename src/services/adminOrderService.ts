@@ -40,6 +40,16 @@ export const prepareShipping = async (orderId: string): Promise<ApiResponse<any>
   }
 };
 
+export const createShipment = async (orderId: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/${orderId}/shipment`);
+    return res.data;
+  } catch (e) {
+    console.error('AdminOrder - createShipment error:', e);
+    throw e;
+  }
+};
+
 /**
  * 訂單出貨（PUT /admin/orders/{orderId}/ship）
  * body: OrderShipReq（例如 { trackingNo: 'xxx', ... }）

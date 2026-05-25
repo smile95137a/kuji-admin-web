@@ -283,7 +283,9 @@ const toDatetimeLocalValue = (value?: string | null) => {
 };
 
 const toBackendLocalDateTime = (value?: string | null) => {
-  const text = normalizeText(value);
+  const text = normalizeText(value)
+    .replace('T', ' ')
+    .replace(/\//g, '-');
 
   if (!text) return null;
   if (text.length >= 19) return text.slice(0, 19);
