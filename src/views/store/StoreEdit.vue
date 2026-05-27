@@ -215,15 +215,37 @@
                 :error="errors.phone"
                 placeholder="02-12345678"
                 :disabled="isEditorRole"
+                required
+              />
+            </div>
+            <div class="w-50 w-md-100 p-6">
+              <FormSelect
+                label="店家地址縣市"
+                v-model="form.city"
+                :options="cityOptions"
+                :error="errors.city"
+                :disabled="isEditorRole"
+                required
+              />
+            </div>
+            <div class="w-50 w-md-100 p-6">
+              <FormSelect
+                label="店家地址行政區"
+                v-model="form.district"
+                :options="districtOptions"
+                :error="errors.district"
+                :disabled="isEditorRole || !form.city || districtLoading"
+                required
               />
             </div>
             <div class="w-100 p-6">
               <FormInput
-                label="店家地址"
-                v-model="form.address"
-                :error="errors.address"
-                placeholder="台北市..."
+                label="詳細地址"
+                v-model="form.addressDetail"
+                :error="errors.addressDetail"
+                placeholder="路名、門牌、樓層"
                 :disabled="isEditorRole"
+                required
               />
             </div>
           </div>
@@ -292,16 +314,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
 
 import { useDialogStore, useAuthStore } from '@/stores';
 import { api } from '@/services/FrontAPI';
 import { getStoreById, updateStore } from '@/services/adminStoreService';
+import {
+  getAllCities,
+  getDistrictsByCity,
+  type DistrictInfo,
+} from '@/services/districtService';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 import { formatDateTime as formatDateTimeUtil } from '@/utils/DateUtils';
 
@@ -342,6 +370,9 @@ const form = ref<any>({
   email: '',
   phone: '',
   address: '',
+  city: '',
+  district: '',
+  addressDetail: '',
   facebookUrl: '',
   instagramUrl: '',
   referralCode: '',
@@ -350,6 +381,107 @@ const form = ref<any>({
 });
 
 const errors = ref<Record<string, string>>({});
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+const cityOptions = ref<SelectOption[]>([]);
+const districtOptions = ref<SelectOption[]>([]);
+const districtLoading = ref(false);
+const addressHydrating = ref(false);
+
+const normalizeAddressText = (value: any) =>
+  String(value ?? '')
+    .replace(/臺/g, '台')
+    .replace(/\s+/g, '')
+    .trim();
+
+const optionOf = (value: string): SelectOption => ({ value, label: value });
+
+async function loadCities() {
+  const cities = await getAllCities();
+  cityOptions.value = [
+    { value: '', label: '請選擇縣市' },
+    ...(Array.isArray(cities) ? cities.map(optionOf) : []),
+  ];
+}
+
+async function loadDistrictOptions(city: string): Promise<DistrictInfo[]> {
+  if (!city) {
+    districtOptions.value = [{ value: '', label: '請先選擇縣市' }];
+    return [];
+  }
+
+  districtLoading.value = true;
+  try {
+    const districts = await getDistrictsByCity(city);
+    const list = Array.isArray(districts) ? districts : [];
+    districtOptions.value = [
+      { value: '', label: '請選擇行政區' },
+      ...list.map((item) => ({
+        value: item.districtName,
+        label: item.zipCode
+          ? `${item.districtName}（${item.zipCode}）`
+          : item.districtName,
+      })),
+    ];
+    return list;
+  } finally {
+    districtLoading.value = false;
+  }
+}
+
+async function splitStoreAddress(address: string) {
+  const text = String(address ?? '').trim();
+  form.value.city = '';
+  form.value.district = '';
+  form.value.addressDetail = text;
+
+  if (!text || !cityOptions.value.length) return;
+
+  const normalized = normalizeAddressText(text);
+  const matchedCity = cityOptions.value.find(
+    (item) =>
+      item.value && normalized.includes(normalizeAddressText(item.value)),
+  )?.value;
+
+  if (!matchedCity) return;
+
+  addressHydrating.value = true;
+  try {
+    form.value.city = matchedCity;
+    const districts = await loadDistrictOptions(matchedCity);
+    const matchedDistrict = districts.find((item) =>
+      normalized.includes(normalizeAddressText(item.districtName)),
+    );
+
+    if (!matchedDistrict) return;
+
+    form.value.district = matchedDistrict.districtName;
+    form.value.addressDetail = text
+      .replace(new RegExp(`^\\s*${matchedDistrict.zipCode || ''}`), '')
+      .replace(matchedCity, '')
+      .replace(matchedDistrict.districtName, '')
+      .trim();
+  } finally {
+    addressHydrating.value = false;
+  }
+}
+
+function buildStoreAddress(): string {
+  return `${form.value.city}${form.value.district}${form.value.addressDetail}`.trim();
+}
+
+watch(
+  () => form.value.city,
+  async (city) => {
+    if (addressHydrating.value) return;
+    form.value.district = '';
+    await loadDistrictOptions(city);
+  },
+);
 
 /* ==============================
  * Weekdays
@@ -476,6 +608,11 @@ function validate(): boolean {
     e.shortDescription = '簡短描述最多 100 字';
   if (form.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email))
     e.email = 'Email 格式不正確';
+  if (!form.value.phone?.trim()) e.phone = '店家電話為必填';
+  if (!form.value.city?.trim()) e.city = '請選擇縣市';
+  if (!form.value.district?.trim()) e.district = '請選擇行政區';
+  if (!form.value.addressDetail?.trim() || form.value.addressDetail.trim() === '無')
+    e.addressDetail = '請填寫詳細地址，不可填「無」';
   if (form.value.facebookUrl && !/^https?:\/\//.test(form.value.facebookUrl))
     e.facebookUrl = '請輸入有效的 URL（以 https:// 開頭）';
   if (form.value.instagramUrl && !/^https?:\/\//.test(form.value.instagramUrl))
@@ -513,6 +650,7 @@ const loadStore = async () => {
       referrerStoreName: d.referrerStoreName ?? '',
       activatedAt: d.activatedAt ?? '',
     });
+    await splitStoreAddress(d.address ?? '');
     parseBusinessHours(d.businessHours);
   } catch {
     openInfoDialog({
@@ -537,6 +675,7 @@ const submitForm = async () => {
     await updateStore(storeId.value, {
       ...form.value,
       storeName: form.value.name,
+      address: buildStoreAddress(),
       businessHours: buildBusinessHours(),
     });
     await openInfoDialog({
@@ -569,7 +708,10 @@ const goBack = () => {
 /* ==============================
  * Lifecycle
  * ============================== */
-onMounted(loadStore);
+onMounted(async () => {
+  await loadCities();
+  await loadStore();
+});
 </script>
 
 <style scoped lang="scss">

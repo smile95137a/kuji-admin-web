@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useField, useForm } from 'vee-validate';
 import * as yup from 'yup';
@@ -7,9 +7,15 @@ import * as yup from 'yup';
 import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
 
 import { useDialogStore } from '@/stores';
 import { createStore } from '@/services/adminStoreService';
+import {
+  getAllCities,
+  getDistrictsByCity,
+  type DistrictInfo,
+} from '@/services/districtService';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 
 const router = useRouter();
@@ -23,7 +29,14 @@ const includeOwner = ref(false);
 const schema = yup.object({
   storeName: yup.string().required('店家名稱為必填'),
   shortDescription: yup.string().max(100, '簡短描述最多 100 字').optional(),
-  phone: yup.string().optional(),
+  phone: yup.string().required('聯絡電話為必填'),
+  city: yup.string().required('請選擇縣市'),
+  district: yup.string().required('請選擇行政區'),
+  addressDetail: yup
+    .string()
+    .trim()
+    .required('請填寫詳細地址')
+    .notOneOf(['無'], '詳細地址不可填「無」'),
   email: yup
     .string()
     .email('Email 格式不正確')
@@ -45,12 +58,84 @@ const { handleSubmit, isSubmitting } = useForm({
 const { value: storeName, errorMessage: storeNameError } =
   useField<string>('storeName');
 const { value: shortDescription } = useField<string>('shortDescription');
-const { value: phone } = useField<string>('phone');
+const { value: phone, errorMessage: phoneError } = useField<string>('phone');
+const { value: city, errorMessage: cityError } = useField<string>('city');
+const { value: district, errorMessage: districtError } =
+  useField<string>('district');
+const { value: addressDetail, errorMessage: addressDetailError } =
+  useField<string>('addressDetail');
 const { value: email } = useField<string>('email');
 const { value: referralCode } = useField<string>('referralCode');
 const { value: ownerUsername, errorMessage: ownerUsernameError } =
   useField<string>('ownerUsername');
 const { value: ownerPassword } = useField<string>('ownerPassword');
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+const cityOptions = ref<SelectOption[]>([{ value: '', label: '請選擇縣市' }]);
+const districtOptions = ref<SelectOption[]>([
+  { value: '', label: '請先選擇縣市' },
+]);
+const districtLoading = ref(false);
+
+const loadCities = async () => {
+  const cities = await getAllCities();
+  cityOptions.value = [
+    { value: '', label: '請選擇縣市' },
+    ...(Array.isArray(cities)
+      ? cities.map((item) => ({ value: item, label: item }))
+      : []),
+  ];
+};
+
+const loadDistrictOptions = async (cityValue: string): Promise<DistrictInfo[]> => {
+  if (!cityValue) {
+    districtOptions.value = [{ value: '', label: '請先選擇縣市' }];
+    return [];
+  }
+
+  districtLoading.value = true;
+  try {
+    const districts = await getDistrictsByCity(cityValue);
+    const list = Array.isArray(districts) ? districts : [];
+    districtOptions.value = [
+      { value: '', label: '請選擇行政區' },
+      ...list.map((item) => ({
+        value: item.districtName,
+        label: item.zipCode
+          ? `${item.districtName}（${item.zipCode}）`
+          : item.districtName,
+      })),
+    ];
+    return list;
+  } finally {
+    districtLoading.value = false;
+  }
+};
+
+const createDefaultBusinessHoursStructured = () => ({
+  schedules: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => ({
+    day,
+    open: ['MON', 'TUE', 'WED', 'THU', 'FRI'].includes(day) ? '10:00' : null,
+    close: ['MON', 'TUE', 'WED', 'THU', 'FRI'].includes(day) ? '18:00' : null,
+    closed: ['SAT', 'SUN'].includes(day),
+  })),
+  exceptions: [],
+  tz: 'Asia/Taipei',
+});
+
+watch(
+  () => city.value,
+  async (nextCity) => {
+    district.value = '';
+    await loadDistrictOptions(String(nextCity || ''));
+  },
+);
+
+onMounted(loadCities);
 
 /* ==============================
  * Submit
@@ -59,8 +144,10 @@ const onSubmit = handleSubmit(async (values) => {
   const req: Record<string, any> = {
     storeName: values.storeName,
     shortDescription: values.shortDescription || undefined,
-    phone: values.phone || undefined,
+    phone: values.phone,
     email: values.email || undefined,
+    address: `${values.city}${values.district}${values.addressDetail}`.trim(),
+    businessHoursStructured: createDefaultBusinessHoursStructured(),
     referralCode: values.referralCode || undefined,
   };
 
@@ -144,7 +231,9 @@ const onSubmit = handleSubmit(async (values) => {
             <FormInput
               label="聯絡電話"
               v-model="phone"
+              :error="phoneError"
               placeholder="02-1234-5678"
+              required
             />
           </div>
           <div class="w-50 w-md-100 p-6">
@@ -153,6 +242,34 @@ const onSubmit = handleSubmit(async (values) => {
               v-model="email"
               type="email"
               placeholder="store@example.com"
+            />
+          </div>
+          <div class="w-50 w-md-100 p-6">
+            <FormSelect
+              label="店家地址縣市"
+              v-model="city"
+              :options="cityOptions"
+              :error="cityError"
+              required
+            />
+          </div>
+          <div class="w-50 w-md-100 p-6">
+            <FormSelect
+              label="店家地址行政區"
+              v-model="district"
+              :options="districtOptions"
+              :error="districtError"
+              :disabled="!city || districtLoading"
+              required
+            />
+          </div>
+          <div class="w-100 p-6">
+            <FormInput
+              label="詳細地址"
+              v-model="addressDetail"
+              :error="addressDetailError"
+              placeholder="路名、門牌、樓層"
+              required
             />
           </div>
           <div class="w-50 w-md-100 p-6">

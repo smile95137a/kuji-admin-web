@@ -286,6 +286,15 @@
                         >
                           查詢物流
                         </a>
+                        <a
+                          v-if="detail.logisticsLabelUrl"
+                          :href="detail.logisticsLabelUrl"
+                          target="_blank"
+                          rel="noreferrer"
+                          class="admin-order-detail__tracking-link"
+                        >
+                          列印物流單
+                        </a>
                       </span>
                     </div>
 
@@ -807,7 +816,7 @@ function statusBadgeClass(status?: string): string {
 }
 
 const shippingMethodText = (value?: string) => {
-  if (value === 'HOME_DELIVERY') return '宅配';
+  if (value === 'HOME_DELIVERY') return '宅配到府（順豐）';
   if (value === 'CONVENIENCE_STORE') return '超商取貨';
   if (value === 'CVS') return '超商取貨';
 

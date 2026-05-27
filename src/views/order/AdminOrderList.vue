@@ -386,7 +386,7 @@ const statusBadgeClass = (status?: string) => {
 };
 
 const shippingMethodText = (value?: string) => {
-  if (value === 'HOME_DELIVERY') return '宅配';
+  if (value === 'HOME_DELIVERY') return '宅配到府（順豐）';
   if (value === 'CONVENIENCE_STORE') return '超商取貨';
 
   return value || '-';

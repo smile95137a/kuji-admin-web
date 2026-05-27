@@ -142,14 +142,35 @@
                       />
                     </div>
 
+                    <div class="w-50 w-md-100 p-6">
+                      <FormSelect
+                        label="店家地址縣市"
+                        v-model="storeCity"
+                        :options="cityOptions"
+                        :error="displayErrors.storeCity"
+                        required
+                      />
+                    </div>
+
+                    <div class="w-50 w-md-100 p-6">
+                      <FormSelect
+                        label="店家地址行政區"
+                        v-model="storeDistrict"
+                        :options="districtOptions"
+                        :error="displayErrors.storeDistrict"
+                        :disabled="!storeCity || districtLoading"
+                        required
+                      />
+                    </div>
+
                     <div class="w-100 p-6">
                       <FormInput
-                        label="店家地址"
-                        v-model="storeAddress"
-                        :error="displayErrors.storeAddress"
+                        label="詳細地址"
+                        v-model="storeAddressDetail"
+                        :error="displayErrors.storeAddressDetail"
                         required
-                        maxlength="200"
-                        placeholder="台北市…（無實體店可填「無」）"
+                        maxlength="160"
+                        placeholder="路名、門牌、樓層"
                       />
                     </div>
 
@@ -674,6 +695,7 @@ import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
 import FormTitle from '@/components/common/FormTitle.vue';
 import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
 import FormTextarea from '@/components/common/FormTextarea.vue';
 import FormSection from '@/components/common/FormSection.vue';
 import FormCheckTagGroup from '@/components/common/FormCheckTagGroup.vue';
@@ -698,6 +720,11 @@ import {
 } from '@/services/adminUserService';
 
 import { getStoreOptions, getStoreById, updateStore } from '@/services/adminStoreService';
+import {
+  getAllCities,
+  getDistrictsByCity,
+  type DistrictInfo,
+} from '@/services/districtService';
 import {
   uploadStoreCoverImage,
   uploadStoreLogoImage,
@@ -827,6 +854,9 @@ const fieldTabMap: Record<string, string> = {
   coverImageUrl: 'store',
   storeEmail: 'store',
   storePhone: 'store',
+  storeCity: 'store',
+  storeDistrict: 'store',
+  storeAddressDetail: 'store',
   storeAddress: 'store',
   businessHoursStructured: 'store',
   facebookUrl: 'store',
@@ -886,6 +916,98 @@ const loadStoreOptions = async () => {
     showCatchDialog: true,
   });
 };
+
+/* ==============================
+ * Store address
+ * ============================== */
+const cityOptions = ref<SelectOption[]>([{ value: '', label: '請選擇縣市' }]);
+const districtOptions = ref<SelectOption[]>([
+  { value: '', label: '請先選擇縣市' },
+]);
+const districtLoading = ref(false);
+const addressHydrating = ref(false);
+
+const normalizeAddressText = (value: any) =>
+  String(value ?? '')
+    .replace(/臺/g, '台')
+    .replace(/\s+/g, '')
+    .trim();
+
+const loadCities = async () => {
+  const cities = await getAllCities();
+  cityOptions.value = [
+    { value: '', label: '請選擇縣市' },
+    ...(Array.isArray(cities)
+      ? cities.map((city) => ({ value: city, label: city }))
+      : []),
+  ];
+};
+
+const loadDistrictOptions = async (city: string): Promise<DistrictInfo[]> => {
+  if (!city) {
+    districtOptions.value = [{ value: '', label: '請先選擇縣市' }];
+    return [];
+  }
+
+  districtLoading.value = true;
+  try {
+    const districts = await getDistrictsByCity(city);
+    const list = Array.isArray(districts) ? districts : [];
+    districtOptions.value = [
+      { value: '', label: '請選擇行政區' },
+      ...list.map((item) => ({
+        value: item.districtName,
+        label: item.zipCode
+          ? `${item.districtName}（${item.zipCode}）`
+          : item.districtName,
+      })),
+    ];
+    return list;
+  } finally {
+    districtLoading.value = false;
+  }
+};
+
+const splitStoreAddress = async (address: string) => {
+  const text = String(address ?? '').trim();
+  const result = {
+    storeCity: '',
+    storeDistrict: '',
+    storeAddressDetail: text,
+    storeAddress: text,
+  };
+
+  if (!text || !cityOptions.value.length) return result;
+
+  const normalized = normalizeAddressText(text);
+  const matchedCity = cityOptions.value.find(
+    (item) =>
+      item.value && normalized.includes(normalizeAddressText(item.value)),
+  )?.value;
+
+  if (!matchedCity) return result;
+
+  const districts = await loadDistrictOptions(matchedCity);
+  const matchedDistrict = districts.find((item) =>
+    normalized.includes(normalizeAddressText(item.districtName)),
+  );
+
+  result.storeCity = matchedCity;
+
+  if (!matchedDistrict) return result;
+
+  result.storeDistrict = matchedDistrict.districtName;
+  result.storeAddressDetail = text
+    .replace(new RegExp(`^\\s*${matchedDistrict.zipCode || ''}`), '')
+    .replace(matchedCity, '')
+    .replace(matchedDistrict.districtName, '')
+    .trim();
+
+  return result;
+};
+
+const buildFullStoreAddress = (values: any) =>
+  `${values.storeCity || ''}${values.storeDistrict || ''}${values.storeAddressDetail || ''}`.trim();
 
 /* ==============================
  * Form
@@ -986,6 +1108,9 @@ const initialValues = {
   coverImageUrl: '',
   storeEmail: '',
   storePhone: '',
+  storeCity: '',
+  storeDistrict: '',
+  storeAddressDetail: '',
   storeAddress: '',
   businessHoursStructured: createDefaultBusinessHoursStructured(),
   facebookUrl: '',
@@ -1010,6 +1135,9 @@ const schema = computed(() => {
       coverImageUrl: yup.string().nullable(),
       storeEmail: yup.string().nullable(),
       storePhone: yup.string().nullable(),
+      storeCity: yup.string().nullable(),
+      storeDistrict: yup.string().nullable(),
+      storeAddressDetail: yup.string().nullable(),
       storeAddress: yup.string().nullable(),
       businessHoursStructured: yup.mixed().nullable(),
       facebookUrl: yup.string().nullable(),
@@ -1052,6 +1180,9 @@ const schema = computed(() => {
       coverImageUrl: yup.string().nullable(),
       storeEmail: yup.string().nullable(),
       storePhone: yup.string().nullable(),
+      storeCity: yup.string().nullable(),
+      storeDistrict: yup.string().nullable(),
+      storeAddressDetail: yup.string().nullable(),
       storeAddress: yup.string().nullable(),
       businessHoursStructured: yup.mixed().nullable(),
       facebookUrl: yup.string().nullable(),
@@ -1101,11 +1232,18 @@ const schema = computed(() => {
       .required('店家聯絡電話不可為空')
       .max(30, '店家聯絡電話最多 30 字'),
 
-    storeAddress: yup
+    storeCity: yup.string().trim().required('請選擇店家地址縣市'),
+
+    storeDistrict: yup.string().trim().required('請選擇店家地址行政區'),
+
+    storeAddressDetail: yup
       .string()
       .trim()
-      .required('店家地址不可為空')
-      .max(200, '店家地址最多 200 字'),
+      .required('請填寫店家詳細地址')
+      .notOneOf(['無'], '詳細地址不可填「無」')
+      .max(160, '詳細地址最多 160 字'),
+
+    storeAddress: yup.string().nullable().max(200, '店家地址最多 200 字'),
 
     businessHoursStructured: yup
       .mixed<BusinessHoursStructured>()
@@ -1146,11 +1284,23 @@ const [logoUrl] = defineField('logoUrl');
 const [coverImageUrl] = defineField('coverImageUrl');
 const [storeEmail] = defineField('storeEmail');
 const [storePhone] = defineField('storePhone');
+const [storeCity] = defineField('storeCity');
+const [storeDistrict] = defineField('storeDistrict');
+const [storeAddressDetail] = defineField('storeAddressDetail');
 const [storeAddress] = defineField('storeAddress');
 const [businessHoursStructured] = defineField('businessHoursStructured');
 const [facebookUrl] = defineField('facebookUrl');
 const [instagramUrl] = defineField('instagramUrl');
 const [lineId] = defineField('lineId');
+
+watch(
+  () => storeCity.value,
+  async (city) => {
+    if (addressHydrating.value) return;
+    storeDistrict.value = '';
+    await loadDistrictOptions(String(city || ''));
+  },
+);
 
 /* ==============================
  * Image upload
@@ -1504,6 +1654,9 @@ const reloadDetail = async () => {
           coverImageUrl: '',
           storeEmail: '',
           storePhone: '',
+          storeCity: '',
+          storeDistrict: '',
+          storeAddressDetail: '',
           storeAddress: '',
           businessHoursStructured: createDefaultBusinessHoursStructured(),
           facebookUrl: '',
@@ -1537,30 +1690,36 @@ const reloadDetail = async () => {
         );
 
         if (isOwnerRole) {
-        setValues(
-          {
-            email: data?.email ?? '',
-            displayName: data?.displayName ?? '',
-            phone: data?.phone ?? '',
-            remark: data?.remark ?? '',
-            storeIds: currentStoreIds,
-            storeName: storeData?.storeName ?? '',
-            shortDescription: storeData?.shortDescription ?? '',
-            longDescription: storeData?.longDescription ?? '',
-            logoUrl: storeData?.logoUrl ?? '',
-            coverImageUrl: storeData?.coverImageUrl ?? '',
-            storeEmail: storeData?.email ?? '',
-            storePhone: storeData?.phone ?? '',
-            storeAddress: storeData?.address ?? '',
-            businessHoursStructured: normalizeBusinessHoursStructured(
-              storeData?.businessHoursStructured,
-            ),
-            facebookUrl: storeData?.facebookUrl ?? '',
-            instagramUrl: storeData?.instagramUrl ?? '',
-            lineId: storeData?.lineId ?? '',
-          },
-          false,
-        );
+          addressHydrating.value = true;
+          try {
+            const parsedAddress = await splitStoreAddress(storeData?.address ?? '');
+            setValues(
+              {
+                email: data?.email ?? '',
+                displayName: data?.displayName ?? '',
+                phone: data?.phone ?? '',
+                remark: data?.remark ?? '',
+                storeIds: currentStoreIds,
+                storeName: storeData?.storeName ?? '',
+                shortDescription: storeData?.shortDescription ?? '',
+                longDescription: storeData?.longDescription ?? '',
+                logoUrl: storeData?.logoUrl ?? '',
+                coverImageUrl: storeData?.coverImageUrl ?? '',
+                storeEmail: storeData?.email ?? '',
+                storePhone: storeData?.phone ?? '',
+                ...parsedAddress,
+                businessHoursStructured: normalizeBusinessHoursStructured(
+                  storeData?.businessHoursStructured,
+                ),
+                facebookUrl: storeData?.facebookUrl ?? '',
+                instagramUrl: storeData?.instagramUrl ?? '',
+                lineId: storeData?.lineId ?? '',
+              },
+              false,
+            );
+          } finally {
+            addressHydrating.value = false;
+          }
         }
       }
     },
@@ -1595,7 +1754,7 @@ const buildStorePayload = (values: any) => ({
   coverImageUrl: emptyToNull(values.coverImageUrl),
   email: normalizeText(values.storeEmail),
   phone: normalizeText(values.storePhone),
-  address: normalizeText(values.storeAddress),
+  address: buildFullStoreAddress(values),
   businessHoursStructured: serializeBusinessHoursStructured(
     values.businessHoursStructured,
   ),
@@ -1614,7 +1773,7 @@ const buildOwnerPayload = (values: any) => ({
   coverImageUrl: emptyToNull(values.coverImageUrl),
   storeEmail: normalizeText(values.storeEmail),
   storePhone: normalizeText(values.storePhone),
-  storeAddress: normalizeText(values.storeAddress),
+  storeAddress: buildFullStoreAddress(values),
   businessHoursStructured: serializeBusinessHoursStructured(
     values.businessHoursStructured,
   ),
@@ -1909,6 +2068,7 @@ const initPage = async () => {
   isSubmitted.value = false;
   logoImagePreview.value = '';
   coverImagePreview.value = '';
+  await loadCities();
 
   if (isEditorFormMode.value) {
     activeTab.value = 'account';

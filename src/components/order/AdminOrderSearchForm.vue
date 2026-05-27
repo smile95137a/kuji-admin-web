@@ -109,7 +109,7 @@ const [recipientName] = defineField('recipientName');
 const [recipientPhone] = defineField('recipientPhone');
 
 const shippingMethodOptions: SelectOption[] = [
-  { label: '宅配', value: 'HOME_DELIVERY' },
+  { label: '宅配到府（順豐）', value: 'HOME_DELIVERY' },
   { label: '超商取貨', value: 'CONVENIENCE_STORE' },
 ];
 </script>

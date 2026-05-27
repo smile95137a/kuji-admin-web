@@ -22,6 +22,7 @@
             :clearable="clearable"
             :disabled="disabled"
             :text-input="textInputOptions"
+            teleport="body"
             :placeholder="startPlaceholder"
             :class="{ 'is-invalid': !!startError }"
           />
@@ -51,6 +52,7 @@
             :clearable="clearable"
             :disabled="disabled"
             :text-input="textInputOptions"
+            teleport="body"
             :placeholder="endPlaceholder"
             :class="{ 'is-invalid': !!endError }"
           />
@@ -430,5 +432,10 @@ $date-range-disabled-bg: color.mix($border-light, #fff, 28%);
       padding-left: 4px;
     }
   }
+}
+
+:global(.dp__outer_menu_wrap),
+:global(.dp__menu) {
+  z-index: 3000;
 }
 </style>
