@@ -1,48 +1,19 @@
 <!-- src/views/systemLog/SystemLogList.vue -->
 <template>
   <div class="system-log-page">
-    <!-- Header + Summary + 分類切換 -->
     <MCard>
       <div class="sl-page-head">
-        <div class="sl-page-head__main">
-          <p class="sl-page-head__eyebrow">系統管理</p>
+        <div>
+          <p class="sl-page-head__eyebrow">SYSTEM LOG</p>
           <h2 class="sl-page-head__title">系統日誌</h2>
           <p class="sl-page-head__sub">
-            查看登入紀錄、後台操作紀錄與系統活動追蹤。
+            集中查看登入、後台操作、付款、物流、訂單狀態、錢包與抽獎事件。
           </p>
         </div>
 
         <div class="sl-page-head__actions">
-          <span class="sl-current-type">
-            {{ activeTabLabel }}
-          </span>
-
-          <span v-if="hasData" class="sl-total-count">
-            共 {{ list.length }} 筆
-          </span>
-        </div>
-      </div>
-
-      <div class="sl-summary-row">
-        <div class="sl-summary-card">
-          <span class="sl-summary-card__label">目前分類</span>
-          <strong class="sl-summary-card__value">
-            {{ activeTabLabel }}
-          </strong>
-        </div>
-
-        <div class="sl-summary-card">
-          <span class="sl-summary-card__label">查詢筆數</span>
-          <strong class="sl-summary-card__value">
-            {{ hasData ? list.length : 0 }} 筆
-          </strong>
-        </div>
-
-        <div class="sl-summary-card">
-          <span class="sl-summary-card__label">筆數上限</span>
-          <strong class="sl-summary-card__value">
-            {{ limitInput || 200 }} 筆
-          </strong>
+          <span class="sl-current-type">{{ activeTabLabel }}</span>
+          <span class="sl-total-count">{{ list.length }} 筆</span>
         </div>
       </div>
 
@@ -51,38 +22,23 @@
           v-for="tab in LOG_TABS"
           :key="tab.value"
           class="sl-tab"
-          :class="[
-            `sl-tab--${tab.value.toLowerCase()}`,
-            {
-              'sl-tab--active': activeTab === tab.value,
-              'sl-tab--disabled': tab.disabled,
-            },
-          ]"
-          :disabled="tab.disabled"
-          :title="tab.disabled ? '後端尚未支援此日誌類型' : undefined"
+          :class="{ 'sl-tab--active': activeTab === tab.value }"
           type="button"
-          @click="!tab.disabled && switchTab(tab.value)"
+          @click="switchTab(tab.value)"
         >
-          <span class="sl-tab__content">
-            <span class="sl-tab__label">{{ tab.label }}</span>
-            <span class="sl-tab__value">{{ tab.value }}</span>
-          </span>
-
-          <span v-if="tab.disabled" class="sl-tab__unsupported">
-            尚未支援
-          </span>
+          <span class="sl-tab__label">{{ tab.label }}</span>
+          <span class="sl-tab__value">{{ tab.value }}</span>
         </button>
       </div>
     </MCard>
 
-    <!-- 查詢條件 -->
     <div class="m-t-12">
       <MCard>
         <div class="sl-card-head">
           <div>
             <p class="sl-card-head__title">查詢條件</p>
             <p class="sl-card-head__sub">
-              可依時間區間、Email、結果狀態與筆數上限篩選日誌。
+              可用日期、Email / ID / 第三方單號關鍵字與執行結果縮小範圍。
             </p>
           </div>
         </div>
@@ -90,7 +46,7 @@
         <div class="sl-filter-grid">
           <div class="sl-filter-grid__item sl-filter-grid__item--wide">
             <FormDateRangeField
-              label="時間區間"
+              label="日期區間"
               type="datetime-local"
               v-model:start="startInput"
               v-model:end="endInput"
@@ -100,13 +56,13 @@
           </div>
 
           <FormInput
-            label="Email 搜尋"
-            v-model="emailInput"
-            placeholder="輸入 Email 篩選"
+            label="關鍵字"
+            v-model="keywordInput"
+            placeholder="Email、訂單、儲值、會員、第三方單號"
           />
 
           <FormSelect
-            label="結果狀態"
+            label="執行結果"
             v-model="resultFilter"
             :options="resultOptions"
             :showAll="true"
@@ -130,36 +86,22 @@
 
           <MButton type="button" class="mbtn--gray" @click="resetFilters">
             <font-awesome-icon icon="fa-rotate-left" class="m-r-4" />
-            清除
-          </MButton>
-
-          <MButton type="button" class="mbtn--red" @click="cleanupLogs">
-            <font-awesome-icon icon="fa-trash-can" class="m-r-4" />
-            清除過期日誌
+            重設
           </MButton>
         </div>
       </MCard>
     </div>
 
-    <!-- 結果列表 -->
     <div class="m-t-12">
       <MCard>
         <div class="sl-card-head sl-card-head--result">
           <div>
             <p class="sl-card-head__title">查詢結果</p>
-            <p class="sl-card-head__sub">
-              {{ activeTabLabel }} / 依查詢條件顯示目前日誌資料。
-            </p>
+            <p class="sl-card-head__sub">{{ activeTabLabel }} / {{ list.length }} 筆</p>
           </div>
-
-          <span v-if="hasData" class="sl-card-head__count">
-            {{ list.length }} 筆資料
-          </span>
         </div>
 
-        <template v-if="!hasData">
-          <NoData :message="noDataMessage" />
-        </template>
+        <NoData v-if="!hasData" message="目前沒有符合條件的系統日誌" />
 
         <template v-else>
           <ReportTable
@@ -172,17 +114,15 @@
             :sort-order="sortOrder"
             @sort="handleSort"
           >
-            <!-- 時間 -->
             <template #cell-createdAt="{ item }">
               <DateFormatter
                 v-if="item.createdAt"
                 :date="item.createdAt"
                 format="YYYY/MM/DD HH:mm:ss"
               />
-              <span v-else class="sl-empty">—</span>
+              <span v-else class="sl-empty">-</span>
             </template>
 
-            <!-- 結果 -->
             <template #cell-result="{ item }">
               <span
                 class="sl-result"
@@ -192,71 +132,50 @@
               </span>
             </template>
 
-            <!-- 失敗原因 -->
+            <template #cell-actor="{ item }">
+              <span>{{ actorText(item) }}</span>
+            </template>
+
+            <template #cell-target="{ item }">
+              <span v-if="targetText(item)">{{ targetText(item) }}</span>
+              <span v-else class="sl-empty">-</span>
+            </template>
+
+            <template #cell-status="{ item }">
+              <span v-if="item.beforeStatus || item.afterStatus">
+                {{ item.beforeStatus || '-' }} -> {{ item.afterStatus || '-' }}
+              </span>
+              <span v-else class="sl-empty">-</span>
+            </template>
+
+            <template #cell-amount="{ item }">
+              <span v-if="item.amount !== null && item.amount !== undefined">
+                {{ Number(item.amount).toLocaleString('zh-TW') }}
+              </span>
+              <span v-else class="sl-empty">-</span>
+            </template>
+
             <template #cell-errorMessage="{ item }">
               <span
                 v-if="item.errorMessage"
                 class="sl-error"
                 :title="item.errorMessage"
               >
-                {{ truncate(item.errorMessage, 40) }}
+                {{ truncate(item.errorMessage, 48) }}
               </span>
-              <span v-else class="sl-empty">—</span>
+              <span v-else class="sl-empty">-</span>
             </template>
 
-            <!-- LOGIN 專用：userType -->
-            <template #cell-userType="{ item }">
-              <span
-                class="sl-badge"
-                :class="
-                  item.userType?.toLowerCase() === 'admin'
-                    ? 'sl-badge--admin'
-                    : 'sl-badge--user'
-                "
-              >
-                {{ item.userType?.toLowerCase() === 'admin' ? '後台' : '前台' }}
-              </span>
-            </template>
-
-            <!-- LOGIN 專用：loginMethod -->
-            <template #cell-loginMethod="{ item }">
-              {{
-                LOGIN_METHOD_LABEL[item.loginMethod] ?? item.loginMethod ?? '-'
-              }}
-            </template>
-
-            <!-- ADMIN_ACTION 專用：action -->
-            <template #cell-action="{ item }">
-              <span
-                class="sl-action"
-                :class="`sl-action--${String(item.action ?? '').toLowerCase()}`"
-              >
-                {{ item.action || '-' }}
-              </span>
-            </template>
-
-            <!-- ADMIN_ACTION 專用：操作對象 -->
-            <template #cell-target="{ item }">
-              <span v-if="item.targetType || item.targetName">
-                <span class="sl-target-type">{{ item.targetType || '-' }}</span>
-                <span v-if="item.targetName" class="sl-target-name">
-                  — {{ truncate(item.targetName, 30) }}
-                </span>
-              </span>
-              <span v-else class="sl-empty">—</span>
-            </template>
-
-            <!-- ADMIN_ACTION 專用：快照 -->
             <template #cell-snapshot="{ item }">
               <button
-                v-if="item.beforeSnapshot || item.afterSnapshot"
+                v-if="hasSnapshot(item)"
                 class="sl-detail-btn"
                 type="button"
                 @click="openSnapshot(item)"
               >
                 查看
               </button>
-              <span v-else class="sl-empty">—</span>
+              <span v-else class="sl-empty">-</span>
             </template>
           </ReportTable>
 
@@ -282,40 +201,31 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 
-import { usePagination } from '@/hook/usePagination';
-import { useSearchPage } from '@/hook/useSearchPage';
-import { compareByKeySmart } from '@/utils/sortUtils';
-
-import MCard from '@/components/common/MCard.vue';
 import MButton from '@/components/common/MButton.vue';
+import MCard from '@/components/common/MCard.vue';
+import DateFormatter from '@/components/common/DateFormatter.vue';
+import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
+import FormInput from '@/components/common/FormInput.vue';
+import FormSelect from '@/components/common/FormSelect.vue';
 import NoData from '@/components/common/NoData.vue';
 import Pagination from '@/components/common/Pagination.vue';
 import ReportTable from '@/components/common/ReportTable.vue';
-import FormInput from '@/components/common/FormInput.vue';
-import FormSelect from '@/components/common/FormSelect.vue';
-import FormDateRangeField from '@/components/common/FormDateRangeField.vue';
-import DateFormatter from '@/components/common/DateFormatter.vue';
-
-import { executeApi } from '@/utils/executeApiUtils';
-
-import {
-  cleanupOldSystemLogs,
-  getSystemLogsByDateRange,
-  getSystemLogsByType,
-} from '@/services/adminSystemLogService';
-
-import { openConfirmDialog } from '@/utils/dialog/confirmDialog';
+import { usePagination } from '@/hook/usePagination';
+import { getSystemLogsByDateRange, getSystemLogsByType } from '@/services/adminSystemLogService';
 import { openInfoDialog } from '@/utils/dialog/infoDialog';
 import { openSystemLogSnapshotDialog } from '@/utils/dialog/openSystemLogSnapshotDialog';
+import { compareByKeySmart } from '@/utils/sortUtils';
 
-/* ==============================
- * Constants
- * ============================== */
 const LOG_TABS = [
-  { label: '登入日誌', value: 'LOGIN', disabled: false },
-  { label: '後台操作', value: 'ADMIN_ACTION', disabled: false },
-  { label: '抽獎日誌', value: 'DRAW', disabled: true },
-  { label: '支付日誌', value: 'PAYMENT', disabled: true },
+  { label: '登入日誌', value: 'LOGIN' },
+  { label: '後台操作', value: 'ADMIN_ACTION' },
+  { label: '付款事件', value: 'PAYMENT' },
+  { label: '物流事件', value: 'LOGISTICS' },
+  { label: '訂單狀態', value: 'ORDER_STATUS' },
+  { label: '錢包異動', value: 'WALLET' },
+  { label: '儲值紀錄', value: 'RECHARGE' },
+  { label: '訂單紀錄', value: 'ORDER' },
+  { label: '抽獎紀錄', value: 'DRAW' },
 ] as const;
 
 type LogType = (typeof LOG_TABS)[number]['value'];
@@ -323,79 +233,49 @@ type LogType = (typeof LOG_TABS)[number]['value'];
 const RESULT_LABEL: Record<string, string> = {
   SUCCESS: '成功',
   FAILED: '失敗',
-  BLOCKED: '封鎖',
-};
-
-const LOGIN_METHOD_LABEL: Record<string, string> = {
-  PASSWORD: '密碼',
-  GOOGLE: 'Google',
-  LINE: 'LINE',
+  FAIL: '失敗',
+  PENDING: '待處理',
+  DUPLICATE: '重複',
+  SKIPPED: '略過',
+  BLOCKED: '阻擋',
 };
 
 const resultOptions = [
   { label: '成功 (SUCCESS)', value: 'SUCCESS' },
   { label: '失敗 (FAILED)', value: 'FAILED' },
-  { label: '封鎖 (BLOCKED)', value: 'BLOCKED' },
+  { label: '待處理 (PENDING)', value: 'PENDING' },
+  { label: '重複 (DUPLICATE)', value: 'DUPLICATE' },
+  { label: '略過 (SKIPPED)', value: 'SKIPPED' },
+  { label: '阻擋 (BLOCKED)', value: 'BLOCKED' },
 ];
 
-/* ==============================
- * Tab / Filter State
- * ============================== */
 const activeTab = ref<LogType>('LOGIN');
+const startInput = ref('');
+const endInput = ref('');
+const keywordInput = ref('');
+const resultFilter = ref('');
+const limitInput = ref<number | string>(200);
+const list = ref<any[]>([]);
 
 const activeTabLabel = computed(() => {
   return LOG_TABS.find((item) => item.value === activeTab.value)?.label ?? '-';
 });
 
-const startInput = ref('');
-const endInput = ref('');
-const emailInput = ref('');
-const resultFilter = ref('');
-const limitInput = ref<number | string>(200);
+const hasData = computed(() => list.value.length > 0);
 
-/* ==============================
- * Snapshot Dialog
- * ============================== */
-const openSnapshot = async (item: any) => {
-  await openSystemLogSnapshotDialog({
-    beforeSnapshot: item.beforeSnapshot ?? null,
-    afterSnapshot: item.afterSnapshot ?? null,
-  });
-};
-
-/* ==============================
- * Search Hook
- * ============================== */
-const { list, hasData, noDataMessage, query } = useSearchPage({
-  useLocalList: true,
-});
-
-/* ==============================
- * Utils
- * ============================== */
 const toBackendDateTime = (value?: string | null) => {
-  const text = String(value ?? '')
-    .trim()
-    .replace('T', ' ')
-    .replace(/\//g, '-');
-
+  const text = String(value ?? '').trim().replace('T', ' ').replace(/\//g, '-');
   if (!text) return '';
   if (text.length === 16) return `${text}:00`;
-
   return text;
 };
 
 const truncate = (value?: string, max = 60) => {
   const text = String(value ?? '');
-
   if (!text || text === 'null' || text === 'undefined') return '-';
-
   return text.length <= max ? text : `${text.slice(0, max)}...`;
 };
 
-/* ==============================
- * Sorting
- * ============================== */
 const sortKey = ref('');
 const sortOrder = ref<'asc' | 'desc' | ''>('');
 
@@ -412,26 +292,17 @@ const handleSort = ({
 };
 
 const sortedList = computed(() => {
-  if (!sortKey.value || !sortOrder.value) return list.value as any[];
-
-  const arr = [...(list.value as any[])];
-
-  arr.sort((a, b) =>
+  if (!sortKey.value || !sortOrder.value) return list.value;
+  return [...list.value].sort((a, b) =>
     compareByKeySmart(a, b, sortKey.value, sortOrder.value as 'asc' | 'desc', {
       type: 'auto',
       mode: 'big5',
       locale: 'zh-TW',
     }),
   );
-
-  return arr;
 });
 
-/* ==============================
- * Pagination
- * ============================== */
 const pageLimitSize = ref(20);
-
 const {
   totalPages,
   currentPageItems,
@@ -447,87 +318,108 @@ const handlePageLimitSizeChange = (value: number) => {
   goToPage(1);
 };
 
-/* ==============================
- * Columns
- * ============================== */
 const columns = computed(() => {
+  const baseColumns = [
+    { field: 'createdAt', label: '時間', width: 165, sortable: true },
+    { field: 'logType', label: '類型', width: 120, sortable: true },
+    { field: 'action', label: '動作', width: 180, sortable: true },
+    { field: 'actor', label: '執行者', width: 180, sortable: false },
+    { field: 'target', label: '對象', width: 260, sortable: false },
+    { field: 'externalRef', label: '第三方單號', width: 180, sortable: true },
+    { field: 'paymentMethod', label: '方法', width: 120, sortable: true },
+    { field: 'amount', label: '金額', width: 100, sortable: true },
+    { field: 'status', label: '狀態變化', width: 180, sortable: false },
+    { field: 'result', label: '結果', width: 90, sortable: true },
+    { field: 'errorMessage', label: '錯誤訊息', width: 220, sortable: true },
+    { field: 'snapshot', label: '詳細', width: 80, sortable: false },
+  ];
+
   if (activeTab.value === 'LOGIN') {
     return [
       { field: 'createdAt', label: '時間', width: 165, sortable: true },
-      { field: 'email', label: 'Email', width: 200, sortable: true },
-      { field: 'userType', label: '使用者類型', width: 100, sortable: true },
-      { field: 'loginMethod', label: '登入方式', width: 110, sortable: true },
+      { field: 'email', label: 'Email', width: 220, sortable: true },
+      { field: 'userType', label: '使用者類型', width: 120, sortable: true },
+      { field: 'loginMethod', label: '登入方式', width: 120, sortable: true },
       { field: 'result', label: '結果', width: 90, sortable: true },
       { field: 'ip', label: 'IP', width: 140, sortable: true },
-      { field: 'errorMessage', label: '失敗原因', width: 200, sortable: true },
+      { field: 'errorMessage', label: '錯誤訊息', width: 220, sortable: true },
     ];
   }
 
-  return [
-    { field: 'createdAt', label: '時間', width: 165, sortable: true },
-    { field: 'adminEmail', label: '操作人員', width: 200, sortable: true },
-    { field: 'adminRole', label: '角色', width: 160, sortable: true },
-    { field: 'action', label: '操作', width: 120, sortable: true },
-    { field: 'target', label: '操作對象', width: 240, sortable: false },
-    { field: 'result', label: '結果', width: 90, sortable: true },
-    { field: 'ip', label: 'IP', width: 140, sortable: true },
-    { field: 'snapshot', label: '快照', width: 70, sortable: false },
-  ];
+  if (activeTab.value === 'ADMIN_ACTION') {
+    return [
+      { field: 'createdAt', label: '時間', width: 165, sortable: true },
+      { field: 'adminEmail', label: '後台帳號', width: 220, sortable: true },
+      { field: 'adminRole', label: '角色', width: 140, sortable: true },
+      { field: 'action', label: '動作', width: 160, sortable: true },
+      { field: 'target', label: '操作對象', width: 260, sortable: false },
+      { field: 'result', label: '結果', width: 90, sortable: true },
+      { field: 'ip', label: 'IP', width: 140, sortable: true },
+      { field: 'snapshot', label: '快照', width: 80, sortable: false },
+    ];
+  }
+
+  return baseColumns;
 });
 
-/* ==============================
- * Query
- * ============================== */
+const unwrapRows = (res: any): any[] => {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  return [];
+};
+
+const matchKeyword = (item: any, keyword: string) => {
+  if (!keyword) return true;
+  const source = [
+    item.email,
+    item.adminEmail,
+    item.userId,
+    item.actorId,
+    item.targetId,
+    item.targetNo,
+    item.targetName,
+    item.orderId,
+    item.rechargeId,
+    item.walletTransactionId,
+    item.externalRef,
+    item.action,
+    item.errorMessage,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return source.includes(keyword);
+};
+
 const fetchLogs = async (logType: LogType) => {
   const start = toBackendDateTime(startInput.value);
   const end = toBackendDateTime(endInput.value);
   const limit = Number(limitInput.value || 200);
-  const emailQ = emailInput.value.trim().toLowerCase();
+  const keyword = keywordInput.value.trim().toLowerCase();
   const resultQ = resultFilter.value;
 
-  await query(async () => {
-    let rows: any[];
+  try {
+    const res = start && end
+      ? await getSystemLogsByDateRange(start, end, limit)
+      : await getSystemLogsByType(logType, limit);
 
-    if (start && end) {
-      const res = await getSystemLogsByDateRange(start, end, limit);
-      const all: any[] = Array.isArray(res)
-        ? res
-        : Array.isArray((res as any)?.data)
-          ? (res as any).data
-          : [];
+    const rows = unwrapRows(res)
+      .filter((item) => (start && end ? item?.logType === logType : true))
+      .filter((item) => matchKeyword(item, keyword))
+      .filter((item) => !resultQ || item?.result === resultQ);
 
-      rows = all.filter((item) => item?.logType === logType);
-    } else {
-      const res = await getSystemLogsByType(logType, limit);
-
-      rows = Array.isArray(res)
-        ? res
-        : Array.isArray((res as any)?.data)
-          ? (res as any).data
-          : [];
-    }
-
-    if (emailQ) {
-      rows = rows.filter((item) =>
-        String(item?.email ?? item?.adminEmail ?? '')
-          .toLowerCase()
-          .includes(emailQ),
-      );
-    }
-
-    if (resultQ) {
-      rows = rows.filter((item) => item?.result === resultQ);
-    }
-
-    return rows;
-  });
-
-  goToPage(1);
+    list.value = rows;
+    goToPage(1);
+  } catch (error: any) {
+    list.value = [];
+    await openInfoDialog({
+      title: '查詢失敗',
+      message: error?.response?.data?.message ?? error?.message ?? '系統日誌查詢失敗',
+      iconType: 'warning',
+    });
+  }
 };
 
-/* ==============================
- * Actions
- * ============================== */
 const doSearch = async () => {
   await fetchLogs(activeTab.value);
 };
@@ -535,10 +427,9 @@ const doSearch = async () => {
 const resetFilters = async () => {
   startInput.value = '';
   endInput.value = '';
-  emailInput.value = '';
+  keywordInput.value = '';
   resultFilter.value = '';
   limitInput.value = 200;
-
   await fetchLogs(activeTab.value);
 };
 
@@ -546,49 +437,47 @@ const switchTab = async (tab: LogType) => {
   activeTab.value = tab;
   sortKey.value = '';
   sortOrder.value = '';
-
   await fetchLogs(tab);
 };
 
-const cleanupLogs = async () => {
-  const days = 90;
+const actorText = (item: any) => {
+  return item.adminEmail
+    ?? item.email
+    ?? item.actorName
+    ?? item.actorId
+    ?? item.userId
+    ?? item.actorType
+    ?? '-';
+};
 
-  const ok = await openConfirmDialog({
-    title: '清除確認',
-    message: `確定要清除 ${days} 天前的系統日誌嗎？（不可復原）`,
-  });
+const targetText = (item: any) => {
+  const name = item.targetName ?? item.targetNo ?? item.targetId ?? item.orderId ?? item.rechargeId;
+  if (!name) return '';
+  return item.targetType ? `${item.targetType} / ${name}` : String(name);
+};
 
-  if (!ok) return;
+const hasSnapshot = (item: any) => {
+  return Boolean(
+    item.beforeSnapshot
+      || item.afterSnapshot
+      || item.callbackSummary
+      || item.rawPayloadHash,
+  );
+};
 
-  await executeApi({
-    fn: async () => cleanupOldSystemLogs(days),
-    onSuccess: async (data: any) => {
-      const deleted = data?.data ?? data ?? 0;
-
-      await openInfoDialog({
-        title: '提示訊息',
-        message: `清除完成：共刪除 ${deleted} 筆日誌`,
-        iconType: 'success',
-      });
-
-      await fetchLogs(activeTab.value);
-    },
-    showSuccessDialog: false,
-    showFailDialog: true,
-    showCatchDialog: true,
+const openSnapshot = async (item: any) => {
+  await openSystemLogSnapshotDialog({
+    beforeSnapshot: item.beforeSnapshot ?? item.callbackSummary ?? null,
+    afterSnapshot: item.afterSnapshot ?? (item.rawPayloadHash ? `rawPayloadHash=${item.rawPayloadHash}` : null),
   });
 };
 
-/* ==============================
- * Lifecycle
- * ============================== */
 onMounted(async () => {
   await fetchLogs('LOGIN');
 });
 </script>
 
 <style scoped lang="scss">
-@use 'sass:color';
 @use '@/assets/styles/base/tokens' as tokens;
 
 .system-log-page {
@@ -596,495 +485,178 @@ onMounted(async () => {
   max-width: 100%;
 }
 
-/* ==============================
- * Page Head
- * ============================== */
-.sl-page-head {
+.sl-page-head,
+.sl-card-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  min-width: 0;
   margin-bottom: 14px;
+}
 
-  &__main {
-    min-width: 0;
-  }
+.sl-page-head__eyebrow {
+  margin: 0 0 4px;
+  color: tokens.$brand;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
 
-  &__eyebrow {
-    margin: 0 0 4px;
-    color: tokens.$brand;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-  }
+.sl-page-head__title,
+.sl-card-head__title {
+  margin: 0;
+  color: tokens.$form-text;
+  font-size: 22px;
+  font-weight: 800;
+}
 
-  &__title {
-    margin: 0;
-    color: tokens.$form-text;
-    font-size: 22px;
-    font-weight: 800;
-    line-height: 1.35;
-  }
+.sl-card-head__title {
+  font-size: 18px;
+}
 
-  &__sub {
-    margin: 4px 0 0;
-    color: tokens.$form-muted;
-    font-size: 13px;
-    line-height: 1.5;
-  }
+.sl-page-head__sub,
+.sl-card-head__sub {
+  margin: 4px 0 0;
+  color: tokens.$form-muted;
+  font-size: 13px;
+  line-height: 1.5;
+}
 
-  &__actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+.sl-page-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .sl-current-type,
 .sl-total-count {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 4px 12px;
+  min-height: 30px;
+  padding: 0 12px;
   border-radius: 999px;
+  background: #fff4e4;
+  color: tokens.$brand;
   font-size: 12px;
   font-weight: 800;
-  white-space: nowrap;
-}
-
-.sl-current-type {
-  background: color.mix(tokens.$brand-light, #fff, 18%);
-  color: tokens.$brand-dark;
 }
 
 .sl-total-count {
-  background: color.mix(tokens.$form-border, #fff, 42%);
+  background: #f5f6f8;
   color: tokens.$form-muted;
 }
 
-/* ==============================
- * Summary
- * ============================== */
-.sl-summary-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.sl-summary-card {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
-  border-radius: 14px;
-  background: color.mix(tokens.$brand-light, #fff, 8%);
-
-  &__label {
-    display: block;
-    margin-bottom: 4px;
-    color: tokens.$form-muted;
-    font-size: 12px;
-    line-height: 1.4;
-  }
-
-  &__value {
-    display: block;
-    color: tokens.$form-text;
-    font-size: 15px;
-    font-weight: 800;
-    line-height: 1.5;
-    word-break: break-word;
-  }
-}
-
-/* ==============================
- * Tabs
- * ============================== */
 .sl-tab-bar {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .sl-tab {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  min-height: 52px;
-  padding: 10px 12px;
-  border: 1px solid color.mix(tokens.$form-border, #fff, 70%);
-  border-radius: 14px;
-  background: tokens.$form-bg;
-  color: tokens.$ink-700;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
-
-  &:hover:not(:disabled) {
-    border-color: tokens.$brand;
-    background: color.mix(tokens.$brand-light, #fff, 18%);
-    color: tokens.$brand-dark;
-    box-shadow: 0 6px 14px rgba(tokens.$ink-900, 0.06);
-    transform: translateY(-1px);
-  }
-
-  &__dot {
-    flex: 0 0 auto;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: tokens.$form-border;
-  }
-
-  &__content {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  &__label {
-    color: inherit;
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1.4;
-  }
-
-  &__value {
-    color: tokens.$form-muted;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.3;
-    word-break: break-word;
-  }
-
-  &__unsupported {
-    flex: 0 0 auto;
-    margin-left: auto;
-    padding: 2px 7px;
-    border-radius: 999px;
-    background: color.mix(tokens.$form-border, #fff, 45%);
-    color: tokens.$form-muted;
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  &--active {
-    border-color: tokens.$brand;
-    background: tokens.$brand-light;
-    color: tokens.$brand-dark;
-    box-shadow: 0 6px 14px rgba(tokens.$brand, 0.1);
-
-    .sl-tab__value {
-      color: tokens.$brand-dark;
-    }
-  }
-
-  &--disabled {
-    opacity: 0.48;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-}
-
-.sl-tab--login .sl-tab__dot {
-  background: tokens.$brand;
-}
-
-.sl-tab--admin_action .sl-tab__dot {
-  background: tokens.$brand-hover;
-}
-
-.sl-tab--draw .sl-tab__dot,
-.sl-tab--payment .sl-tab__dot {
-  background: tokens.$form-border;
-}
-
-/* ==============================
- * Card Head
- * ============================== */
-.sl-card-head {
-  display: flex;
+  display: inline-flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-
-  &--result {
-    margin-bottom: 12px;
-  }
-
-  &__title {
-    margin: 0;
-    padding-left: 10px;
-    border-left: 4px solid tokens.$brand;
-    color: tokens.$form-text;
-    font-size: 15px;
-    font-weight: 800;
-    line-height: 1.4;
-  }
-
-  &__sub {
-    margin: 4px 0 0;
-    color: tokens.$form-muted;
-    font-size: 13px;
-    line-height: 1.5;
-  }
-
-  &__count {
-    flex: 0 0 auto;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: color.mix(tokens.$brand-light, #fff, 18%);
-    color: tokens.$brand;
-    font-size: 12px;
-    font-weight: 800;
-  }
+  min-width: 116px;
+  padding: 10px 12px;
+  border: 1px solid #e7e0d8;
+  border-radius: 14px;
+  background: #fff;
+  color: tokens.$form-text;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-/* ==============================
- * Filter
- * ============================== */
+.sl-tab:hover,
+.sl-tab--active {
+  border-color: tokens.$brand;
+  box-shadow: 0 8px 20px rgb(255 138 0 / 14%);
+  transform: translateY(-1px);
+}
+
+.sl-tab__label {
+  font-weight: 800;
+}
+
+.sl-tab__value {
+  margin-top: 2px;
+  color: tokens.$form-muted;
+  font-size: 11px;
+}
+
 .sl-filter-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(280px, 2fr) repeat(3, minmax(160px, 1fr));
   gap: 12px;
-  margin-bottom: 14px;
-  padding: 14px;
-  border: 1px solid color.mix(tokens.$form-border, #fff, 72%);
-  border-radius: 16px;
-  background: color.mix(tokens.$brand-light, #fff, 7%);
+}
 
-  &__item {
-    min-width: 0;
-
-    &--wide {
-      grid-column: span 2;
-    }
-  }
+.sl-filter-grid__item--wide {
+  min-width: 0;
 }
 
 .sl-filter-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-/* ==============================
- * ReportTable
- * ============================== */
-.sl-report-table {
-  margin-top: 0;
-}
-
-/* ==============================
- * Result Badge
- * ============================== */
 .sl-result {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   min-height: 24px;
-  padding: 2px 9px;
+  padding: 0 10px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.4;
-
-  &--success {
-    background: color.mix(tokens.$brand-light, #fff, 52%);
-    color: tokens.$brand-dark;
-  }
-
-  &--failed {
-    background: color.mix(tokens.$danger-light, #fff, 18%);
-    color: tokens.$danger;
-  }
-
-  &--blocked {
-    background: tokens.$brand-light-hover;
-    color: tokens.$brand-dark;
-  }
-}
-
-/* ==============================
- * User Type Badge
- * ============================== */
-.sl-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-
-  &--admin {
-    background: tokens.$brand-light;
-    color: tokens.$brand-dark;
-  }
-
-  &--user {
-    background: color.mix(tokens.$brand-light, #fff, 52%);
-    color: tokens.$brand;
-  }
-}
-
-/* ==============================
- * Action Badge
- * ============================== */
-.sl-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: color.mix(tokens.$border-light, #fff, 28%);
-  color: tokens.$ink-800;
-  font-size: 12px;
-  font-weight: 700;
-
-  &--create {
-    background: color.mix(tokens.$brand-light, #fff, 52%);
-    color: tokens.$brand-dark;
-  }
-
-  &--update {
-    background: tokens.$brand-light-hover;
-    color: tokens.$brand-dark;
-  }
-
-  &--delete {
-    background: color.mix(tokens.$danger-light, #fff, 18%);
-    color: tokens.$danger;
-  }
-
-  &--on_shelf {
-    background: tokens.$brand-light;
-    color: tokens.$brand-dark;
-  }
-
-  &--off_shelf {
-    background: color.mix(tokens.$brand-light-hover, #fff, 38%);
-    color: tokens.$brand-dark;
-  }
-}
-
-/* ==============================
- * Target
- * ============================== */
-.sl-target-type {
-  color: tokens.$ink-800;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.sl-target-name {
+  background: #f5f6f8;
   color: tokens.$form-muted;
   font-size: 12px;
+  font-weight: 800;
 }
 
-/* ==============================
- * Detail Button
- * ============================== */
-.sl-detail-btn {
-  min-height: 26px;
-  padding: 0 11px;
-  border: 1px solid color.mix(tokens.$form-border, #fff, 52%);
-  border-radius: 999px;
-  background: tokens.$form-bg;
-  color: tokens.$ink-800;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
-
-  &:hover {
-    border-color: tokens.$brand;
-    background: tokens.$brand-light;
-    color: tokens.$brand-dark;
-    box-shadow: 0 4px 10px rgba(tokens.$brand, 0.12);
-  }
+.sl-result--success {
+  background: #eaf8ef;
+  color: #16833a;
 }
 
-/* ==============================
- * Misc
- * ============================== */
+.sl-result--failed,
+.sl-result--fail {
+  background: #fff0ee;
+  color: #c0392b;
+}
+
+.sl-result--pending {
+  background: #fff7df;
+  color: #9a6500;
+}
+
 .sl-error {
-  color: tokens.$danger;
-  font-size: 12px;
+  color: #c0392b;
   font-weight: 700;
 }
 
 .sl-empty {
-  color: tokens.$form-border;
+  color: tokens.$form-muted;
 }
 
-/* ==============================
- * RWD
- * ============================== */
-@media (max-width: 1180px) {
-  .sl-tab-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.sl-detail-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #fff4e4;
+  color: tokens.$brand;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 @media (max-width: 960px) {
-  .sl-page-head {
+  .sl-page-head,
+  .sl-card-head {
     flex-direction: column;
-
-    &__actions {
-      justify-content: flex-start;
-    }
-  }
-
-  .sl-summary-row {
-    grid-template-columns: 1fr;
   }
 
   .sl-filter-grid {
     grid-template-columns: 1fr;
-
-    &__item {
-      &--wide {
-        grid-column: span 1;
-      }
-    }
-  }
-
-  .sl-filter-actions {
-    justify-content: flex-start;
-  }
-
-  .sl-card-head {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 640px) {
-  .sl-tab-bar {
-    grid-template-columns: 1fr;
-  }
-
-  .sl-tab {
-    min-height: 48px;
   }
 }
 </style>
